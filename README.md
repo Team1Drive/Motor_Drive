@@ -62,7 +62,63 @@ Pushing your branch
 
 ### Using GUI in VS Code
 
+#### 1. Clone the repository
 
+- Open VS Code.
+
+- Press `Ctrl+Shift+P` and type `Git: Clone`.
+
+- Paste the repository URL and select a local folder.
+
+#### 2. Update your local `main` branch
+
+- Click the Source Control icon in the left sidebar (or `Ctrl+Shift+G`).
+
+- In the bottom-left corner, click the branch name (usually `main`) and select `main` from the list.
+
+- Click the `…` menu and choose `Pull` to get the latest changes.
+
+#### 3. Create and switch to a new branch
+
+- Click the branch name in the bottom-left corner.
+
+- Choose `Create new branch…` and enter a name (e.g., `feature/overmodulation`).
+
+#### 4. Make changes and commit them
+
+- Edit files as needed. Modified files appear in the Source Control view.
+
+- Hover over a file and click the `+` to stage it (or click the `+` next to Changes to stage all).
+
+- Enter a commit message in the text box above.
+
+- Click the checkmark Commit button to commit locally.
+
+#### 5. Push your branch to GitHub
+
+- Click the `…` menu in Source Control and choose `Push`.
+
+- If this is the first push from this branch, VS Code may ask if you want to publish the branch – confirm.
+
+### Opening a Pull Request
+
+You can do this from VS Code (if you have the GitHub Pull Requests extension) or directly on GitHub.
+
+#### Option A: In VS Code (with extension)
+
+Click the `Pull Requests` icon in the left sidebar (or install the extension first).
+
+Click the `+` to create a new PR, select your branch as the `compare` branch, and `main` as `base`.
+
+Fill in the details and click `Create`.
+
+#### Option B: On GitHub
+
+Go to the repository page on GitHub.
+
+You’ll likely see a prompt to create a PR from your recently pushed branch. Click `Compare & pull request`.
+
+Otherwise, go to the `Pull requests` tab, click `New pull request`, select your branch as `compare` and `main` as `base`, then `Create pull request`.
 
 ## File Structure
 
@@ -96,11 +152,8 @@ Pushing your branch
     │       ├── ustimer.cpp
     │       └── ustimer.h
     │
-    ├── Drivers/                     # Python implementation (NumPy/SciPy-based)
-    │   ├── src/
-    │   ├── tests/
-    │   └── notebooks/             # Jupyter notebooks for demonstration
-    ├── Middlewares\ST\STM32_USB_Device_Library/
+    ├── Drivers/
+    ├── Middlewares/ST/STM32_USB_Device_Library/
     ├── USB_DEVICE/       
     ├── cmake/
     ├── out/                      
