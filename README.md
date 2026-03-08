@@ -124,31 +124,31 @@ Otherwise, go to the `Pull requests` tab, click `New pull request`, select your 
 
     Root
     ├── Core
-    │   ├── Inc                     
+    │   ├── Inc/
     │   └── Src                     
-    │       ├── adc_sampler.cpp
-    │       ├── adc_sampler.h
-    │       ├── adc.c
+    │       ├── adc_sampler.cpp         # Class for ADC and DMA sampling
+    │       ├── adc_sampler.h           # Declaration of class and functions for ADC and DMA sampling
+    │       ├── adc.c                   # CubeMX generated file
     │       ├── digitalio.cpp
     │       ├── digitalio.h
-    │       ├── dma.c
+    │       ├── dma.c                   # CubeMX generated file
     │       ├── encoder.cpp
     │       ├── encoder.h
-    │       ├── gpio.c
+    │       ├── gpio.c                  # CubeMX generated file
     │       ├── hallsensor.cpp
     │       ├── hallsensor.h
-    │       ├── main.c
+    │       ├── main.c                  # CubeMX generated main file
     │       ├── main.cpp                # Main programme
     │       ├── modulation.cpp
     │       ├── modulation.h
     │       ├── pwm3phase_timer.cpp
     │       ├── pwm3phase_timer.h
-    │       ├── stm32h7xx_hal_msp.c
-    │       ├── stm32h7xx_it.c
-    │       ├── syscalls.c
-    │       ├── sysmem.c
-    │       ├── system_stm32h7xx.c
-    │       ├── tim.c
+    │       ├── stm32h7xx_hal_msp.c     # CubeMX generated file
+    │       ├── stm32h7xx_it.c          # CubeMX generated file
+    │       ├── syscalls.c              # CubeMX generated file
+    │       ├── sysmem.c                # CubeMX generated file
+    │       ├── system_stm32h7xx.c      # CubeMX generated file
+    │       ├── tim.c                   # CubeMX generated file
     │       ├── ustimer.cpp
     │       └── ustimer.h
     │
@@ -156,5 +156,32 @@ Otherwise, go to the `Pull requests` tab, click `New pull request`, select your 
     ├── Middlewares/ST/STM32_USB_Device_Library/
     ├── USB_DEVICE/       
     ├── cmake/
-    ├── out/                      
+    ├── out/build/gcc-arm
+    │   ├── .cmake/
+    │   ├── cmake/
+    │   ├── CMakeFiles/
+    │   ├── cmake_install.cmake
+    │   ├── CMakeCache.txt
+    │   ├── compile_commands.json
+    │   ├── Makefile
+    │   ├── Motor_Drive.bin             # Compiled binary file for flashing
+    │   ├── Motor_Drive.elf
+    │   └── Motor_Drive.map
+    │
     └── README.md
+
+## Flashing Programme onto STM32
+
+Open STM32CubeProgrammer.
+
+On the left-hand side select download tab.
+
+Select USB from the drop-down menu.
+
+To set the STM32 into Bootloader mode, pull the `BOOT0` pin to 5 V and press the RESET button.
+
+The device should show up in STM32CubeProgrammer as a USB-DFU device.
+
+Click `Connect` and then `Programme`, a success message will show if flashing is successful.
+
+Unplug the jumper cable on the board and press RESET, the STM32 should be running the programme.
