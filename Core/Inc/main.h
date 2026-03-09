@@ -53,6 +53,31 @@ extern "C" {
 void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
+void SystemClock_Config(void);
+void MX_GPIO_Init(void);
+void MX_DMA_Init(void);
+void MX_ADC1_Init(void);
+void MX_ADC2_Init(void);
+void MX_ADC3_Init(void);
+void MX_GPIO_Init(void);
+void MX_TIM2_Init(void);
+void MX_TIM3_Init(void);
+void MX_TIM4_Init(void);
+void MX_TIM7_Init(void);
+void MX_TIM8_Init(void);
+
+void MX_USB_DEVICE_Init();
+
+void PeriphCommonClock_Config(void);
+
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin);
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim);
+
+void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* hadc);
+void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc);
+
+void USB_CDC_RxHandler(uint8_t* Buf, uint32_t Len);
 
 /* USER CODE END EFP */
 

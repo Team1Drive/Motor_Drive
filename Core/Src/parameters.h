@@ -3,6 +3,9 @@
 #define M_PI 3.14159265358979323846264338327950288f
 #define SQRT3 1.73205080756887729352744634150587236f
 
+#define RX_RING_SIZE 256
+#define CMD_MAX_LEN 64
+
 #define ADC1_NUM_CHANNELS   3U
 #define ADC2_NUM_CHANNELS   2U
 #define ADC3_NUM_CHANNELS   2U
@@ -22,3 +25,9 @@ typedef enum {
     MOTOR_FOC_LINEAR,
     MOTOR_FOC_DPWM
 } MotorControlMode;
+
+typedef struct {
+    uint8_t buffer[RX_RING_SIZE];
+    volatile uint16_t head;
+    volatile uint16_t tail;
+} ring_buffer_t;

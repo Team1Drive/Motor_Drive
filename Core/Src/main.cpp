@@ -19,45 +19,24 @@
 
 
 
-/* HAL Function Prototypes in Extern C*/
-extern "C" {
-  void SystemClock_Config(void);
-  void MX_GPIO_Init(void);
-  void MX_DMA_Init(void);
-  void MX_ADC1_Init(void);
-  void MX_ADC2_Init(void);
-  void MX_ADC3_Init(void);
-  void MX_GPIO_Init(void);
-  void MX_TIM2_Init(void);
-  void MX_TIM3_Init(void);
-  void MX_TIM4_Init(void);
-  void MX_TIM7_Init(void);
-  void MX_TIM8_Init(void);
-
-  void MX_USB_DEVICE_Init();
-
-  void PeriphCommonClock_Config(void);
-
-  void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin);
-
-  void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim);
-
-  void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* hadc);
-  void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc);
-}
-
 void MPU_Config(void);
 
 void timer3IRQ(void);
 void timer4IRQ(void);
+
+static void process_command(const char* cmd);
 
 void sixStepCommutation(void);
 void test_PWM(void);
 void test_PWM_sweep(void);
 
 void usb_printf(const char *format, ...);
+
 float adcToVoltage(uint32_t raw, float vref, uint32_t resolution, float gain, float offset);
 float adcToCurrent(uint32_t raw, float vref, uint32_t resolution, float gain, float offset, float shunt);
+
+static bool ring_buffer_write(uint8_t data);
+static bool read_line_from_ring(char* line, int max_len);
 
 /* Declare ADC buffers */
 alignas(32) uint16_t adc1_buffer[ADC1_BUF_LEN] __attribute__((section(".sram_d1")));
@@ -97,6 +76,10 @@ HallSensor hallsensor(GPIOB, GPIO_PIN_5, GPIOB, GPIO_PIN_8, GPIOE, GPIO_PIN_4);
 uint16_t adc1_proc_buffer[ADC1_BUF_LEN];
 uint16_t adc2_proc_buffer[ADC2_BUF_LEN];
 uint16_t adc3_proc_buffer[ADC3_BUF_LEN];
+
+MotorControlMode control_mode = MOTOR_STOP;
+
+static ring_buffer_t rx_ring = { .head = 0, .tail = 0 };
 
 
 
@@ -204,7 +187,10 @@ int main(void)
   {
     //usb_printf("Hello from STM32! Counter: %lu\r\n", counter++);
     /* USER CODE END WHILE */
-
+    char cmd_line[CMD_MAX_LEN];
+    if (read_line_from_ring(cmd_line, CMD_MAX_LEN)) {
+      process_command(cmd_line);
+    }
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
@@ -278,6 +264,12 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
   ADCSampler::irqConvCplt(hadc);
 }
 
+void USB_CDC_RxHandler(uint8_t* Buf, uint32_t Len) {
+  for (uint32_t i = 0; i < Len; i++) {
+    ring_buffer_write(Buf[i]);
+  }
+}
+
 void timer3IRQ(void) {
   //led_red.toggle();
   //led_green.toggle();
@@ -311,6 +303,27 @@ void timer4IRQ(void) {
   //usb_printf("i a/b/c (A):\t%.2f\t%.2f\t%.2f\n", ia, ib, ic);
   //usb_printf("v ab/bc (V):\t%.2f\t%.2f\n", vab, vbc);
   //usb_printf("v batt (V): %.2f\t, i batt (A): %.2f\n", vbatt, ibatt);
+}
+
+static void process_command(const char* cmd) {
+    if (strcmp(cmd, "start") == 0) {
+      control_mode = MOTOR_STARTUP;
+    } else if (strcmp(cmd, "stop") == 0) {
+      control_mode = MOTOR_STOP;
+    } else if (strncmp(cmd, "speed ", 6) == 0) {
+        int speed;
+        if (sscanf(cmd + 6, "%d", &speed) == 1) {
+            motorPWM.setDuty(speed, speed, speed);
+        } else {
+            // 格式错误，可回传错误信息
+            const char* err = "Invalid speed\r\n";
+            CDC_Transmit_HS((uint8_t*)err, strlen(err));
+        }
+    } else {
+        // 未知命令
+        const char* err = "Unknown command\r\n";
+        CDC_Transmit_HS((uint8_t*)err, strlen(err));
+    }
 }
 
 void sixStepCommutation(void) {
@@ -439,6 +452,42 @@ float adcToVoltage(uint32_t raw, float vref, uint32_t resolution, float gain, fl
 float adcToCurrent(uint32_t raw, float vref, uint32_t resolution, float gain, float offset, float shunt) {
   float voltage = adcToVoltage(raw, vref, resolution, 1.0f, offset);
   return voltage / (gain * shunt);
+}
+
+static bool ring_buffer_write(uint8_t data) {
+    uint16_t next_head = (rx_ring.head + 1) % RX_RING_SIZE;
+    if (next_head != rx_ring.tail) {
+        rx_ring.buffer[rx_ring.head] = data;
+        rx_ring.head = next_head;
+        return true;
+    }
+    return false;
+}
+
+static bool read_line_from_ring(char* line, int max_len) {
+    static char line_buffer[CMD_MAX_LEN];
+    static int idx = 0;
+
+    while (rx_ring.tail != rx_ring.head) {
+        uint8_t c = rx_ring.buffer[rx_ring.tail];
+        rx_ring.tail = (rx_ring.tail + 1) % RX_RING_SIZE;
+
+        if (c == '\n' || c == '\r') {
+            if (idx > 0) {
+                line_buffer[idx] = '\0';
+                strncpy(line, line_buffer, max_len);
+                idx = 0;
+                return true; // 成功读取一行
+            }
+            // 忽略空行
+        } else if (idx < max_len - 1) {
+            line_buffer[idx++] = c;
+        } else {
+            // 行太长，丢弃并重置
+            idx = 0;
+        }
+    }
+    return false; // 没有完整行
 }
 
 void MPU_Config(void)
