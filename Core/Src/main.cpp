@@ -26,6 +26,7 @@ void timer4IRQ(void);
 
 static void process_command(const char* cmd);
 
+void startUpSequence(void);
 void sixStepCommutation(void);
 void test_PWM(void);
 void test_PWM_sweep(void);
@@ -181,6 +182,8 @@ int main(void)
   relay.write(1);
 
   usb_printf("System Initialized\n");
+
+  control_mode = MOTOR_STOP;
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
@@ -203,20 +206,20 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
     case GPIO_PIN_4:
       if (HAL_GPIO_ReadPin(GPIOE, GPIO_Pin) == GPIO_PIN_SET) {
         HallSensor::irqHandlerRising(GPIO_Pin);
-        sixStepCommutation();
+        if (control_mode == MOTOR_SIX_STEP) sixStepCommutation();
       } else {
         HallSensor::irqHandlerFalling(GPIO_Pin);
-        sixStepCommutation();
+        if (control_mode == MOTOR_SIX_STEP) sixStepCommutation();
       }
       break;
     // Hall Channel A (PB5), Hall Channel B (PB8)
     case GPIO_PIN_5: case GPIO_PIN_8:
       if (HAL_GPIO_ReadPin(GPIOB, GPIO_Pin) == GPIO_PIN_SET) {
         HallSensor::irqHandlerRising(GPIO_Pin);
-        sixStepCommutation();
+        if (control_mode == MOTOR_SIX_STEP) sixStepCommutation();
       } else {
         HallSensor::irqHandlerFalling(GPIO_Pin);
-        sixStepCommutation();
+        if (control_mode == MOTOR_SIX_STEP) sixStepCommutation();
       }
       break;
     // Handle Encoder Channel A (PB6), Encoder Channel B (PB7), Encoder Index (PB9)
@@ -238,7 +241,9 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
   if (htim->Instance == TIM8) {
     // PWM update interrupt
+    if (control_mode == MOTOR_FOC_LINEAR) {
 
+    }
   }
   else if (htim->Instance == TIM7) {
     // 1 MHz timer interrupt (Interrupt every 65.536 ms)
@@ -308,6 +313,7 @@ void timer4IRQ(void) {
 static void process_command(const char* cmd) {
     if (strcmp(cmd, "start") == 0) {
       control_mode = MOTOR_STARTUP;
+      startUpSequence();
     } else if (strcmp(cmd, "stop") == 0) {
       control_mode = MOTOR_STOP;
     } else if (strncmp(cmd, "speed ", 6) == 0) {
@@ -315,15 +321,21 @@ static void process_command(const char* cmd) {
         if (sscanf(cmd + 6, "%d", &speed) == 1) {
             motorPWM.setDuty(speed, speed, speed);
         } else {
-            // 格式错误，可回传错误信息
+            // Wrong speed format
             const char* err = "Invalid speed\r\n";
             CDC_Transmit_HS((uint8_t*)err, strlen(err));
         }
     } else {
-        // 未知命令
+        // Unknown command
         const char* err = "Unknown command\r\n";
         CDC_Transmit_HS((uint8_t*)err, strlen(err));
     }
+}
+
+void startUpSequence(void) {
+  if (control_mode != MOTOR_STARTUP) return;
+  hallsensor.read();
+  sixStepCommutation();
 }
 
 void sixStepCommutation(void) {
@@ -477,17 +489,15 @@ static bool read_line_from_ring(char* line, int max_len) {
                 line_buffer[idx] = '\0';
                 strncpy(line, line_buffer, max_len);
                 idx = 0;
-                return true; // 成功读取一行
+                return true;
             }
-            // 忽略空行
         } else if (idx < max_len - 1) {
             line_buffer[idx++] = c;
         } else {
-            // 行太长，丢弃并重置
             idx = 0;
         }
     }
-    return false; // 没有完整行
+    return false;
 }
 
 void MPU_Config(void)
