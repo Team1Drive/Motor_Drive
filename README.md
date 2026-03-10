@@ -12,6 +12,8 @@ Ensure [Git](https://git-scm.com/downloads) is installed on your PC.
 
 Login your account in Git and you should be able to take advantage of the source control tab in VS Code.
 
+**Ensure you PULL FIRST before PUSHING any changes**
+
 ### Common Git Terminology
 
 | Term          | Meaning                                                                       |
@@ -172,16 +174,18 @@ Otherwise, go to the `Pull requests` tab, click `New pull request`, select your 
 
 ## Flashing Programme onto STM32
 
+To set the STM32 into Bootloader mode, pull the `BOOT0` pin to 5 V and press the RESET button.
+
 Open STM32CubeProgrammer.
 
 On the left-hand side select `Erasing & Programming` tab.
 
-Select USB from the drop-down menu.
-
-To set the STM32 into Bootloader mode, pull the `BOOT0` pin to 5 V and press the RESET button.
+For the device selection on the right, select USB from the drop-down menu.
 
 The device should show up in STM32CubeProgrammer as a USB-DFU device.
 
-Click `Connect` and then `Programme`, a success message will show if flashing is successful.
+Click `Connect` to connect, a green dot will show if successful
+
+Select the path to the `.bin`file, then click `Program` to flash the programme, no other changes are needed, a success message will show if flashing is successful.
 
 Unplug the jumper cable on the board and press RESET, the STM32 should be running the programme.
