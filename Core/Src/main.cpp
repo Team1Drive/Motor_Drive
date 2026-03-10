@@ -183,7 +183,7 @@ int main(void)
 
   usb_printf("System Initialized\n");
 
-  control_mode = MOTOR_STOP;
+  control_mode = MOTOR_STARTUP;
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
@@ -244,6 +244,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
     if (control_mode == MOTOR_FOC_LINEAR) {
 
     }
+    else if (control_mode == MOTOR_STARTUP) {
+      startUpSequence();
+    }
   }
   else if (htim->Instance == TIM7) {
     // 1 MHz timer interrupt (Interrupt every 65.536 ms)
@@ -293,7 +296,7 @@ void timer4IRQ(void) {
   adc2.getLatestData(adc2_raw);
   adc3.getLatestData(adc3_raw);
 
-  usb_printf("RAW: %lu\n", adc1_raw[1]);
+  //usb_printf("RAW: %lu\n", adc1_raw[1]);
 
   float ia = adcToCurrent(adc1_raw[0], 3.3f, 65536, 50.0f, 0.0f, 0.013f);
   float ib = adcToCurrent(adc2_raw[0], 3.3f, 65536, 50.0f, 0.0f, 0.013f);

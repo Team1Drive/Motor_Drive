@@ -174,7 +174,7 @@ Otherwise, go to the `Pull requests` tab, click `New pull request`, select your 
 
 Open STM32CubeProgrammer.
 
-On the left-hand side select download tab.
+On the left-hand side select `Erasing & Programming` tab.
 
 Select USB from the drop-down menu.
 
