@@ -1,0 +1,7 @@
+out/build/gcc-arm/.cmake/
+out/build/gcc-arm/cmake/
+out/build/gcc-arm/CMakeFiles/
+out/build/gcc-arm/cmake_install.cmake
+out/build/gcc-arm/CMakeCache.txt
+out/build/gcc-arm/compile_commands.json
+out/build/gcc-arm/Makefile
