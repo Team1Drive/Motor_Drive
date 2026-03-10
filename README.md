@@ -12,7 +12,7 @@ Ensure [Git](https://git-scm.com/downloads) is installed on your PC.
 
 Login your account in Git and you should be able to take advantage of the source control tab in VS Code.
 
-**Ensure you PULL FIRST before PUSHING any changes**
+**Ensure you PULL FIRST BEFORE PUSHING any changes**
 
 ### Common Git Terminology
 
@@ -171,6 +171,43 @@ Otherwise, go to the `Pull requests` tab, click `New pull request`, select your 
     │   └── Motor_Drive.map
     │
     └── README.md
+
+## Programming Convention
+
+### Naming
+
+Use `FULL_CAPITAL` for defined macros and enumeration.
+
+e.g.
+
+    enum class MotorControlMode : uint8_t {
+        MOTOR_STOP,
+        MOTOR_STARTUP,
+        MOTOR_SIX_STEP,
+        MOTOR_FOC_LINEAR,
+        MOTOR_FOC_DPWM
+    };
+
+Always name macros with `DEVICE_DESCRIPTION_UNIT`.
+
+e.g.
+
+    #define ADC1_NUM_CHANNELS   3U
+    #define ADC2_NUM_CHANNELS   2U
+    #define ADC3_NUM_CHANNELS   2U
+
+Use `camelCase()` for functions.
+
+e.g.
+
+    void setDuty(float duty_A, float duty_B, float duty_C);
+
+Use `snake_case` for variables.
+
+e.g.
+
+    bool use_proc_buffer;
+
 
 ## Flashing Programme onto STM32
 
