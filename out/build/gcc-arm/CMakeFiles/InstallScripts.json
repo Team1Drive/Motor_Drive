@@ -1,8 +1,0 @@
-{
-	"InstallScripts" : 
-	[
-		"C:/Users/Gilbert/OneDrive - The University of Manchester/40330. Team Project/Repository/Motor_Drive/out/build/gcc-arm/cmake_install.cmake",
-		"C:/Users/Gilbert/OneDrive - The University of Manchester/40330. Team Project/Repository/Motor_Drive/out/build/gcc-arm/cmake/stm32cubemx/cmake_install.cmake"
-	],
-	"Parallel" : false
-}
