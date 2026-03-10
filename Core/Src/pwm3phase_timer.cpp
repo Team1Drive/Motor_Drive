@@ -3,8 +3,14 @@
 #include <cstdint>
 
 ThreePhasePWMOut::ThreePhasePWMOut(TIM_HandleTypeDef* htim):
-    htim_(htim)
-    {}
+    htim_(htim) {
+        duty_A = 0.0f;
+        duty_B = 0.0f;
+        duty_C = 0.0f;
+        enabled_A = false;
+        enabled_B = false;
+        enabled_C = false;
+    }
 
 void ThreePhasePWMOut::updateCompareValues(void) {
     // Get current auto-reload value
@@ -26,17 +32,54 @@ void ThreePhasePWMOut::updateCompareValues(void) {
 }
 
 HAL_StatusTypeDef ThreePhasePWMOut::init(void) {
-
+    if (HAL_TIM_Base_Start(htim_) != HAL_OK) {
+        return HAL_ERROR;
+    }
+    __HAL_TIM_ENABLE_IT(htim_, TIM_IT_UPDATE);
     return HAL_OK;
 }
 
 HAL_StatusTypeDef ThreePhasePWMOut::start(void) {
-
+    if (HAL_TIM_PWM_Start(htim_, TIM_CHANNEL_1) != HAL_OK) {
+        return HAL_ERROR;
+    }
+    if (HAL_TIM_PWM_Start(htim_, TIM_CHANNEL_2) != HAL_OK) {
+        return HAL_ERROR;
+    }
+    if (HAL_TIM_PWM_Start(htim_, TIM_CHANNEL_3) != HAL_OK) {
+        return HAL_ERROR;
+    }
+    if (HAL_TIMEx_PWMN_Start(htim_, TIM_CHANNEL_1) != HAL_OK) {
+        return HAL_ERROR;
+    }
+    if (HAL_TIMEx_PWMN_Start(htim_, TIM_CHANNEL_2) != HAL_OK) {
+        return HAL_ERROR;
+    }
+    if (HAL_TIMEx_PWMN_Start(htim_, TIM_CHANNEL_3) != HAL_OK) {
+        return HAL_ERROR;
+    }
     return HAL_OK;
 }
 
 HAL_StatusTypeDef ThreePhasePWMOut::stop(void) {
-    
+    if (HAL_TIM_PWM_Stop(htim_, TIM_CHANNEL_1) != HAL_OK) {
+        return HAL_ERROR;
+    }
+    if (HAL_TIM_PWM_Stop(htim_, TIM_CHANNEL_2) != HAL_OK) {
+        return HAL_ERROR;
+    }
+    if (HAL_TIM_PWM_Stop(htim_, TIM_CHANNEL_3) != HAL_OK) {
+        return HAL_ERROR;
+    }
+    if (HAL_TIMEx_PWMN_Stop(htim_, TIM_CHANNEL_1) != HAL_OK) {
+        return HAL_ERROR;
+    }
+    if (HAL_TIMEx_PWMN_Stop(htim_, TIM_CHANNEL_2) != HAL_OK) {
+        return HAL_ERROR;
+    }
+    if (HAL_TIMEx_PWMN_Stop(htim_, TIM_CHANNEL_3) != HAL_OK) {
+        return HAL_ERROR;
+    }
     return HAL_OK;
 }
 

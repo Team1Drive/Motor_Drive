@@ -151,16 +151,17 @@ int main(void)
   HAL_TIM_Base_Start_IT(&htim7);
 
   /* Start PWM */
-  HAL_TIM_Base_Start(&htim8);
-  HAL_TIM_PWM_Start(&htim8, TIM_CHANNEL_1);
-  HAL_TIM_PWM_Start(&htim8, TIM_CHANNEL_2);
-  HAL_TIM_PWM_Start(&htim8, TIM_CHANNEL_3);
-  HAL_TIMEx_PWMN_Start(&htim8, TIM_CHANNEL_1);
-  HAL_TIMEx_PWMN_Start(&htim8, TIM_CHANNEL_2);
-  HAL_TIMEx_PWMN_Start(&htim8, TIM_CHANNEL_3);
+  motorPWM.init();
+  //HAL_TIM_Base_Start(&htim8);
+  //HAL_TIM_PWM_Start(&htim8, TIM_CHANNEL_1);
+  //HAL_TIM_PWM_Start(&htim8, TIM_CHANNEL_2);
+  //HAL_TIM_PWM_Start(&htim8, TIM_CHANNEL_3);
+  //HAL_TIMEx_PWMN_Start(&htim8, TIM_CHANNEL_1);
+  //HAL_TIMEx_PWMN_Start(&htim8, TIM_CHANNEL_2);
+  //HAL_TIMEx_PWMN_Start(&htim8, TIM_CHANNEL_3);
 
   /* Enable TIM8 update interrupt */
-  __HAL_TIM_ENABLE_IT(&htim8, TIM_IT_UPDATE);
+  //__HAL_TIM_ENABLE_IT(&htim8, TIM_IT_UPDATE);
 
   /* Enable Caches */
   SCB_EnableICache();
