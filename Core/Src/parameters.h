@@ -18,13 +18,13 @@
 #define USTIMER_ENCODER_PULSE_ID  0U // Identifier for encoder pulse timing in the microsecond timer
 #define USTIMER_ENCODER_INDEX_ID  1U // Identifier for encoder index timing in the microsecond timer
 
-typedef enum {
+enum class MotorControlMode : uint8_t {
     MOTOR_STOP,
     MOTOR_STARTUP,
     MOTOR_SIX_STEP,
     MOTOR_FOC_LINEAR,
     MOTOR_FOC_DPWM
-} MotorControlMode;
+};
 
 typedef struct {
     uint8_t buffer[RX_RING_SIZE];

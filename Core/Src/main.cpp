@@ -78,7 +78,7 @@ uint16_t adc1_proc_buffer[ADC1_BUF_LEN];
 uint16_t adc2_proc_buffer[ADC2_BUF_LEN];
 uint16_t adc3_proc_buffer[ADC3_BUF_LEN];
 
-MotorControlMode control_mode = MOTOR_STOP;
+MotorControlMode control_mode = MotorControlMode::MOTOR_STOP;
 
 static ring_buffer_t rx_ring = { .head = 0, .tail = 0 };
 
@@ -184,7 +184,7 @@ int main(void)
 
   usb_printf("System Initialized\n");
 
-  control_mode = MOTOR_STARTUP;
+  control_mode = MotorControlMode::MOTOR_STARTUP;
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
@@ -207,20 +207,20 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
     case GPIO_PIN_4:
       if (HAL_GPIO_ReadPin(GPIOE, GPIO_Pin) == GPIO_PIN_SET) {
         HallSensor::irqHandlerRising(GPIO_Pin);
-        if (control_mode == MOTOR_SIX_STEP) sixStepCommutation();
+        if (control_mode == MotorControlMode::MOTOR_SIX_STEP) sixStepCommutation();
       } else {
         HallSensor::irqHandlerFalling(GPIO_Pin);
-        if (control_mode == MOTOR_SIX_STEP) sixStepCommutation();
+        if (control_mode == MotorControlMode::MOTOR_SIX_STEP) sixStepCommutation();
       }
       break;
     // Hall Channel A (PB5), Hall Channel B (PB8)
     case GPIO_PIN_5: case GPIO_PIN_8:
       if (HAL_GPIO_ReadPin(GPIOB, GPIO_Pin) == GPIO_PIN_SET) {
         HallSensor::irqHandlerRising(GPIO_Pin);
-        if (control_mode == MOTOR_SIX_STEP) sixStepCommutation();
+        if (control_mode == MotorControlMode::MOTOR_SIX_STEP) sixStepCommutation();
       } else {
         HallSensor::irqHandlerFalling(GPIO_Pin);
-        if (control_mode == MOTOR_SIX_STEP) sixStepCommutation();
+        if (control_mode == MotorControlMode::MOTOR_SIX_STEP) sixStepCommutation();
       }
       break;
     // Handle Encoder Channel A (PB6), Encoder Channel B (PB7), Encoder Index (PB9)
@@ -242,10 +242,10 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
   if (htim->Instance == TIM8) {
     // PWM update interrupt
-    if (control_mode == MOTOR_FOC_LINEAR) {
+    if (control_mode == MotorControlMode::MOTOR_FOC_LINEAR) {
 
     }
-    else if (control_mode == MOTOR_STARTUP) {
+    else if (control_mode == MotorControlMode::MOTOR_STARTUP) {
       startUpSequence();
     }
   }
@@ -316,10 +316,10 @@ void timer4IRQ(void) {
 
 static void process_command(const char* cmd) {
     if (strcmp(cmd, "start") == 0) {
-      control_mode = MOTOR_STARTUP;
+      control_mode = MotorControlMode::MOTOR_STARTUP;
       startUpSequence();
     } else if (strcmp(cmd, "stop") == 0) {
-      control_mode = MOTOR_STOP;
+      control_mode = MotorControlMode::MOTOR_STOP;
     } else if (strncmp(cmd, "speed ", 6) == 0) {
         int speed;
         if (sscanf(cmd + 6, "%d", &speed) == 1) {
@@ -337,7 +337,7 @@ static void process_command(const char* cmd) {
 }
 
 void startUpSequence(void) {
-  if (control_mode != MOTOR_STARTUP) return;
+  if (control_mode != MotorControlMode::MOTOR_STARTUP) return;
   hallsensor.read();
   sixStepCommutation();
 }
