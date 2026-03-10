@@ -402,7 +402,8 @@ void test_PWM(void) {
     float alpha = cosf(angle);
     float beta = sinf(angle);
 
-    SVPWM(alpha, beta, 2.0f, &dutyA, &dutyB, &dutyC);
+    const float Ts = 1.0f / 20000.0f;
+    Modulate(ModulationType::SVPWM, alpha, beta, 2.0f, Ts, &dutyA, &dutyB, &dutyC);
 
     motorPWM.setDuty(dutyA, dutyB, dutyC);
 
