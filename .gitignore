@@ -5,3 +5,6 @@ out/build/gcc-arm/cmake_install.cmake
 out/build/gcc-arm/CMakeCache.txt
 out/build/gcc-arm/compile_commands.json
 out/build/gcc-arm/Makefile
+!out/build/gcc-arm/Motor_Drive.bin
+!out/build/gcc-arm/Motor_Drive.elf
+!out/build/gcc-arm/Motor_Drive.map
