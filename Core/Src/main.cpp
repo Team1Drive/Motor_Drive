@@ -135,10 +135,13 @@ int main(void)
   /* Start ADC */
   while (HAL_ADCEx_Calibration_Start(&hadc1, ADC_CALIB_OFFSET, ADC_SINGLE_ENDED) != HAL_OK) usb_printf("Failed to calibrate ADC1 Error code: 0x%lx\r\n", HAL_ADC_GetError(&hadc1));
   while (HAL_ADCEx_Calibration_Start(&hadc1, ADC_CALIB_OFFSET_LINEARITY, ADC_SINGLE_ENDED) != HAL_OK) usb_printf("Failed to calibrate ADC1 linearity Error code: 0x%lx\r\n", HAL_ADC_GetError(&hadc1));
+  while (HAL_ADCEx_Calibration_Start(&hadc1, ADC_CALIB_OFFSET_LINEARITY, ADC_DIFFERENTIAL_ENDED) != HAL_OK) usb_printf("Failed to calibrate ADC1 linearity Error code: 0x%lx\r\n", HAL_ADC_GetError(&hadc1));
   while (HAL_ADCEx_Calibration_Start(&hadc2, ADC_CALIB_OFFSET, ADC_SINGLE_ENDED) != HAL_OK) usb_printf("Failed to calibrate ADC2 Error code: 0x%lx\r\n", HAL_ADC_GetError(&hadc2));
   while (HAL_ADCEx_Calibration_Start(&hadc2, ADC_CALIB_OFFSET_LINEARITY, ADC_SINGLE_ENDED) != HAL_OK) usb_printf("Failed to calibrate ADC2 linearity Error code: 0x%lx\r\n", HAL_ADC_GetError(&hadc2));
+  while (HAL_ADCEx_Calibration_Start(&hadc2, ADC_CALIB_OFFSET_LINEARITY, ADC_DIFFERENTIAL_ENDED) != HAL_OK) usb_printf("Failed to calibrate ADC2 linearity Error code: 0x%lx\r\n", HAL_ADC_GetError(&hadc2));
   while (HAL_ADCEx_Calibration_Start(&hadc3, ADC_CALIB_OFFSET, ADC_SINGLE_ENDED) != HAL_OK) usb_printf("Failed to calibrate ADC3 Error code: 0x%lx\r\n", HAL_ADC_GetError(&hadc3));
   while (HAL_ADCEx_Calibration_Start(&hadc3, ADC_CALIB_OFFSET_LINEARITY, ADC_SINGLE_ENDED) != HAL_OK) usb_printf("Failed to calibrate ADC3 linearity Error code: 0x%lx\r\n", HAL_ADC_GetError(&hadc3));
+  while (HAL_ADCEx_Calibration_Start(&hadc3, ADC_CALIB_OFFSET_LINEARITY, ADC_DIFFERENTIAL_ENDED) != HAL_OK) usb_printf("Failed to calibrate ADC3 linearity Error code: 0x%lx\r\n", HAL_ADC_GetError(&hadc3));
 
   while (adc1.startDMA() != HAL_OK) usb_printf("Failed to start ADC1 DMA Error code: 0x%lx\r\n", HAL_DMA_GetError(&hdma_adc1));
   while (adc2.startDMA() != HAL_OK) usb_printf("Failed to start ADC2 DMA Error code: 0x%lx\r\n", HAL_DMA_GetError(&hdma_adc2));
@@ -191,6 +194,10 @@ int main(void)
   {
     //usb_printf("Hello from STM32! Counter: %lu\r\n", counter++);
     /* USER CODE END WHILE */
+    /* HAL_ADC_Start(&hadc1);
+    HAL_ADC_PollForConversion(&hadc1, 10);
+    uint32_t val = HAL_ADC_GetValue(&hadc1);
+    usb_printf("Polling Val: %lu\r\n", val); */
     char cmd_line[CMD_MAX_LEN];
     if (read_line_from_ring(cmd_line, CMD_MAX_LEN)) {
       process_command(cmd_line);
@@ -297,7 +304,7 @@ void timer4IRQ(void) {
   adc2.getLatestData(adc2_raw);
   adc3.getLatestData(adc3_raw);
 
-  //usb_printf("RAW: %lu\n", adc1_raw[1]);
+  usb_printf("RAW: %u\t%u\t%u\n", adc1_raw[0], adc1_raw[1], adc1_raw[2]);
 
   float ia = adcToCurrent(adc1_raw[0], 3.3f, 65536, 50.0f, 0.0f, 0.013f);
   float ib = adcToCurrent(adc2_raw[0], 3.3f, 65536, 50.0f, 0.0f, 0.013f);
