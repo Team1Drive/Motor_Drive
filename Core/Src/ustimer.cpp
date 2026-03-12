@@ -8,16 +8,15 @@ MicrosecondTimer::MicrosecondTimer(TIM_HandleTypeDef* htim):
     htim_(htim),
     overflow_count_(0) {
         instance_ = this;
-        init();
     }
 
-void MicrosecondTimer::init(void) {
+HAL_StatusTypeDef MicrosecondTimer::init(void) {
     for (int i = 0; i < 256; i++) {
         start_tick[i] = 0;
         start_overflow_count[i] = 0;
     }
     __HAL_TIM_CLEAR_IT(htim_, TIM_IT_UPDATE);
-    HAL_TIM_Base_Start_IT(htim_);
+    return HAL_TIM_Base_Start_IT(htim_);
 }
 
 void MicrosecondTimer::irqHandler(TIM_HandleTypeDef* htim) {

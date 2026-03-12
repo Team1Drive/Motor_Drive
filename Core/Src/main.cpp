@@ -151,7 +151,8 @@ int main(void)
   HAL_TIM_Base_Start_IT(&htim2);
   HAL_TIM_Base_Start_IT(&htim3);
   HAL_TIM_Base_Start_IT(&htim4);
-  HAL_TIM_Base_Start_IT(&htim7);
+
+  usTimer.init();
 
   /* Start PWM */
   motorPWM.init();

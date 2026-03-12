@@ -28,7 +28,7 @@ class MicrosecondTimer {
          * @brief Initializes the microsecond timer by resetting overflow counts and starting the timer in interrupt mode.
           * This function is called automatically in the constructor after setting the instance pointer.
          */
-        void init(void);
+        HAL_StatusTypeDef init(void);
 
         /**
          * @brief Interrupt handler for the timer overflow. Increments the overflow count each time the timer overflows.
