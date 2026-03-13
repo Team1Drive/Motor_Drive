@@ -43,21 +43,24 @@ HAL_StatusTypeDef ThreePhasePWMOut::start(void) {
     if (HAL_TIM_PWM_Start(htim_, TIM_CHANNEL_1) != HAL_OK) {
         return HAL_ERROR;
     }
-    if (HAL_TIM_PWM_Start(htim_, TIM_CHANNEL_2) != HAL_OK) {
-        return HAL_ERROR;
-    }
-    if (HAL_TIM_PWM_Start(htim_, TIM_CHANNEL_3) != HAL_OK) {
-        return HAL_ERROR;
-    }
     if (HAL_TIMEx_PWMN_Start(htim_, TIM_CHANNEL_1) != HAL_OK) {
+        return HAL_ERROR;
+    }
+    enabled_A = true;
+    if (HAL_TIM_PWM_Start(htim_, TIM_CHANNEL_2) != HAL_OK) {
         return HAL_ERROR;
     }
     if (HAL_TIMEx_PWMN_Start(htim_, TIM_CHANNEL_2) != HAL_OK) {
         return HAL_ERROR;
     }
+    enabled_B = true;
+    if (HAL_TIM_PWM_Start(htim_, TIM_CHANNEL_3) != HAL_OK) {
+        return HAL_ERROR;
+    }
     if (HAL_TIMEx_PWMN_Start(htim_, TIM_CHANNEL_3) != HAL_OK) {
         return HAL_ERROR;
     }
+    enabled_C = true;
     return HAL_OK;
 }
 
@@ -65,21 +68,24 @@ HAL_StatusTypeDef ThreePhasePWMOut::stop(void) {
     if (HAL_TIM_PWM_Stop(htim_, TIM_CHANNEL_1) != HAL_OK) {
         return HAL_ERROR;
     }
-    if (HAL_TIM_PWM_Stop(htim_, TIM_CHANNEL_2) != HAL_OK) {
-        return HAL_ERROR;
-    }
-    if (HAL_TIM_PWM_Stop(htim_, TIM_CHANNEL_3) != HAL_OK) {
-        return HAL_ERROR;
-    }
     if (HAL_TIMEx_PWMN_Stop(htim_, TIM_CHANNEL_1) != HAL_OK) {
+        return HAL_ERROR;
+    }
+    enabled_A = false;
+    if (HAL_TIM_PWM_Stop(htim_, TIM_CHANNEL_2) != HAL_OK) {
         return HAL_ERROR;
     }
     if (HAL_TIMEx_PWMN_Stop(htim_, TIM_CHANNEL_2) != HAL_OK) {
         return HAL_ERROR;
     }
+    enabled_B = false;
+    if (HAL_TIM_PWM_Stop(htim_, TIM_CHANNEL_3) != HAL_OK) {
+        return HAL_ERROR;
+    }
     if (HAL_TIMEx_PWMN_Stop(htim_, TIM_CHANNEL_3) != HAL_OK) {
         return HAL_ERROR;
     }
+    enabled_C = false;
     return HAL_OK;
 }
 
