@@ -11,7 +11,7 @@
 #define ADC3_NUM_CHANNELS   2U
 
 #define MOTOR_ROTATION_DIRECTION    -1 // 1 for clockwise, -1 for counterclockwise
-#define MOTOR_SIXSTEP_DUTYCYCLE     0.7f // Range 1.0 to 0.5
+#define MOTOR_SIXSTEP_DUTYCYCLE     1.0f // Range 1.0 to 0.5
 
 #define ENCODER_PPR     2048U // Pulses per revolution for the encoder
 

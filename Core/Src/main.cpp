@@ -320,6 +320,8 @@ void timer4IRQ(void) {
   //usb_printf("i a/b/c (A):\t%.2f\t%.2f\t%.2f\n", ia, ib, ic);
   //usb_printf("v ab/bc (V):\t%.2f\t%.2f\n", vab, vbc);
   //usb_printf("v batt (V): %.2f\t, i batt (A): %.2f\n", vbatt, ibatt);
+
+  usb_printf("RPM: %.2f\t, Direction: %d\n", encoder.getRPM(), encoder.getDirection());
 }
 
 static void process_command(const char* cmd) {

@@ -103,7 +103,7 @@ uint32_t Encoder::getCount(void) {
     return count;
 }
 
-uint8_t Encoder::getDirection(void) {
+int8_t Encoder::getDirection(void) {
     return direction_decode();
 }
 
