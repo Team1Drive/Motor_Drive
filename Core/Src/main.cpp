@@ -22,7 +22,7 @@
 void MPU_Config(void);
 
 void timer3IRQ(void);
-void timer4IRQ(void);
+void timer2IRQ(void);
 
 static void process_command(const char* cmd);
 
@@ -45,6 +45,7 @@ alignas(32) uint16_t adc2_buffer[ADC2_BUF_LEN] __attribute__((section(".sram_d1"
 alignas(32) uint16_t adc3_buffer[ADC3_BUF_LEN] __attribute__((section(".sram_d1")));
 
 /* Declare timer handles */
+extern TIM_HandleTypeDef htim1;
 extern TIM_HandleTypeDef htim2;
 extern TIM_HandleTypeDef htim3;
 extern TIM_HandleTypeDef htim4;
@@ -121,6 +122,7 @@ int main(void)
   MX_ADC1_Init();
   MX_ADC2_Init();
   MX_ADC3_Init();
+  MX_TIM1_Init();
   MX_TIM2_Init();
   MX_TIM3_Init();
   MX_TIM4_Init();
@@ -148,9 +150,9 @@ int main(void)
   while (adc3.startDMA() != HAL_OK) usb_printf("Failed to start ADC3 DMA Error code: 0x%lx\r\n", HAL_DMA_GetError(&hdma_adc3));
   
   /* Start timers */
+  HAL_TIM_Base_Start_IT(&htim1);
   HAL_TIM_Base_Start_IT(&htim2);
   HAL_TIM_Base_Start_IT(&htim3);
-  HAL_TIM_Base_Start_IT(&htim4);
 
   usTimer.init();
 
@@ -261,9 +263,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
     // 1 MHz timer interrupt (Interrupt every 65.536 ms)
     MicrosecondTimer::irqHandler(htim);
   }
-  else if (htim->Instance == TIM4) {
+  else if (htim->Instance == TIM2) {
     // 10 Hz timer interrupt
-    timer4IRQ();
+    timer2IRQ();
   }
   else if (htim->Instance == TIM3) {
     // 2 Hz timer interrupt
@@ -293,10 +295,9 @@ void timer3IRQ(void) {
   led_yellow_1.toggle();
   led_yellow_2.toggle();
   //relay.toggle();
-  //timer2IRQ();
 }
 
-void timer4IRQ(void) {
+void timer2IRQ(void) {
   uint16_t adc1_raw[3];
   uint16_t adc2_raw[2];
   uint16_t adc3_raw[2];
@@ -305,7 +306,7 @@ void timer4IRQ(void) {
   adc2.getLatestData(adc2_raw);
   adc3.getLatestData(adc3_raw);
 
-  usb_printf("RAW: %u\t%u\t%u\n", adc1_raw[0], adc1_raw[1], adc1_raw[2]);
+  //usb_printf("RAW: %u\t%u\t%u\n", adc1_raw[0], adc2_raw[0], adc3_raw[0]);
 
   float ia = adcToCurrent(adc1_raw[0], 3.3f, 65536, 50.0f, 0.0f, 0.013f);
   float ib = adcToCurrent(adc2_raw[0], 3.3f, 65536, 50.0f, 0.0f, 0.013f);

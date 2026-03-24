@@ -31,3 +31,15 @@ typedef struct {
     volatile uint16_t head;
     volatile uint16_t tail;
 } ring_buffer_t;
+
+
+/*
+Timer allocation
+
+TIM1: ADC trigger
+TIM2: 10 Hz interrupt
+TIM3: 2 Hz interrupt
+TIM4: Encoder pulse timing
+TIM7: Microsecond timer
+TIM8: PWM generation for motor control
+*/
