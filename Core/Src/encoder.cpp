@@ -20,14 +20,14 @@ int8_t Encoder::direction_decode(void) {
         (p_state == 0b01 && state == 0b11) || 
         (p_state == 0b11 && state == 0b10) || 
         (p_state == 0b10 && state == 0b00)
-    ) return 1;
+    ) return -1;
     // CW
     if (
         (p_state == 0b00 && state == 0b10) || 
         (p_state == 0b10 && state == 0b11) || 
         (p_state == 0b11 && state == 0b01) || 
         (p_state == 0b01 && state == 0b00)
-    ) return -1;
+    ) return 1;
     return 0;
 }
 
