@@ -20,6 +20,10 @@ class Encoder {
         bool is_synchronized_;
 
         float rpm;
+        float filtered_rpm_;
+        float rpm_buffer_[10];
+        float rpm_sum_;
+        uint8_t filter_idx_;
         uint8_t stall_counter_;
 
         //int8_t direction_decode(void);

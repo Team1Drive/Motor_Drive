@@ -89,8 +89,16 @@ void Encoder::updateSpeed(void) {
 
     // 2. RPM Calculation (Moving Average Filter)
     float rpm_raw = ((float)delta / counts_per_rev_) * (60.0f / speedloop_period);
+        
+    rpm_sum_ -= rpm_buffer_[filter_idx_];
+    rpm_buffer_[filter_idx_] = rpm_raw;
+    rpm_sum_ += rpm_raw;
+    filter_idx_ = (filter_idx_ + 1) % sizeof(rpm_buffer_);
+    
+    filtered_rpm_ = rpm_sum_ / (float)sizeof(rpm_buffer_);
 
-    rpm = rpm_raw * 0.8f + rpm * 0.2f;
+    //rpm = rpm_raw * 0.8f + rpm * 0.2f;
+    rpm = filtered_rpm_;
 }
 
 void Encoder::counterOverflow(void) {
@@ -111,7 +119,7 @@ void Encoder::init(void) {
 }
 
 HAL_StatusTypeDef Encoder::start(void) {
-    HAL_TIM_Encoder_Start(htim_, TIM_CHANNEL_ALL);
+    return HAL_TIM_Encoder_Start(htim_, TIM_CHANNEL_ALL);
 }
 
 void Encoder::irqHandlerIndex(uint16_t pin){
@@ -133,6 +141,7 @@ void Encoder::irqHandlerOverflow(void) {
 }
 
 void Encoder::reset(void) {
+    __HAL_TIM_SET_COUNTER(htim_, 0);
     overflow_count_ = 0;
     index_offset_ = 0;
     last_hw_cnt_ = 0;
@@ -156,11 +165,11 @@ float Encoder::getRPM(void) {
 }
 
 float Encoder::getPos_deg(void) {
-    float position = ((float)(getCount() % (ENCODER_PPR * 4U))) / (ENCODER_PPR * 4U) * 360.0f;
+    float position = ((float)(getCount() % counts_per_rev_)) / counts_per_rev_ * 360.0f;
     return position;
 }
 
 float Encoder::getPos_rad(void) {
-    float position = ((float)(getCount() % (ENCODER_PPR * 4U))) / (ENCODER_PPR * 4U) * 2.0f * M_PI;
+    float position = ((float)(getCount() % counts_per_rev_)) / counts_per_rev_ * 2.0f * M_PI;
     return position;
 }

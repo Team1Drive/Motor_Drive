@@ -23,6 +23,7 @@ void MPU_Config(void);
 
 void timer3IRQ(void);
 void timer2IRQ(void);
+void speedControl(void);
 
 static void process_command(const char* cmd);
 
@@ -161,6 +162,8 @@ int main(void)
   //HAL_TIM_Base_Start_IT(&htim8);
 
   usTimer.init();
+
+  encoder.start();
 
   /* Start PWM */
   motorPWM.init();
