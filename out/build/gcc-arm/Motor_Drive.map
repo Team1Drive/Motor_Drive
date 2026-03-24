@@ -1926,7 +1926,7 @@ Discarded input sections
  .data          0x00000000        0x0 CMakeFiles/Motor_Drive.dir/Core/Src/main.cpp.obj
  .bss           0x00000000        0x0 CMakeFiles/Motor_Drive.dir/Core/Src/main.cpp.obj
  .text._Z9timer6IRQv
-                0x00000000      0x158 CMakeFiles/Motor_Drive.dir/Core/Src/main.cpp.obj
+                0x00000000      0x150 CMakeFiles/Motor_Drive.dir/Core/Src/main.cpp.obj
  .bss._ZZ8test_PWMvE11timeElapsed
                 0x00000000        0x4 CMakeFiles/Motor_Drive.dir/Core/Src/main.cpp.obj
  .text._Z8test_PWMv

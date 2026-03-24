@@ -363,7 +363,7 @@ void timer6IRQ(void) {
   data.ib    = ib;
   data.ic    = ic;
   data.speed = encoder.getRPM();
-  data.angle = encoder.getPos();
+  data.pos   = encoder.getPos();
 
   //CDC_Transmit_HS((uint8_t*)&data, sizeof(LogData_t));
 }

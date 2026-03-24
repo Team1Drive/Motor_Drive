@@ -41,7 +41,7 @@ typedef struct {
     float ib;
     float ic;
     float speed;
-    float angle;
+    uint32_t pos;
 } LogData_t;
 #pragma pack()
 

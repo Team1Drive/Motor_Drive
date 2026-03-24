@@ -9,9 +9,9 @@ import time
 
 
 # Serial Port Configuration
-COM_PORT = 'COM3'
+COM_PORT = 'COM3'   # Adjust accodringly
 BAUDRATE = 115200
-PACKET_SIZE = 16    # 4 floats = 16 bytes
+PACKET_SIZE = 20    # 4 floats + 1 uint32_t = 20 bytes
 
 # Plot Configuration
 WINDOW_SIZE = 200
@@ -30,8 +30,8 @@ ser = serial.Serial(COM_PORT, BAUDRATE, timeout=1)
 # Packet Parsing Function
 def parse_packet(data: bytes):
     try:
-        iq, id_, speed, angle = struct.unpack('<ffff', data)
-        return iq, id_, speed, angle
+        ia, ib, ic, speed, pos = struct.unpack('<ffffI', data)
+        return ia, ib, ic, speed, pos
     except struct.error:
         return None
 
