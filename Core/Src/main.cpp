@@ -49,6 +49,7 @@ extern TIM_HandleTypeDef htim1;
 extern TIM_HandleTypeDef htim2;
 extern TIM_HandleTypeDef htim3;
 extern TIM_HandleTypeDef htim4;
+extern TIM_HandleTypeDef htim6;
 extern TIM_HandleTypeDef htim7;
 extern TIM_HandleTypeDef htim8;
 
@@ -72,7 +73,7 @@ ADCSampler adc3(&hadc3, &hdma_adc3, adc3_buffer, ADC3_BUF_LEN);
 DigitalOut pwm_ch1_dis(GPIOA, GPIO_PIN_2), pwm_ch2_dis(GPIOB, GPIO_PIN_2), pwm_ch3_dis(GPIOB, GPIO_PIN_13);
 DigitalOut led_red(GPIOC, GPIO_PIN_9), led_green(GPIOA, GPIO_PIN_8), led_yellow_1(GPIOA, GPIO_PIN_9), led_yellow_2(GPIOA, GPIO_PIN_10);
 DigitalOut relay(GPIOD, GPIO_PIN_8);
-Encoder encoder(GPIO_PIN_6, GPIO_PIN_7, GPIO_PIN_9, usTimer);
+Encoder encoder(&htim4, GPIO_PIN_9, ENCODER_PPR, TIM6_FREQ_HZ, ENCODER_STALL_THRESHOLD);
 HallSensor hallsensor(GPIOB, GPIO_PIN_5, GPIOB, GPIO_PIN_8, GPIOE, GPIO_PIN_4);
 
 uint16_t adc1_proc_buffer[ADC1_BUF_LEN];
@@ -126,6 +127,7 @@ int main(void)
   MX_TIM2_Init();
   MX_TIM3_Init();
   MX_TIM4_Init();
+  MX_TIM6_Init();
   MX_TIM7_Init();
   MX_TIM8_Init();
 
@@ -150,9 +152,13 @@ int main(void)
   while (adc3.startDMA() != HAL_OK) usb_printf("Failed to start ADC3 DMA Error code: 0x%lx\r\n", HAL_DMA_GetError(&hdma_adc3));
   
   /* Start timers */
-  HAL_TIM_Base_Start_IT(&htim1);
+  //HAL_TIM_Base_Start_IT(&htim1);
   HAL_TIM_Base_Start_IT(&htim2);
   HAL_TIM_Base_Start_IT(&htim3);
+  HAL_TIM_Base_Start_IT(&htim4);
+  HAL_TIM_Base_Start_IT(&htim6);
+  HAL_TIM_Base_Start_IT(&htim7);
+  //HAL_TIM_Base_Start_IT(&htim8);
 
   usTimer.init();
 
@@ -233,13 +239,10 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
         if (control_mode == MotorControlMode::MOTOR_SIX_STEP) sixStepCommutation();
       }
       break;
-    // Handle Encoder Channel A (PB6), Encoder Channel B (PB7), Encoder Index (PB9)
-    case GPIO_PIN_6: case GPIO_PIN_7: case GPIO_PIN_9:
+    // Handle Encoder Index (PB9)
+    case GPIO_PIN_9:
       if (HAL_GPIO_ReadPin(GPIOB, GPIO_Pin) == GPIO_PIN_SET) {
-        Encoder::irqHandlerRising(GPIO_Pin);
-      }
-      else {
-        Encoder::irqHandlerFalling(GPIO_Pin);
+        Encoder::irqHandlerIndex(GPIO_Pin);
       }
       break;
     default:
@@ -259,6 +262,11 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
       startUpSequence();
     }
   }
+  else if (htim->Instance == TIM6) {
+    // 1 kHz control loop interrupt
+    Encoder::irqHandlerSpeed();
+    speedControl();
+  }
   else if (htim->Instance == TIM7) {
     // 1 MHz timer interrupt (Interrupt every 65.536 ms)
     MicrosecondTimer::irqHandler(htim);
@@ -266,6 +274,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
   else if (htim->Instance == TIM2) {
     // 10 Hz timer interrupt
     timer2IRQ();
+  }
+  else if (htim->Instance == TIM4) {
+    Encoder::irqHandlerOverflow();
   }
   else if (htim->Instance == TIM3) {
     // 2 Hz timer interrupt
@@ -323,6 +334,10 @@ void timer2IRQ(void) {
   //usb_printf("v batt (V): %.2f\t, i batt (A): %.2f\n", vbatt, ibatt);
 
   usb_printf("RPM: %.2f\t, Direction: %d\n", encoder.getRPM(), encoder.getDirection());
+}
+
+void speedControl(void) {
+  uint32_t rpm = encoder.getRPM();
 }
 
 static void process_command(const char* cmd) {

@@ -8,34 +8,48 @@
 class Encoder {
     private:
         static Encoder* instance_;
-        uint16_t pinA_, pinB_, indexPin_;
-        MicrosecondTimer& timer_;
-        uint32_t count;
-        uint8_t state, p_state;
-        uint32_t pulse_interval, p_pulse_interval;
+        TIM_HandleTypeDef* htim_;
+        const uint32_t counts_per_rev_;
+        const float speedloop_period;
+        uint16_t indexPin_;
+        int32_t overflow_count_;
+        uint8_t stall_threshold_;
 
-        int8_t direction_decode(void);
+        uint16_t index_offset_;
+        uint16_t last_hw_cnt_;
+        bool is_synchronized_;
 
-        void chA_rise(void);
+        float rpm;
+        uint8_t stall_counter_;
 
-        void chA_fall(void);
+        //int8_t direction_decode(void);
 
-        void chB_rise(void);
+        //void chA_rise(void);
 
-        void chB_fall(void);
+        //void chA_fall(void);
+
+        //void chB_rise(void);
+
+        //void chB_fall(void);
 
         void index_rise(void);
 
-        void index_fall(void);
+        void updateSpeed(void);
+
+        void counterOverflow(void);
 
     public:
-        Encoder(uint16_t chA, uint16_t chB, uint16_t index, MicrosecondTimer& timer);
+        Encoder(TIM_HandleTypeDef* htim, uint16_t index_pin, uint32_t pulses_per_rev, uint32_t speedloop_freq, uint8_t stall_threshold);
 
         void init(void);
 
-        static void irqHandlerRising(uint16_t pin);
+        HAL_StatusTypeDef start(void);
 
-        static void irqHandlerFalling(uint16_t pin);
+        static void irqHandlerIndex(uint16_t pin);
+
+        static void irqHandlerSpeed(void);
+
+        static void irqHandlerOverflow(void);
 
         void reset(void);
 
@@ -43,7 +57,7 @@ class Encoder {
          * @brief Gets the current count of encoder pulses. This count is incremented on each rising edge of channel A and channel B, and can be reset to zero using the reset() function. The count represents the total number of pulses detected since the last reset, and can be used to calculate position, speed, and direction of rotation.
          * @return The current count of encoder pulses.
          */
-        uint32_t getCount(void);
+        uint16_t getCount(void);
 
         /**
          * @brief Gets the current direction of rotation based on the state of the encoder channels. The direction is determined by the sequence of rising and falling edges on channel A and channel B, and is typically represented as 1 for clockwise rotation, -1 for counterclockwise rotation, and 0 for no movement or invalid state.

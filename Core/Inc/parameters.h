@@ -10,10 +10,13 @@
 #define ADC2_NUM_CHANNELS   2U
 #define ADC3_NUM_CHANNELS   2U
 
+#define TIM6_FREQ_HZ        1000U
+
 #define MOTOR_ROTATION_DIRECTION    -1 // 1 for clockwise, -1 for counterclockwise
 #define MOTOR_SIXSTEP_DUTYCYCLE     1.0f // Range 1.0 to 0.5
 
-#define ENCODER_PPR     2048U // Pulses per revolution for the encoder
+#define ENCODER_PPR                 2048U // Pulses per revolution for the encoder
+#define ENCODER_STALL_THRESHOLD     10U // Threshold for detecting stall
 
 #define USTIMER_ENCODER_PULSE_ID  0U // Identifier for encoder pulse timing in the microsecond timer
 #define USTIMER_ENCODER_INDEX_ID  1U // Identifier for encoder index timing in the microsecond timer
@@ -40,6 +43,7 @@ TIM1: ADC trigger
 TIM2: 10 Hz interrupt
 TIM3: 2 Hz interrupt
 TIM4: Encoder pulse timing
+TIM6: 1000 Hz interrupt
 TIM7: Microsecond timer
 TIM8: PWM generation for motor control
 */
