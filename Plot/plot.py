@@ -16,8 +16,8 @@ PACKET_SIZE = 16    # 4 floats = 16 bytes
 # Plot Configuration
 WINDOW_SIZE = 200
 
-CHANNELS = [0, 2]
-CHANNEL_NAMES = ['Iq', 'Speed(RPM)']
+CHANNELS = [0, 3]
+CHANNEL_NAMES = ['Ia', 'Speed(RPM)']
 
 Y_LIMITS = [(-10, 10), (0, 4000)]
 

@@ -9,11 +9,11 @@ class Encoder {
     private:
         static Encoder* instance_;
         TIM_HandleTypeDef* htim_;
+        uint16_t indexPin_;
         const uint32_t counts_per_rev_;
         const float speedloop_period;
-        uint16_t indexPin_;
-        int32_t overflow_count_;
         uint8_t stall_threshold_;
+        int32_t overflow_count_;
 
         uint16_t index_offset_;
         uint16_t last_hw_cnt_;
@@ -61,7 +61,7 @@ class Encoder {
          * @brief Gets the current count of encoder pulses. This count is incremented on each rising edge of channel A and channel B, and can be reset to zero using the reset() function. The count represents the total number of pulses detected since the last reset, and can be used to calculate position, speed, and direction of rotation.
          * @return The current count of encoder pulses.
          */
-        uint16_t getCount(void);
+        uint16_t getPos(void);
 
         /**
          * @brief Gets the current direction of rotation based on the state of the encoder channels. The direction is determined by the sequence of rising and falling edges on channel A and channel B, and is typically represented as 1 for clockwise rotation, -1 for counterclockwise rotation, and 0 for no movement or invalid state.

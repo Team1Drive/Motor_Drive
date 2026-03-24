@@ -35,6 +35,16 @@ typedef struct {
     volatile uint16_t tail;
 } ring_buffer_t;
 
+#pragma pack(1)
+typedef struct {
+    float ia;
+    float ib;
+    float ic;
+    float speed;
+    float angle;
+} LogData_t;
+#pragma pack()
+
 
 /*
 Timer allocation

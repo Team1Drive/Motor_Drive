@@ -303,14 +303,6 @@ void USB_CDC_RxHandler(uint8_t* Buf, uint32_t Len) {
   }
 }
 
-void timer3IRQ(void) {
-  //led_red.toggle();
-  //led_green.toggle();
-  led_yellow_1.toggle();
-  led_yellow_2.toggle();
-  //relay.toggle();
-}
-
 void timer2IRQ(void) {
   uint16_t adc1_raw[3];
   uint16_t adc2_raw[2];
@@ -337,6 +329,43 @@ void timer2IRQ(void) {
   //usb_printf("v batt (V): %.2f\t, i batt (A): %.2f\n", vbatt, ibatt);
 
   usb_printf("RPM: %.2f\t, Direction: %d\n", encoder.getRPM(), encoder.getDirection());
+}
+
+void timer3IRQ(void) {
+  //led_red.toggle();
+  //led_green.toggle();
+  led_yellow_1.toggle();
+  led_yellow_2.toggle();
+  //relay.toggle();
+}
+
+void timer6IRQ(void) {
+  uint16_t adc1_raw[3];
+  uint16_t adc2_raw[2];
+  uint16_t adc3_raw[2];
+
+  adc1.getLatestData(adc1_raw);
+  adc2.getLatestData(adc2_raw);
+  adc3.getLatestData(adc3_raw);
+
+  float ia = adcToCurrent(adc1_raw[0], 3.3f, 65536, 50.0f, 0.0f, 0.013f);
+  float ib = adcToCurrent(adc2_raw[0], 3.3f, 65536, 50.0f, 0.0f, 0.013f);
+  float ic = adcToCurrent(adc3_raw[0], 3.3f, 4096, 50.0f, 0.0f, 0.013f);
+
+  float vab = adcToVoltage(adc2_raw[1], 3.3f, 65536, 11.0f, 0.0f);
+  float vbc = adcToVoltage(adc1_raw[1], 3.3f, 65536, 11.0f, 0.0f);
+
+  float vbatt = adcToVoltage(adc1_raw[2], 3.3f, 65536, 0.130435f, 0.0f);
+  float ibatt = adcToCurrent(adc3_raw[1], 3.3f, 4096, 50.0f, 0.0f, 0.013f);
+
+  LogData_t data;
+  data.ia    = ia;
+  data.ib    = ib;
+  data.ic    = ic;
+  data.speed = encoder.getRPM();
+  data.angle = encoder.getPos();
+
+  //CDC_Transmit_HS((uint8_t*)&data, sizeof(LogData_t));
 }
 
 void speedControl(void) {

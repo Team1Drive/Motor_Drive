@@ -10,9 +10,9 @@ Encoder::Encoder(TIM_HandleTypeDef* htim, uint16_t index_pin, uint32_t pulses_pe
     counts_per_rev_(pulses_per_rev * 4),
     speedloop_period(1.0f / (float)speedloop_freq),
     stall_threshold_(stall_threshold) {
-    instance_ = this;
-    init();
-}
+        instance_ = this;
+        init();
+    }
 
 //int8_t Encoder::direction_decode(void) {
 //    // ACW
@@ -150,7 +150,7 @@ void Encoder::reset(void) {
     stall_counter_ = 0;
 }
 
-uint16_t Encoder::getCount(void) {
+uint16_t Encoder::getPos(void) {
     if (!is_synchronized_) return 0;
     uint16_t current_hw_cnt = (uint16_t)htim_->Instance->CNT;
     return (uint16_t)(current_hw_cnt - index_offset_) & (counts_per_rev_ - 1);
@@ -165,11 +165,11 @@ float Encoder::getRPM(void) {
 }
 
 float Encoder::getPos_deg(void) {
-    float position = ((float)(getCount() % counts_per_rev_)) / counts_per_rev_ * 360.0f;
+    float position = ((float)(getPos() % counts_per_rev_)) / counts_per_rev_ * 360.0f;
     return position;
 }
 
 float Encoder::getPos_rad(void) {
-    float position = ((float)(getCount() % counts_per_rev_)) / counts_per_rev_ * 2.0f * M_PI;
+    float position = ((float)(getPos() % counts_per_rev_)) / counts_per_rev_ * 2.0f * M_PI;
     return position;
 }
