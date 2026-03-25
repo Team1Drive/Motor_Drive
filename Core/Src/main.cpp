@@ -82,6 +82,8 @@ uint16_t adc3_proc_buffer[ADC3_BUF_LEN];
 MotorControlMode control_mode = MotorControlMode::MOTOR_STOP;
 
 SystemStatus_t system_status = { .is_vvvf_running = false, .is_sixstep_running = false, .is_foc_running = false, .led_increment_counter = 0};
+ADCGain_t adc_gain = { .ia_shunt = ADC_IA_SHUNT, .ib_shunt = ADC_IB_SHUNT, .ic_shunt = ADC_IC_SHUNT, .va_gain = ADC_VA_GAIN, .vb_gain = ADC_VB_GAIN, .ibatt_shunt = ADC_IBATT_SHUNT, .vbatt_gain = ADC_VBATT_GAIN };
+Target_t target = { .speed = 0.0f, .torque = 0.0f };
 
 static ring_buffer_t rx_ring = { .head = 0, .tail = 0 };
 
@@ -309,15 +311,15 @@ void timer2IRQ(void) {
 
   //usb_printf("RAW: %u\t%u\t%u\t%.1f\n", adc1_raw[0], adc2_raw[0], adc3_raw[0], encoder.getRPM());
 
-  float ia = adcToCurrent(adc1_raw[0], 3.3f, 65536, 50.0f, 0.0f, 0.013f);
-  float ib = adcToCurrent(adc2_raw[0], 3.3f, 65536, 50.0f, 0.0f, 0.013f);
-  float ic = adcToCurrent(adc3_raw[0], 3.3f, 4096, 50.0f, 0.0f, 0.013f);
+  float ia = adcToCurrent(adc1_raw[0], 3.3f, 65536, 50.0f, 1.65f, adc_gain.ia_shunt);
+  float ib = adcToCurrent(adc2_raw[0], 3.3f, 65536, 50.0f, 1.65f, adc_gain.ib_shunt);
+  float ic = adcToCurrent(adc3_raw[0], 3.3f, 4096, 50.0f, 1.65f, adc_gain.ic_shunt);
 
-  float vab = adcToVoltage(adc2_raw[1], 3.3f, 65536, 11.0f, 0.0f);
-  float vbc = adcToVoltage(adc1_raw[1], 3.3f, 65536, 11.0f, 0.0f);
+  float vab = adcToVoltage(adc2_raw[1], 3.3f, 65536, adc_gain.va_gain, 0.0f);
+  float vbc = adcToVoltage(adc1_raw[1], 3.3f, 65536, adc_gain.vb_gain, 0.0f);
 
-  float vbatt = adcToVoltage(adc1_raw[2], 3.3f, 65536, 0.130435f, 0.0f);
-  float ibatt = adcToCurrent(adc3_raw[1], 3.3f, 4096, 50.0f, 0.0f, 0.013f);
+  float vbatt = adcToVoltage(adc1_raw[2], 3.3f, 65536, adc_gain.vbatt_gain, 0.0f);
+  float ibatt = adcToCurrent(adc3_raw[1], 3.3f, 4096, 50.0f, 1.65f, adc_gain.ibatt_shunt);
 
   //usb_printf("i a/b/c (A):\t%.2f\t%.2f\t%.2f\n", ia, ib, ic);
   //usb_printf("v ab/bc (V):\t%.2f\t%.2f\n", vab, vbc);
@@ -379,15 +381,15 @@ void timer6IRQ(void) {
   adc2.getLatestData(adc2_raw);
   adc3.getLatestData(adc3_raw);
 
-  float ia = adcToCurrent(adc1_raw[0], 3.3f, 65536, 50.0f, 0.0f, 0.013f);
-  float ib = adcToCurrent(adc2_raw[0], 3.3f, 65536, 50.0f, 0.0f, 0.013f);
-  float ic = adcToCurrent(adc3_raw[0], 3.3f, 4096, 50.0f, 0.0f, 0.013f);
+  float ia = adcToCurrent(adc1_raw[0], 3.3f, 65536, 50.0f, 0.0f, adc_gain.ia_shunt);
+  float ib = adcToCurrent(adc2_raw[0], 3.3f, 65536, 50.0f, 0.0f, adc_gain.ib_shunt);
+  float ic = adcToCurrent(adc3_raw[0], 3.3f, 4096, 50.0f, 0.0f, adc_gain.ic_shunt);
 
-  float vab = adcToVoltage(adc2_raw[1], 3.3f, 65536, 11.0f, 0.0f);
-  float vbc = adcToVoltage(adc1_raw[1], 3.3f, 65536, 11.0f, 0.0f);
+  float vab = adcToVoltage(adc2_raw[1], 3.3f, 65536, adc_gain.va_gain, 0.0f);
+  float vbc = adcToVoltage(adc1_raw[1], 3.3f, 65536, adc_gain.vb_gain, 0.0f);
 
-  float vbatt = adcToVoltage(adc1_raw[2], 3.3f, 65536, 0.130435f, 0.0f);
-  float ibatt = adcToCurrent(adc3_raw[1], 3.3f, 4096, 50.0f, 0.0f, 0.013f);
+  float vbatt = adcToVoltage(adc1_raw[2], 3.3f, 65536, adc_gain.vbatt_gain, 0.0f);
+  float ibatt = adcToCurrent(adc3_raw[1], 3.3f, 4096, 50.0f, 0.0f, adc_gain.ibatt_shunt);
 
   LogData_t data;
   data.ia    = adc1_raw[0];
@@ -525,7 +527,7 @@ const int8_t commutation_acw[8][3] = {
 }
 
 float adcToVoltage(uint32_t raw, float vref, uint32_t resolution, float gain, float offset) {
-  return ((float)raw / resolution) * vref / gain + offset;
+  return ((float)raw / resolution) * vref / gain - offset;
 }
 
 float adcToCurrent(uint32_t raw, float vref, uint32_t resolution, float gain, float offset, float shunt) {
@@ -569,10 +571,11 @@ static void process_command(const char* cmd) {
 
   // Set speed for speed loop
   } else if (strncmp(cmd, "speed ", 6) == 0) {
-    float speed;
-    if (sscanf(cmd + 6, "%f", &speed) == 1) {
+    float speed = atof(cmd + 6);
+    if (speed >= -5000.0f && speed <= 5000.0f) {
       relay.write(1);
-      motorPWM.setDuty(speed, speed, speed);
+        // Insert speed loop set speed
+      target.speed = speed;
       CDC_Transmit_HS((uint8_t*)"Speed set\r\n", 11);
     } else {
       // Wrong speed format
@@ -592,36 +595,36 @@ static void process_command(const char* cmd) {
     int count = 0;
     char* token = strtok(cmd_copy, ",");   // Comma as delimiter for three duty values
     while (token != NULL && count < 3) {
-        // Remove leading spaces from the token
-        while (*token == ' ') token++;
-        char* endptr;
-        float val = strtof(token, &endptr);
-        // Check if the entire token was a valid float (endptr should point to the end of the token or a space)
-        if (endptr != token && (*endptr == '\0' || *endptr == ' ')) {
-            values[count++] = val;
-        } else {
-            break; // Invalid float format, exit parsing
-        }
-        token = strtok(NULL, ",");
+      // Remove leading spaces from the token
+      while (*token == ' ') token++;
+      char* endptr;
+      float val = strtof(token, &endptr);
+      // Check if the entire token was a valid float (endptr should point to the end of the token or a space)
+      if (endptr != token && (*endptr == '\0' || *endptr == ' ')) {
+        values[count++] = val;
+      } else {
+        break; // Invalid float format, exit parsing
+      }
+      token = strtok(NULL, ",");
     }
 
     // Validate 3 values and in range [-1.0, 1.0]
     if (count == 3) {
-        if (values[0] >= -1.0f && values[0] <= 1.0f &&
-            values[1] >= -1.0f && values[1] <= 1.0f &&
-            values[2] >= -1.0f && values[2] <= 1.0f) {
-              motorPWM.setDuty(values[0], values[1], values[2]);
-              control_mode = MotorControlMode::MOTOR_MANUAL;
-              system_status.is_vvvf_running = false;
-              system_status.is_sixstep_running = false;
-              system_status.is_foc_running = false;
-              if (values[0] >= 0.0f &&
-                  values[1] >= 0.0f &&
-                  values[2] >= 0.0f) relay.write(1);
-              CDC_Transmit_HS((uint8_t*)"Duty set\r\n", 4);
-        } else {
-          CDC_Transmit_HS((uint8_t*)"Duty values out of range [-1,1]\r\n", 34);
-        }
+      if (values[0] >= -1.0f && values[0] <= 1.0f &&
+          values[1] >= -1.0f && values[1] <= 1.0f &&
+          values[2] >= -1.0f && values[2] <= 1.0f) {
+            motorPWM.setDuty(values[0], values[1], values[2]);
+            control_mode = MotorControlMode::MOTOR_MANUAL;
+            system_status.is_vvvf_running = false;
+            system_status.is_sixstep_running = false;
+            system_status.is_foc_running = false;
+            if (values[0] >= 0.0f &&
+              values[1] >= 0.0f &&
+              values[2] >= 0.0f) relay.write(1);
+            CDC_Transmit_HS((uint8_t*)"Duty set\r\n", 4);
+      } else {
+        CDC_Transmit_HS((uint8_t*)"Duty values out of range [-1,1]\r\n", 34);
+      }
     } else {
       CDC_Transmit_HS((uint8_t*)"Invalid duty format. Usage: duty 0.3,0.3,0.3\r\n", 48);
     }
@@ -666,6 +669,141 @@ static void process_command(const char* cmd) {
       CDC_Transmit_HS((uint8_t*)resp, strlen(resp));
     } else {
         CDC_Transmit_HS((uint8_t*)"Invalid vector. Use 0-5.\r\n", 26);
+    }
+
+  // Tune control parameters
+  } else if (strncmp(cmd, "tune ", 5) == 0) {
+    // Copy command to a mutable buffer
+    char cmd_copy[CMD_MAX_LEN];
+    strncpy(cmd_copy, cmd + 5, CMD_MAX_LEN - 1);
+    cmd_copy[CMD_MAX_LEN - 1] = '\0';
+
+    // Tokenize: expect three tokens: subsystem, parameter, value
+    char* token = strtok(cmd_copy, " ");
+    if (token == NULL) {
+        CDC_Transmit_HS((uint8_t*)"Invalid tune format. Use: tune <subsys> <param> <value>\r\n", 58);
+        return;
+    }
+    char* subsys = token;   // e.g. "speed", "current", "flux"
+
+    token = strtok(NULL, " ");
+    if (token == NULL) {
+        CDC_Transmit_HS((uint8_t*)"Missing parameter type\r\n", 25);
+        return;
+    }
+    char* param = token;    // e.g. "p", "i", "d"
+
+    token = strtok(NULL, " ");
+    if (token == NULL) {
+        CDC_Transmit_HS((uint8_t*)"Missing value\r\n", 16);
+        return;
+    }
+    // Convert value to float (supports integer or decimal)
+    char* endptr;
+    float value = strtof(token, &endptr);
+    if (endptr == token || (*endptr != '\0' && *endptr != ' ' && *endptr != '\n')) {
+        CDC_Transmit_HS((uint8_t*)"Invalid numeric value\r\n", 23);
+        return;
+    }
+
+    // Now apply based on subsys and param
+    bool success = false;
+    char resp[64];
+    float original;
+
+    // Speed loop parameters
+    if (strcmp(subsys, "speed") == 0) {
+      if (strcmp(param, "p") == 0) {
+        // Set speed loop proportional gain
+          // Replace with your actual function
+        snprintf(resp, sizeof(resp), "Speed Kp set to %.3f\r\n", value);
+        success = true;
+      } else if (strcmp(param, "i") == 0) {
+          // Replace with your actual function
+        snprintf(resp, sizeof(resp), "Speed Ki set to %.3f\r\n", value);
+        success = true;
+      } else if (strcmp(param, "d") == 0) {
+          // Replace with your actual function
+        snprintf(resp, sizeof(resp), "Speed Kd set to %.3f\r\n", value);
+        success = true;
+      } else {
+        snprintf(resp, sizeof(resp), "Unknown speed parameter '%s'\r\n", param);
+      }
+
+    // Current loop parameters
+    } else if (strcmp(subsys, "current") == 0) {
+      if (strcmp(param, "p") == 0) {
+        // Set current loop proportional gain
+          // Replace with your actual function
+        snprintf(resp, sizeof(resp), "Current Kp set to %.3f\r\n", value);
+        success = true;
+      } else if (strcmp(param, "i") == 0) {
+          // Replace with your actual function
+        snprintf(resp, sizeof(resp), "Current Ki set to %.3f\r\n", value);
+        success = true;
+      } else {
+        snprintf(resp, sizeof(resp), "Unknown current parameter '%s'\r\n", param);
+      }
+
+    // Add more subsystems and parameters as needed
+    } else if (strcmp(subsys, "flux") == 0) {
+      if (strcmp(param, "p") == 0) {
+          // Replace with your actual function
+        snprintf(resp, sizeof(resp), "Flux gain set to %.3f\r\n", value);
+        success = true;
+      } else {
+        snprintf(resp, sizeof(resp), "Unknown flux parameter '%s'\r\n", param);
+      }
+    
+    // ADC parameters
+    } else if (strcmp(subsys, "adc") == 0) {
+      if (strcmp(param, "ia") == 0) {
+        original = adc_gain.ia_shunt;
+        adc_gain.ia_shunt = value;
+        snprintf(resp, sizeof(resp), "Ia shunt set to %.4f was %.4f\r\n", value, original);
+        success = true;
+      } else if (strcmp(param, "ib") == 0) {
+        original = adc_gain.ib_shunt;
+        adc_gain.ib_shunt = value;
+        snprintf(resp, sizeof(resp), "Ib shunt set to %.4f was %.4f\r\n", value, original);
+        success = true;
+      } else if (strcmp(param, "ic") == 0) {
+        original = adc_gain.ic_shunt;
+        adc_gain.ic_shunt = value;
+        snprintf(resp, sizeof(resp), "Ic shunt set to %.4f was %.4f\r\n", value, original);
+        success = true;
+      } else if (strcmp(param, "va") == 0) {
+        original = adc_gain.va_gain;
+        adc_gain.va_gain = value;
+        snprintf(resp, sizeof(resp), "Va gain set to %.4f was %.4f\r\n", value, original);
+        success = true;
+      } else if (strcmp(param, "vb") == 0) {
+        original = adc_gain.vb_gain;
+        adc_gain.vb_gain = value;
+        snprintf(resp, sizeof(resp), "Vb gain set to %.4f was %.4f\r\n", value, original);
+        success = true;
+      } else if (strcmp(param, "ibatt") == 0) {
+        original = adc_gain.ibatt_shunt;
+        adc_gain.ibatt_shunt = value;
+        snprintf(resp, sizeof(resp), "Ibatt shunt set to %.4f was %.4f\r\n", value, original);
+        success = true;
+      } else if (strcmp(param, "vbatt") == 0) {
+        original = adc_gain.vbatt_gain;
+        adc_gain.vbatt_gain = value;
+        snprintf(resp, sizeof(resp), "Vbatt gain set to %.4f was %.4f\r\n", value, original);
+        success = true;
+      } else {
+          snprintf(resp, sizeof(resp), "Unknown flux parameter '%s'\r\n", param);
+      }
+    } else {
+        snprintf(resp, sizeof(resp), "Unknown subsystem '%s'\r\n", subsys);
+    }
+
+    if (success) {
+        CDC_Transmit_HS((uint8_t*)resp, strlen(resp));
+    } else {
+        // Error message already prepared
+        CDC_Transmit_HS((uint8_t*)resp, strlen(resp));
     }
     
   // Handle invalid case

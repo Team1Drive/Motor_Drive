@@ -10,6 +10,14 @@
 #define ADC2_NUM_CHANNELS   2U
 #define ADC3_NUM_CHANNELS   2U
 
+#define ADC_IA_SHUNT        0.013f // Ia channel gain (shunt resistor)
+#define ADC_IB_SHUNT        0.013f // Ib channel gain (shunt resistor)
+#define ADC_IC_SHUNT        0.013f // Ic channel gain (shunt resistor)
+#define ADC_VA_GAIN         11.0f // Va channel gain (voltage divider)
+#define ADC_VB_GAIN         11.0f // Vb channel gain (voltage divider)
+#define ADC_IBATT_SHUNT     0.013f // Battery current channel gain (shunt resistor)
+#define ADC_VBATT_GAIN      0.130435f // Battery voltage channel gain (voltage divider)
+
 #define TIM6_FREQ_HZ        1000U
 
 #define MOTOR_POLE_PAIRS            4U
@@ -51,6 +59,21 @@ typedef struct {
     bool    is_foc_running;
     uint8_t led_increment_counter;
 } SystemStatus_t;
+
+typedef struct {
+    float ia_shunt;
+    float ib_shunt;
+    float ic_shunt;
+    float va_gain;
+    float vb_gain;
+    float ibatt_shunt;
+    float vbatt_gain;
+} ADCGain_t;
+
+typedef struct {
+    float speed;
+    float torque;
+} Target_t;
 
 #pragma pack(1)
 typedef struct {
