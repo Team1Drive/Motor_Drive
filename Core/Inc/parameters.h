@@ -42,12 +42,16 @@ typedef struct {
 
 #pragma pack(1)
 typedef struct {
-    uint32_t ia;
-    uint32_t ib;
-    uint32_t ic;
+    uint16_t ia;
+    uint16_t ib;
+    uint16_t ic;
     float speed;
-    uint32_t pos;
+    uint16_t pos;
 } LogData_t;
+
+typedef struct {
+    bool vvvf_ramp_from_zero;
+} SystemStatus_t;
 #pragma pack()
 
 

@@ -374,14 +374,6 @@ void speedControl(void) {
 }
 
 static void process_command(const char* cmd) {
-  /* char hexbuf[128];
-  int pos = 0;
-  for (int i = 0; cmd[i] != '\0'; i++) {
-      pos += snprintf(hexbuf + pos, sizeof(hexbuf) - pos, "%02X ", (unsigned char)cmd[i]);
-  }
-  pos += snprintf(hexbuf + pos, sizeof(hexbuf) - pos, "\r\n");
-  CDC_Transmit_HS((uint8_t*)hexbuf, strlen(hexbuf)); */
-
   if (strcmp(cmd, "start") == 0) {
     control_mode = MotorControlMode::MOTOR_STARTUP;
     relay.write(1);
@@ -500,6 +492,10 @@ void startUpSequence(void) {
   vvvfRampUp();
 }
 
+/**
+ * @brief Implements a VVVF ramp-up sequence for a BLDC motor. Gradually increases the frequency and amplitude of the PWM signals to smoothly accelerate the motor from standstill to a target speed defined by VVVF_THRESHOLD_RPM.
+ * @note To be called in the TIM8 update interrupt when running in MOTOR_STARTUP mode.
+ */
 void vvvfRampUp(void) {
   const uint32_t frequency = 20000U;
   const uint32_t ramp_up = VVVF_RAMP_UP_SPEED; // RPM/s
@@ -551,6 +547,10 @@ void vvvfRampUp(void) {
   motorPWM.setDuty(dutyA, dutyB, dutyC);
 }
 
+/**
+ * @brief Implements six-step commutation control for a BLDC motor using Hall sensor feedback. Include 2 commutation tables for clockwise and anti-clockwise.
+ * @note  To be called at every Hall sensor interrupt when running in six-step mode.
+ */
 void sixStepCommutation(void) {
 // Clockwise commutation table
 const int8_t commutation_cw[8][3] = {
@@ -599,6 +599,105 @@ const int8_t commutation_acw[8][3] = {
 
   motorPWM.setDuty(dutyA, dutyB, dutyC);
 }
+
+float adcToVoltage(uint32_t raw, float vref, uint32_t resolution, float gain, float offset) {
+  return ((float)raw / resolution) * vref / gain + offset;
+}
+
+float adcToCurrent(uint32_t raw, float vref, uint32_t resolution, float gain, float offset, float shunt) {
+  float voltage = adcToVoltage(raw, vref, resolution, 1.0f, offset);
+  return voltage / (gain * shunt);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  USB Communication and Command Processing
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * @brief A simple printf-like function that formats a string and sends it over USB using the CDC interface. This function uses a fixed-size buffer to hold the formatted string and supports variable arguments like printf.
+ * @param format The format string, similar to printf.
+ */
+void usb_printf(const char *format, ...) {
+    char buffer[256];
+    va_list args;
+    va_start(args, format);
+
+    int len = vsnprintf(buffer, sizeof(buffer), format, args);
+    va_end(args);
+
+    if (len > 0) {
+        CDC_Transmit_HS((uint8_t*)buffer, len);
+    }
+}
+
+static bool ring_buffer_write(uint8_t data) {
+    uint16_t next_head = (rx_ring.head + 1) % RX_RING_SIZE;
+    if (next_head != rx_ring.tail) {
+        rx_ring.buffer[rx_ring.head] = data;
+        rx_ring.head = next_head;
+        return true;
+    }
+    return false;
+}
+
+static bool read_line_from_ring(char* line, int max_len) {
+    static char line_buffer[CMD_MAX_LEN];
+    static int idx = 0;
+
+    while (rx_ring.tail != rx_ring.head) {
+        uint8_t c = rx_ring.buffer[rx_ring.tail];
+        rx_ring.tail = (rx_ring.tail + 1) % RX_RING_SIZE;
+
+        if (c == '\n' || c == '\r') {
+            if (idx > 0) {
+                line_buffer[idx] = '\0';
+                strncpy(line, line_buffer, max_len);
+                idx = 0;
+                return true;
+            }
+        } else if (idx < max_len - 1) {
+            line_buffer[idx++] = c;
+        } else {
+            idx = 0;
+        }
+    }
+    return false;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Memory Protection Unit (MPU) Configuration
+// ─────────────────────────────────────────────────────────────────────────────
+
+void MPU_Config(void)
+{
+  MPU_Region_InitTypeDef MPU_InitStruct = {0};
+
+  /* Disables the MPU */
+  HAL_MPU_Disable();
+
+  /** Initializes and configures the Region and the memory to be protected
+  */
+  MPU_InitStruct.Enable = MPU_REGION_ENABLE;
+  MPU_InitStruct.Number = MPU_REGION_NUMBER0;
+  MPU_InitStruct.BaseAddress = 0x24000000;
+  MPU_InitStruct.Size = MPU_REGION_SIZE_128KB;
+  MPU_InitStruct.SubRegionDisable = 0x00;
+  MPU_InitStruct.TypeExtField = MPU_TEX_LEVEL0;
+  MPU_InitStruct.AccessPermission = MPU_REGION_FULL_ACCESS;
+  MPU_InitStruct.DisableExec = MPU_INSTRUCTION_ACCESS_ENABLE;
+  MPU_InitStruct.IsShareable = MPU_ACCESS_NOT_SHAREABLE;
+  MPU_InitStruct.IsCacheable = MPU_ACCESS_NOT_CACHEABLE;
+  MPU_InitStruct.IsBufferable = MPU_ACCESS_NOT_BUFFERABLE;
+
+  HAL_MPU_ConfigRegion(&MPU_InitStruct);
+  /* Enables the MPU */
+  HAL_MPU_Enable(MPU_PRIVILEGED_DEFAULT);
+
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Test Functions - No longer used
+// ─────────────────────────────────────────────────────────────────────────────
 
 // SVPWM test: Generates a rotating space vector by calculating the appropriate duty cycles for a 3-phase inverter using the SVPWM algorithm. The test runs in a timer interrupt to continuously update the PWM outputs and create a smooth rotation of the vector. This verifies that the PWM generation and modulation are working correctly, and that the motor responds as expected to changes in the duty cycle.
 void test_PWM(void) {
@@ -652,91 +751,4 @@ void test_PWM_sweep(void) {
     }
 
     motorPWM.setFrequency((uint32_t)frequency);
-}
-
-/**
- * @brief A simple printf-like function that formats a string and sends it over USB using the CDC interface. This function uses a fixed-size buffer to hold the formatted string and supports variable arguments like printf.
- * @param format The format string, similar to printf.
- */
-void usb_printf(const char *format, ...) {
-    char buffer[256];
-    va_list args;
-    va_start(args, format);
-
-    int len = vsnprintf(buffer, sizeof(buffer), format, args);
-    va_end(args);
-
-    if (len > 0) {
-        CDC_Transmit_HS((uint8_t*)buffer, len);
-    }
-}
-
-float adcToVoltage(uint32_t raw, float vref, uint32_t resolution, float gain, float offset) {
-  return ((float)raw / resolution) * vref / gain + offset;
-}
-
-float adcToCurrent(uint32_t raw, float vref, uint32_t resolution, float gain, float offset, float shunt) {
-  float voltage = adcToVoltage(raw, vref, resolution, 1.0f, offset);
-  return voltage / (gain * shunt);
-}
-
-static bool ring_buffer_write(uint8_t data) {
-    uint16_t next_head = (rx_ring.head + 1) % RX_RING_SIZE;
-    if (next_head != rx_ring.tail) {
-        rx_ring.buffer[rx_ring.head] = data;
-        rx_ring.head = next_head;
-        return true;
-    }
-    return false;
-}
-
-static bool read_line_from_ring(char* line, int max_len) {
-    static char line_buffer[CMD_MAX_LEN];
-    static int idx = 0;
-
-    while (rx_ring.tail != rx_ring.head) {
-        uint8_t c = rx_ring.buffer[rx_ring.tail];
-        rx_ring.tail = (rx_ring.tail + 1) % RX_RING_SIZE;
-
-        if (c == '\n' || c == '\r') {
-            if (idx > 0) {
-                line_buffer[idx] = '\0';
-                strncpy(line, line_buffer, max_len);
-                idx = 0;
-                return true;
-            }
-        } else if (idx < max_len - 1) {
-            line_buffer[idx++] = c;
-        } else {
-            idx = 0;
-        }
-    }
-    return false;
-}
-
-void MPU_Config(void)
-{
-  MPU_Region_InitTypeDef MPU_InitStruct = {0};
-
-  /* Disables the MPU */
-  HAL_MPU_Disable();
-
-  /** Initializes and configures the Region and the memory to be protected
-  */
-  MPU_InitStruct.Enable = MPU_REGION_ENABLE;
-  MPU_InitStruct.Number = MPU_REGION_NUMBER0;
-  MPU_InitStruct.BaseAddress = 0x24000000;
-  MPU_InitStruct.Size = MPU_REGION_SIZE_128KB;
-  MPU_InitStruct.SubRegionDisable = 0x00;
-  MPU_InitStruct.TypeExtField = MPU_TEX_LEVEL0;
-  MPU_InitStruct.AccessPermission = MPU_REGION_FULL_ACCESS;
-  MPU_InitStruct.DisableExec = MPU_INSTRUCTION_ACCESS_ENABLE;
-  MPU_InitStruct.IsShareable = MPU_ACCESS_NOT_SHAREABLE;
-  MPU_InitStruct.IsCacheable = MPU_ACCESS_NOT_CACHEABLE;
-  MPU_InitStruct.IsBufferable = MPU_ACCESS_NOT_BUFFERABLE;
-
-  HAL_MPU_ConfigRegion(&MPU_InitStruct);
-  /* Enables the MPU */
-  HAL_MPU_Enable(MPU_PRIVILEGED_DEFAULT);
-
 }
