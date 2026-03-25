@@ -83,6 +83,8 @@ uint16_t adc3_proc_buffer[ADC3_BUF_LEN];
 
 MotorControlMode control_mode = MotorControlMode::MOTOR_STOP;
 
+SystemStatus_t system_status = { .is_vvvf_running = false, .led_increment_counter = 0};
+
 static ring_buffer_t rx_ring = { .head = 0, .tail = 0 };
 
 
@@ -134,6 +136,8 @@ int main(void)
 
   /* USER CODE BEGIN 2 */
   led_red.write(1);
+
+  bool error_flag = false;
   /* Enable USB regulator */
   HAL_PWREx_EnableUSBReg();
   
@@ -153,30 +157,19 @@ int main(void)
   while (adc3.startDMA() != HAL_OK) usb_printf("Failed to start ADC3 DMA Error code: 0x%lx\r\n", HAL_DMA_GetError(&hdma_adc3));
   
   /* Start timers */
-  HAL_TIM_Base_Start(&htim1);
-  //HAL_TIM_Base_Start_IT(&htim1);
-  HAL_TIM_Base_Start_IT(&htim2);
-  HAL_TIM_Base_Start_IT(&htim3);
-  HAL_TIM_Base_Start_IT(&htim4);
-  HAL_TIM_Base_Start_IT(&htim6);
-  HAL_TIM_Base_Start_IT(&htim7);
+  if (HAL_TIM_Base_Start(&htim1) != HAL_OK) error_flag = true;
+  if (HAL_TIM_Base_Start_IT(&htim2) != HAL_OK) error_flag = true;
+  if (HAL_TIM_Base_Start_IT(&htim3) != HAL_OK) error_flag = true;
+  if (HAL_TIM_Base_Start_IT(&htim4) != HAL_OK) error_flag = true;
+  if (HAL_TIM_Base_Start_IT(&htim6) != HAL_OK) error_flag = true;
+  if (HAL_TIM_Base_Start_IT(&htim7) != HAL_OK) error_flag = true;
 
-  usTimer.init();
+  if (usTimer.init() != HAL_OK) error_flag = true;
 
-  encoder.start();
+  if (encoder.start() != HAL_OK) error_flag = true;
 
   /* Start PWM */
-  motorPWM.init();
-  //HAL_TIM_Base_Start(&htim8);
-  //HAL_TIM_PWM_Start(&htim8, TIM_CHANNEL_1);
-  //HAL_TIM_PWM_Start(&htim8, TIM_CHANNEL_2);
-  //HAL_TIM_PWM_Start(&htim8, TIM_CHANNEL_3);
-  //HAL_TIMEx_PWMN_Start(&htim8, TIM_CHANNEL_1);
-  //HAL_TIMEx_PWMN_Start(&htim8, TIM_CHANNEL_2);
-  //HAL_TIMEx_PWMN_Start(&htim8, TIM_CHANNEL_3);
-
-  /* Enable TIM8 update interrupt */
-  //__HAL_TIM_ENABLE_IT(&htim8, TIM_IT_UPDATE);
+  if (motorPWM.init() != HAL_OK) error_flag = true;
 
   /* Enable Caches */
   SCB_EnableICache();
@@ -192,14 +185,15 @@ int main(void)
   adc2.setProcessingBuffer(adc2_proc_buffer, ADC2_BUF_LEN);
   adc3.setProcessingBuffer(adc3_proc_buffer, ADC3_BUF_LEN);
 
-  led_red.write(0);
+  if (!error_flag) led_red.write(0);
+  led_green.write(0);
   led_yellow_1.write(0);
-  led_yellow_2.write(1);
-  //relay.write(1);
+  led_yellow_2.write(0);
+
+  control_mode = MotorControlMode::MOTOR_STOP;
 
   usb_printf("System Initialized\n");
 
-  control_mode = MotorControlMode::MOTOR_STOP;
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
@@ -218,6 +212,8 @@ int main(void)
   }
   /* USER CODE END 3 */
 }
+
+
 
 /* GPIO EXTI interrupt callback */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
@@ -261,7 +257,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
     if (control_mode == MotorControlMode::MOTOR_FOC_LINEAR) {
 
     }
-    else if (control_mode == MotorControlMode::MOTOR_STARTUP) {
+    else if (control_mode == MotorControlMode::MOTOR_VVVF) {
       startUpSequence();
     }
   }
@@ -332,12 +328,48 @@ void timer2IRQ(void) {
   //usb_printf("RPM: %.2f\t, Direction: %d\n", encoder.getRPM(), encoder.getDirection());
 }
 
+/**
+ * @brief Timer 3 interrupt running at 4 Hz.
+ * @note Mainly used for status indicators under different control modes.
+ */
 void timer3IRQ(void) {
-  //led_red.toggle();
-  //led_green.toggle();
-  led_yellow_1.toggle();
-  led_yellow_2.toggle();
-  //relay.toggle();
+  switch (control_mode) {
+    case MotorControlMode::MOTOR_STARTUP:
+      led_yellow_1.write(1);
+      led_yellow_2.write(1);
+      break;
+    case MotorControlMode::MOTOR_VVVF:
+      if (system_status.led_increment_counter >> 1 & 1) {
+        led_green.write(1);
+      }
+      else {
+        led_green.write(0);
+      }
+      break;
+    case MotorControlMode::MOTOR_SIX_STEP:
+      if (system_status.led_increment_counter & 1) led_green.toggle();
+      if (system_status.led_increment_counter >> 1 & 1) {
+        led_yellow_1.write(1);
+        led_yellow_2.write(0);
+      }
+      else {
+        led_yellow_1.write(0);
+        led_yellow_2.write(1);
+      }
+      break;
+    case MotorControlMode::MOTOR_FOC_LINEAR:
+      led_green.write(1);
+      break;
+    case MotorControlMode::MOTOR_FOC_DPWM:
+      led_green.write(1);
+      break;
+    default:
+      break;
+  }
+  
+  if (system_status.led_increment_counter++ >= 7) {
+    system_status.led_increment_counter = 0;
+  }
 }
 
 void timer6IRQ(void) {
@@ -377,7 +409,7 @@ void startUpSequence(void) {
   if (control_mode != MotorControlMode::MOTOR_STARTUP) return;
   hallsensor.read();
   //sixStepCommutation();
-  vvvfRampUp();
+  control_mode = MotorControlMode::MOTOR_VVVF;
 }
 
 /**
@@ -385,19 +417,20 @@ void startUpSequence(void) {
  * @note To be called in the TIM8 update interrupt when running in MOTOR_STARTUP mode.
  */
 void vvvfRampUp(void) {
-  const uint32_t frequency = 20000U;
   const uint32_t ramp_up = VVVF_RAMP_UP_SPEED; // RPM/s
-  const float step_increment = (float)ramp_up / frequency;
-  static float rpm = 0.0f;  
-  static float angle = 0.0f;
-  static bool accelerating = true;
-  static uint32_t last_call_time = 0;
+  static float rpm;  
+  static float angle;
+  static bool accelerating;
 
-  if (HAL_GetTick() - last_call_time > 500U) {
+  if (!system_status.is_vvvf_running) {
     rpm = 0.0f;
     angle = 0.0f;
+    accelerating = true;
+    system_status.is_vvvf_running = true;
   }
-  last_call_time = HAL_GetTick();
+
+  uint32_t frequency = motorPWM.getFrequency();
+  float step_increment = (float)ramp_up / frequency;
 
   if (accelerating) {
     rpm += step_increment;
@@ -506,6 +539,7 @@ static void process_command(const char* cmd) {
   // Start
   if (strcmp(cmd, "start") == 0) {
     control_mode = MotorControlMode::MOTOR_STARTUP;
+    system_status.is_vvvf_running = false;
     relay.write(1);
     startUpSequence();
     CDC_Transmit_HS((uint8_t*)"Starting\r\n", 4);
@@ -513,12 +547,14 @@ static void process_command(const char* cmd) {
   // Stop
   } else if (strcmp(cmd, "stop") == 0) {
     control_mode = MotorControlMode::MOTOR_STOP;
+    system_status.is_vvvf_running = false;
     relay.write(0);
     CDC_Transmit_HS((uint8_t*)"Stopping\r\n", 4);
 
   // Six-step commutation
   } else if (strcmp(cmd, "sixstep") == 0) {
     control_mode = MotorControlMode::MOTOR_SIX_STEP;
+    system_status.is_vvvf_running = false;
     relay.write(1);
     sixStepCommutation();
     CDC_Transmit_HS((uint8_t*)"Six-step running\r\n", 31);

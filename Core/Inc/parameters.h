@@ -29,6 +29,7 @@
 enum class MotorControlMode : uint8_t {
     MOTOR_STOP,
     MOTOR_STARTUP,
+    MOTOR_VVVF,
     MOTOR_SIX_STEP,
     MOTOR_FOC_LINEAR,
     MOTOR_FOC_DPWM
@@ -40,6 +41,11 @@ typedef struct {
     volatile uint16_t tail;
 } ring_buffer_t;
 
+typedef struct {
+    bool    is_vvvf_running;
+    uint8_t led_increment_counter;
+} SystemStatus_t;
+
 #pragma pack(1)
 typedef struct {
     uint16_t ia;
@@ -48,10 +54,6 @@ typedef struct {
     float speed;
     uint16_t pos;
 } LogData_t;
-
-typedef struct {
-    bool vvvf_ramp_from_zero;
-} SystemStatus_t;
 #pragma pack()
 
 
@@ -60,7 +62,7 @@ Timer allocation
 
 TIM1: ADC trigger
 TIM2: 10 Hz interrupt
-TIM3: 2 Hz interrupt
+TIM3: 4 Hz interrupt
 TIM4: Encoder pulse timing
 TIM6: 1000 Hz interrupt
 TIM7: Microsecond timer

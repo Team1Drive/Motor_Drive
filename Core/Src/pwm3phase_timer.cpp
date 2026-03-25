@@ -184,13 +184,14 @@ HAL_StatusTypeDef ThreePhasePWMOut::setDeadTime(uint32_t deadtime_ns) {
 HAL_StatusTypeDef ThreePhasePWMOut::setFrequency(uint32_t freq_Hz) {
     HAL_StatusTypeDef status = HAL_OK;
 
+    pwm_freq_Hz = freq_Hz;
     uint32_t timer_clock = HAL_RCC_GetPCLK2Freq();
     uint32_t psc = 0;
-    uint32_t arr = (uint32_t)(timer_clock / freq_Hz) - 1U;
+    uint32_t arr = (uint32_t)(timer_clock / pwm_freq_Hz) - 1U;
     if (arr > 0xFFFF) {
         // Case for ARR overflow: increase prescaler to bring ARR within 16-bit range
         psc = arr / 0xFFFF;
-        arr = (timer_clock / (freq_Hz * (psc + 1U))) - 1U;
+        arr = (timer_clock / (pwm_freq_Hz * (psc + 1U))) - 1U;
     }
     __HAL_TIM_SET_PRESCALER(htim_, psc);
     __HAL_TIM_SET_AUTORELOAD(htim_, arr);
@@ -198,4 +199,8 @@ HAL_StatusTypeDef ThreePhasePWMOut::setFrequency(uint32_t freq_Hz) {
     updateCompareValues();
 
     return status;
+}
+
+uint32_t ThreePhasePWMOut::getFrequency(void) {
+    return pwm_freq_Hz;
 }

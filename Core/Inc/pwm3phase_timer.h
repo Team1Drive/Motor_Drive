@@ -8,6 +8,7 @@ class ThreePhasePWMOut {
         TIM_HandleTypeDef* htim_;
         float duty_A, duty_B, duty_C;
         bool enabled_A, enabled_B, enabled_C;
+        uint32_t pwm_freq_Hz;
 
         void updateCompareValues(void);
 
@@ -50,4 +51,10 @@ class ThreePhasePWMOut {
          * @return HAL status code indicating success or failure of setting the frequency.
          */
         HAL_StatusTypeDef setFrequency(uint32_t freq_Hz);
+
+        /**
+         * Get the current PWM switching frequency.
+         * @return Current PWM frequency in Hertz.
+         */
+        uint32_t getFrequency(void);
 };
