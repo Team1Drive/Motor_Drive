@@ -9,7 +9,7 @@ import time
 
 
 # Serial Port Configuration
-COM_PORT = 'COM3'   # Adjust accodringly
+COM_PORT = 'COM4'   # Adjust accodringly
 BAUDRATE = 115200
 PACKET_SIZE = 20    # 4 floats + 1 uint32_t = 20 bytes
 

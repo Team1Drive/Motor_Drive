@@ -93,9 +93,9 @@ void Encoder::updateSpeed(void) {
     rpm_sum_ -= rpm_buffer_[filter_idx_];
     rpm_buffer_[filter_idx_] = rpm_raw;
     rpm_sum_ += rpm_raw;
-    filter_idx_ = (filter_idx_ + 1) % sizeof(rpm_buffer_);
+    filter_idx_ = (filter_idx_ + 1) % 10U;
     
-    filtered_rpm_ = rpm_sum_ / (float)sizeof(rpm_buffer_);
+    filtered_rpm_ = rpm_sum_ / (float)10U;
 
     //rpm = rpm_raw * 0.8f + rpm * 0.2f;
     rpm = filtered_rpm_;

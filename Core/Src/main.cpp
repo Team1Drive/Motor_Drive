@@ -17,8 +17,6 @@
 #define ADC2_BUF_LEN  4096
 #define ADC3_BUF_LEN  4096
 
-
-
 void MPU_Config(void);
 
 void timer3IRQ(void);
@@ -28,6 +26,7 @@ void speedControl(void);
 static void process_command(const char* cmd);
 
 void startUpSequence(void);
+void vvvfRampUp(void);
 void sixStepCommutation(void);
 void test_PWM(void);
 void test_PWM_sweep(void);
@@ -159,7 +158,6 @@ int main(void)
   HAL_TIM_Base_Start_IT(&htim4);
   HAL_TIM_Base_Start_IT(&htim6);
   HAL_TIM_Base_Start_IT(&htim7);
-  //HAL_TIM_Base_Start_IT(&htim8);
 
   usTimer.init();
 
@@ -195,11 +193,11 @@ int main(void)
   led_red.write(0);
   led_yellow_1.write(0);
   led_yellow_2.write(1);
-  relay.write(1);
+  //relay.write(1);
 
   usb_printf("System Initialized\n");
 
-  control_mode = MotorControlMode::MOTOR_STARTUP;
+  control_mode = MotorControlMode::MOTOR_STOP;
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
@@ -328,7 +326,7 @@ void timer2IRQ(void) {
   //usb_printf("v ab/bc (V):\t%.2f\t%.2f\n", vab, vbc);
   //usb_printf("v batt (V): %.2f\t, i batt (A): %.2f\n", vbatt, ibatt);
 
-  usb_printf("RPM: %.2f\t, Direction: %d\n", encoder.getRPM(), encoder.getDirection());
+  //usb_printf("RPM: %.2f\t, Direction: %d\n", encoder.getRPM(), encoder.getDirection());
 }
 
 void timer3IRQ(void) {
@@ -373,31 +371,170 @@ void speedControl(void) {
 }
 
 static void process_command(const char* cmd) {
-    if (strcmp(cmd, "start") == 0) {
-      control_mode = MotorControlMode::MOTOR_STARTUP;
-      startUpSequence();
-    } else if (strcmp(cmd, "stop") == 0) {
-      control_mode = MotorControlMode::MOTOR_STOP;
-    } else if (strncmp(cmd, "speed ", 6) == 0) {
-        int speed;
-        if (sscanf(cmd + 6, "%d", &speed) == 1) {
-            motorPWM.setDuty(speed, speed, speed);
+  /* char hexbuf[128];
+  int pos = 0;
+  for (int i = 0; cmd[i] != '\0'; i++) {
+      pos += snprintf(hexbuf + pos, sizeof(hexbuf) - pos, "%02X ", (unsigned char)cmd[i]);
+  }
+  pos += snprintf(hexbuf + pos, sizeof(hexbuf) - pos, "\r\n");
+  CDC_Transmit_HS((uint8_t*)hexbuf, strlen(hexbuf)); */
+
+  if (strcmp(cmd, "start") == 0) {
+    control_mode = MotorControlMode::MOTOR_STARTUP;
+    relay.write(1);
+    startUpSequence();
+    CDC_Transmit_HS((uint8_t*)"Starting\r\n", 4);
+
+  } else if (strcmp(cmd, "stop") == 0) {
+    control_mode = MotorControlMode::MOTOR_STOP;
+    relay.write(0);
+    CDC_Transmit_HS((uint8_t*)"Stopping\r\n", 4);
+
+  } else if (strcmp(cmd, "sixstep") == 0) {
+    control_mode = MotorControlMode::MOTOR_SIX_STEP;
+    relay.write(1);
+    sixStepCommutation();
+    CDC_Transmit_HS((uint8_t*)"Six-step running\r\n", 31);
+
+  } else if (strncmp(cmd, "speed ", 6) == 0) {
+    relay.write(1);
+      float speed;
+      if (sscanf(cmd + 6, "%f", &speed) == 1) {
+          motorPWM.setDuty(speed, speed, speed);
+          CDC_Transmit_HS((uint8_t*)"Speed set\r\n", 11);
+      } else {
+          // Wrong speed format
+          const char* err = "Invalid speed\r\n";
+          CDC_Transmit_HS((uint8_t*)err, strlen(err));
+      }
+
+  } else if (strncmp(cmd, "duty ", 5) == 0) {
+    relay.write(1);
+    // 复制字符串，因为 strtok 会修改原内容（我们也可以直接用 strchr 遍历，但复制简单安全）
+    char cmd_copy[CMD_MAX_LEN];
+    strncpy(cmd_copy, cmd + 5, CMD_MAX_LEN - 1);
+    cmd_copy[CMD_MAX_LEN - 1] = '\0';
+
+    float values[3] = {0};
+    int count = 0;
+    char* token = strtok(cmd_copy, ",");   // 以逗号分隔
+    while (token != NULL && count < 3) {
+        // 去除可能的前后空格（简单处理：跳过前导空格）
+        while (*token == ' ') token++;
+        char* endptr;
+        float val = strtof(token, &endptr);
+        // 检查转换是否成功（endptr 指向字符串末尾或剩余空格/逗号）
+        if (endptr != token && (*endptr == '\0' || *endptr == ' ')) {
+            values[count++] = val;
         } else {
-            // Wrong speed format
-            const char* err = "Invalid speed\r\n";
-            CDC_Transmit_HS((uint8_t*)err, strlen(err));
+            break; // 格式错误
+        }
+        token = strtok(NULL, ",");
+    }
+
+    if (count == 3) {
+        if (values[0] >= -1.0f && values[0] <= 1.0f &&
+            values[1] >= -1.0f && values[1] <= 1.0f &&
+            values[2] >= -1.0f && values[2] <= 1.0f) {
+            motorPWM.setDuty(values[0], values[1], values[2]);
+            CDC_Transmit_HS((uint8_t*)"Duty set\r\n", 4);
+        } else {
+            CDC_Transmit_HS((uint8_t*)"Duty values out of range [-1,1]\r\n", 34);
         }
     } else {
-        // Unknown command
-        const char* err = "Unknown command\r\n";
-        CDC_Transmit_HS((uint8_t*)err, strlen(err));
+        CDC_Transmit_HS((uint8_t*)"Invalid duty format. Usage: duty 0.3,0.3,0.3\r\n", 48);
     }
+
+  } else if (strncmp(cmd, "vec ", 4) == 0) {
+    relay.write(1);
+    int vec_num = atoi(cmd + 4);  // 提取数字，例如 "vec 3" -> 3
+    if (vec_num >= 0 && vec_num <= 5) {
+      // 六个基本矢量的三相状态 (a,b,c) 
+      // 1 = 上桥开下桥关, 0 = 上桥关下桥开, -1 = 全关
+      const int8_t vector_states[6][3] = {
+          { 1,  0, -1},  // 0: A+B-
+          { 1, -1,  0},  // 1: A+C-
+          {-1,  1,  0},  // 2: B+C-
+          { 0,  1, -1},  // 3: B+A-
+          { 0, -1,  1},  // 4: C+A-
+          {-1,  0,  1}   // 5: C+B-
+      };
+      
+      int8_t a_state = vector_states[vec_num][0];
+      int8_t b_state = vector_states[vec_num][1];
+      int8_t c_state = vector_states[vec_num][2];
+      
+      // 转换为占空比或 -1（高阻）
+      float dutyA = (a_state == 1) ? MOTOR_SIXSTEP_DUTYCYCLE : 
+                    (a_state == 0) ? (1.0f - MOTOR_SIXSTEP_DUTYCYCLE) : -1.0f;
+      float dutyB = (b_state == 1) ? MOTOR_SIXSTEP_DUTYCYCLE : 
+                    (b_state == 0) ? (1.0f - MOTOR_SIXSTEP_DUTYCYCLE) : -1.0f;
+      float dutyC = (c_state == 1) ? MOTOR_SIXSTEP_DUTYCYCLE : 
+                    (c_state == 0) ? (1.0f - MOTOR_SIXSTEP_DUTYCYCLE) : -1.0f;
+      
+      motorPWM.setDuty(dutyA, dutyB, dutyC);
+      
+      // 可选：读取当前霍尔状态，用于调试
+      uint8_t hall_state = hallsensor.getState();  // 需要确保该函数存在
+      char resp[64];
+      snprintf(resp, sizeof(resp), "Vector %d applied, Hall=%d\r\n", vec_num, hall_state);
+      CDC_Transmit_HS((uint8_t*)resp, strlen(resp));
+    } else {
+        CDC_Transmit_HS((uint8_t*)"Invalid vector. Use 0-5.\r\n", 26);
+    }
+    
+  } else {
+      // Unknown command
+      const char* err = "Unknown command\r\n";
+      CDC_Transmit_HS((uint8_t*)err, strlen(err));
+  }
 }
 
 void startUpSequence(void) {
   if (control_mode != MotorControlMode::MOTOR_STARTUP) return;
   hallsensor.read();
-  sixStepCommutation();
+  //sixStepCommutation();
+  vvvfRampUp();
+}
+
+void vvvfRampUp(void) {
+  const uint32_t frequency = 20000U;
+  const uint32_t ramp_up = VVVF_RAMP_UP_SPEED; // RPM/s
+  const float step_increment = (float)ramp_up / frequency;
+  static float rpm = 0.0f;  
+  static float angle = 0.0f;
+  static bool accelerating = true;
+  static uint32_t last_call_time = 0;
+
+  if (HAL_GetTick() - last_call_time > 500U) {
+    rpm = 0.0f;
+    angle = 0.0f;
+  }
+  last_call_time = HAL_GetTick();
+
+  if (accelerating) {
+    rpm += step_increment;
+    if (rpm >= VVVF_THRESHOLD_RPM) {
+      rpm = VVVF_THRESHOLD_RPM;
+      accelerating = false;
+    }
+  }
+
+  float electrical_freq = rpm / 60.0f * MOTOR_POLE_PAIRS;
+
+  float delta_angle = 2.0f * M_PI * electrical_freq / frequency;
+  angle += delta_angle;
+  if (angle >= 2.0f * M_PI) angle -= 2.0f * M_PI;
+
+  float amplitude = accelerating ? (rpm / VVVF_THRESHOLD_RPM) : 1.0f;
+  if (amplitude > 1.0f) amplitude = 1.0f;
+  if (amplitude < 0.1f) amplitude = 0.05f;
+
+  float dutyA = 0.5f + amplitude * 0.5f * sinf(angle);
+  float dutyB = 0.5f + amplitude * 0.5f * sinf(angle + 2.0f * M_PI / 3.0f);
+  float dutyC = 0.5f + amplitude * 0.5f * sinf(angle + 4.0f * M_PI / 3.0f);
+
+  motorPWM.setDuty(dutyA, dutyB, dutyC);
 }
 
 void sixStepCommutation(void) {

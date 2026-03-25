@@ -12,8 +12,13 @@
 
 #define TIM6_FREQ_HZ        1000U
 
-#define MOTOR_ROTATION_DIRECTION    -1 // 1 for clockwise, -1 for counterclockwise
+#define MOTOR_POLE_PAIRS            4U
+
+#define MOTOR_ROTATION_DIRECTION    1 // 1 for clockwise, -1 for counterclockwise
 #define MOTOR_SIXSTEP_DUTYCYCLE     1.0f // Range 1.0 to 0.5
+
+#define VVVF_RAMP_UP_SPEED          60U // 60 RPM/s
+#define VVVF_THRESHOLD_RPM          3000U // Minimum RPM to maintain after ramp-up
 
 #define ENCODER_PPR                 2048U // Pulses per revolution for the encoder
 #define ENCODER_STALL_THRESHOLD     10U // Threshold for detecting stall
@@ -56,4 +61,16 @@ TIM4: Encoder pulse timing
 TIM6: 1000 Hz interrupt
 TIM7: Microsecond timer
 TIM8: PWM generation for motor control
+*/
+
+/*
+010 A+ B- C*
+011 A* B+ C-
+
+
+
+A   B   C
+1   X   0   120
+
+1 0 -1 -> -1 1 0
 */
