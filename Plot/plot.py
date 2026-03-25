@@ -14,12 +14,12 @@ BAUDRATE = 115200
 PACKET_SIZE = 20    # 4 floats + 1 uint32_t = 20 bytes
 
 # Plot Configuration
-WINDOW_SIZE = 200
+WINDOW_SIZE = 1000
 
 CHANNELS = [0, 3]
 CHANNEL_NAMES = ['Ia', 'Speed(RPM)']
 
-Y_LIMITS = [(-10, 10), (0, 4000)]
+Y_LIMITS = [(0, 65536), (0, 3000)]
 
 # Initialize data queues for each channel
 data_queues = [deque(maxlen=WINDOW_SIZE) for _ in CHANNELS]
@@ -30,7 +30,7 @@ ser = serial.Serial(COM_PORT, BAUDRATE, timeout=1)
 # Packet Parsing Function
 def parse_packet(data: bytes):
     try:
-        ia, ib, ic, speed, pos = struct.unpack('<ffffI', data)
+        ia, ib, ic, speed, pos = struct.unpack('<IIIfI', data)
         return ia, ib, ic, speed, pos
     except struct.error:
         return None

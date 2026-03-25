@@ -19,8 +19,9 @@
 
 void MPU_Config(void);
 
-void timer3IRQ(void);
 void timer2IRQ(void);
+void timer3IRQ(void);
+void timer6IRQ(void);
 void speedControl(void);
 
 static void process_command(const char* cmd);
@@ -152,6 +153,7 @@ int main(void)
   while (adc3.startDMA() != HAL_OK) usb_printf("Failed to start ADC3 DMA Error code: 0x%lx\r\n", HAL_DMA_GetError(&hdma_adc3));
   
   /* Start timers */
+  HAL_TIM_Base_Start(&htim1);
   //HAL_TIM_Base_Start_IT(&htim1);
   HAL_TIM_Base_Start_IT(&htim2);
   HAL_TIM_Base_Start_IT(&htim3);
@@ -267,6 +269,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
     // 1 kHz control loop interrupt
     Encoder::irqHandlerSpeed();
     speedControl();
+    timer6IRQ();
   }
   else if (htim->Instance == TIM7) {
     // 1 MHz timer interrupt (Interrupt every 65.536 ms)
@@ -310,7 +313,7 @@ void timer2IRQ(void) {
   adc2.getLatestData(adc2_raw);
   adc3.getLatestData(adc3_raw);
 
-  //usb_printf("RAW: %u\t%u\t%u\n", adc1_raw[0], adc2_raw[0], adc3_raw[0]);
+  //usb_printf("RAW: %u\t%u\t%u\t%.1f\n", adc1_raw[0], adc2_raw[0], adc3_raw[0], encoder.getRPM());
 
   float ia = adcToCurrent(adc1_raw[0], 3.3f, 65536, 50.0f, 0.0f, 0.013f);
   float ib = adcToCurrent(adc2_raw[0], 3.3f, 65536, 50.0f, 0.0f, 0.013f);
@@ -357,13 +360,13 @@ void timer6IRQ(void) {
   float ibatt = adcToCurrent(adc3_raw[1], 3.3f, 4096, 50.0f, 0.0f, 0.013f);
 
   LogData_t data;
-  data.ia    = ia;
-  data.ib    = ib;
-  data.ic    = ic;
+  data.ia    = adc1_raw[0];
+  data.ib    = adc2_raw[0];
+  data.ic    = adc3_raw[0];
   data.speed = encoder.getRPM();
   data.pos   = encoder.getPos();
 
-  //CDC_Transmit_HS((uint8_t*)&data, sizeof(LogData_t));
+  CDC_Transmit_HS((uint8_t*)&data, sizeof(LogData_t));
 }
 
 void speedControl(void) {
@@ -526,9 +529,20 @@ void vvvfRampUp(void) {
   angle += delta_angle;
   if (angle >= 2.0f * M_PI) angle -= 2.0f * M_PI;
 
-  float amplitude = accelerating ? (rpm / VVVF_THRESHOLD_RPM) : 1.0f;
+  // 改进的 V/f 曲线：增加最小电压和转折点
+  float amplitude;
+  const float MIN_VOLTAGE = 0.15f;      // 最小占空比幅度 15%
+  const float KNEE_RPM = 300.0f;        // 转折点转速 (RPM)
+  if (rpm < KNEE_RPM) {
+      // 低速段：线性从 MIN_VOLTAGE 升到 1.0
+      amplitude = MIN_VOLTAGE + (1.0f - MIN_VOLTAGE) * (rpm / KNEE_RPM);
+  } else {
+      // 高速段：保持 1.0（或继续增加，但一般保持满压）
+      amplitude = 1.0f;
+  }
+
+  // 限制最大幅度
   if (amplitude > 1.0f) amplitude = 1.0f;
-  if (amplitude < 0.1f) amplitude = 0.05f;
 
   float dutyA = 0.5f + amplitude * 0.5f * sinf(angle);
   float dutyB = 0.5f + amplitude * 0.5f * sinf(angle + 2.0f * M_PI / 3.0f);
