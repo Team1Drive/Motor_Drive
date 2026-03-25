@@ -15,7 +15,8 @@
 #define MOTOR_POLE_PAIRS            4U
 
 #define MOTOR_ROTATION_DIRECTION    1 // 1 for clockwise, -1 for counterclockwise
-#define MOTOR_SIXSTEP_DUTYCYCLE     1.0f // Range 1.0 to 0.5
+
+#define SIXSTEP_DUTYCYCLE           1.0f // Range 1.0 to 0.5
 
 #define VVVF_RAMP_UP_SPEED          60U // 60 RPM/s
 #define VVVF_THRESHOLD_RPM          2000U // Minimum RPM to maintain after ramp-up
@@ -26,8 +27,11 @@
 #define USTIMER_ENCODER_PULSE_ID  0U // Identifier for encoder pulse timing in the microsecond timer
 #define USTIMER_ENCODER_INDEX_ID  1U // Identifier for encoder index timing in the microsecond timer
 
+
+
 enum class MotorControlMode : uint8_t {
     MOTOR_STOP,
+    MOTOR_MANUAL,
     MOTOR_STARTUP,
     MOTOR_VVVF,
     MOTOR_SIX_STEP,
@@ -43,6 +47,8 @@ typedef struct {
 
 typedef struct {
     bool    is_vvvf_running;
+    bool    is_sixstep_running;
+    bool    is_foc_running;
     uint8_t led_increment_counter;
 } SystemStatus_t;
 
@@ -67,4 +73,18 @@ TIM4: Encoder pulse timing
 TIM6: 1000 Hz interrupt
 TIM7: Microsecond timer
 TIM8: PWM generation for motor control
+
+
+ADC channel allocation
+
+I_A     ADC1  PA7 INP7
+I_B     ADC2  PB1 INP5
+I_C     ADC3  PC1 INP11
+V_A+    ADC2  PC4 INP4
+V_A-    ADC2  PC5 INN4
+V_B+    ADC1  PA0 INP16
+V_B-    ADC1  PA1 INN16
+I_BATT  ADC3  PC0 INP10
+V_BATT  ADC1  PB0 INP9
 */
+

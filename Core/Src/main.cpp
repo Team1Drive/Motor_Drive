@@ -24,19 +24,17 @@ void timer3IRQ(void);
 void timer6IRQ(void);
 void speedControl(void);
 
-static void process_command(const char* cmd);
-
 void startUpSequence(void);
 void vvvfRampUp(void);
 void sixStepCommutation(void);
 void test_PWM(void);
 void test_PWM_sweep(void);
 
-void usb_printf(const char *format, ...);
-
 float adcToVoltage(uint32_t raw, float vref, uint32_t resolution, float gain, float offset);
 float adcToCurrent(uint32_t raw, float vref, uint32_t resolution, float gain, float offset, float shunt);
 
+static void process_command(const char* cmd);
+void usb_printf(const char *format, ...);
 static bool ring_buffer_write(uint8_t data);
 static bool read_line_from_ring(char* line, int max_len);
 
@@ -83,7 +81,7 @@ uint16_t adc3_proc_buffer[ADC3_BUF_LEN];
 
 MotorControlMode control_mode = MotorControlMode::MOTOR_STOP;
 
-SystemStatus_t system_status = { .is_vvvf_running = false, .led_increment_counter = 0};
+SystemStatus_t system_status = { .is_vvvf_running = false, .is_sixstep_running = false, .is_foc_running = false, .led_increment_counter = 0};
 
 static ring_buffer_t rx_ring = { .head = 0, .tail = 0 };
 
@@ -408,7 +406,7 @@ void speedControl(void) {
 void startUpSequence(void) {
   if (control_mode != MotorControlMode::MOTOR_STARTUP) return;
   hallsensor.read();
-  //sixStepCommutation();
+  motorPWM.setDuty(1.0f, 0.0f, -1.0f);
   control_mode = MotorControlMode::MOTOR_VVVF;
 }
 
@@ -497,6 +495,11 @@ const int8_t commutation_acw[8][3] = {
     { -1, -1, -1 }  // 7 (Invalid)
 };
 
+  if (!system_status.is_sixstep_running) {
+    hallsensor.read();
+    system_status.is_sixstep_running = true;
+  }
+
   uint8_t hall_state = hallsensor.getState();
 
   if (hall_state < 1 || hall_state > 6) return;
@@ -514,9 +517,9 @@ const int8_t commutation_acw[8][3] = {
       c_state = commutation_acw[hall_state][2];
   }
 
-  float dutyB = (b_state == 1) ? MOTOR_SIXSTEP_DUTYCYCLE : (b_state == 0) ? (1.0f - MOTOR_SIXSTEP_DUTYCYCLE) : -1.0f;
-  float dutyC = (c_state == 1) ? MOTOR_SIXSTEP_DUTYCYCLE : (c_state == 0) ? (1.0f - MOTOR_SIXSTEP_DUTYCYCLE) : -1.0f;
-  float dutyA = (a_state == 1) ? MOTOR_SIXSTEP_DUTYCYCLE : (a_state == 0) ? (1.0f - MOTOR_SIXSTEP_DUTYCYCLE) : -1.0f;
+  float dutyB = (b_state == 1) ? SIXSTEP_DUTYCYCLE : (b_state == 0) ? (1.0f - SIXSTEP_DUTYCYCLE) : -1.0f;
+  float dutyC = (c_state == 1) ? SIXSTEP_DUTYCYCLE : (c_state == 0) ? (1.0f - SIXSTEP_DUTYCYCLE) : -1.0f;
+  float dutyA = (a_state == 1) ? SIXSTEP_DUTYCYCLE : (a_state == 0) ? (1.0f - SIXSTEP_DUTYCYCLE) : -1.0f;
 
   motorPWM.setDuty(dutyA, dutyB, dutyC);
 }
@@ -540,6 +543,8 @@ static void process_command(const char* cmd) {
   if (strcmp(cmd, "start") == 0) {
     control_mode = MotorControlMode::MOTOR_STARTUP;
     system_status.is_vvvf_running = false;
+    system_status.is_sixstep_running = false;
+    system_status.is_foc_running = false;
     relay.write(1);
     startUpSequence();
     CDC_Transmit_HS((uint8_t*)"Starting\r\n", 4);
@@ -548,6 +553,8 @@ static void process_command(const char* cmd) {
   } else if (strcmp(cmd, "stop") == 0) {
     control_mode = MotorControlMode::MOTOR_STOP;
     system_status.is_vvvf_running = false;
+    system_status.is_sixstep_running = false;
+    system_status.is_foc_running = false;
     relay.write(0);
     CDC_Transmit_HS((uint8_t*)"Stopping\r\n", 4);
 
@@ -555,6 +562,7 @@ static void process_command(const char* cmd) {
   } else if (strcmp(cmd, "sixstep") == 0) {
     control_mode = MotorControlMode::MOTOR_SIX_STEP;
     system_status.is_vvvf_running = false;
+    system_status.is_foc_running = false;
     relay.write(1);
     sixStepCommutation();
     CDC_Transmit_HS((uint8_t*)"Six-step running\r\n", 31);
@@ -603,6 +611,10 @@ static void process_command(const char* cmd) {
             values[1] >= -1.0f && values[1] <= 1.0f &&
             values[2] >= -1.0f && values[2] <= 1.0f) {
               motorPWM.setDuty(values[0], values[1], values[2]);
+              control_mode = MotorControlMode::MOTOR_MANUAL;
+              system_status.is_vvvf_running = false;
+              system_status.is_sixstep_running = false;
+              system_status.is_foc_running = false;
               if (values[0] >= 0.0f &&
                   values[1] >= 0.0f &&
                   values[2] >= 0.0f) relay.write(1);
@@ -634,15 +646,19 @@ static void process_command(const char* cmd) {
       int8_t c_state = vector_states[vec_num][2];
       
       // Convert to duty cycles or -1 (high impedance)
-      float dutyA = (a_state == 1) ? MOTOR_SIXSTEP_DUTYCYCLE : 
-                    (a_state == 0) ? (1.0f - MOTOR_SIXSTEP_DUTYCYCLE) : -1.0f;
-      float dutyB = (b_state == 1) ? MOTOR_SIXSTEP_DUTYCYCLE : 
-                    (b_state == 0) ? (1.0f - MOTOR_SIXSTEP_DUTYCYCLE) : -1.0f;
-      float dutyC = (c_state == 1) ? MOTOR_SIXSTEP_DUTYCYCLE : 
-                    (c_state == 0) ? (1.0f - MOTOR_SIXSTEP_DUTYCYCLE) : -1.0f;
+      float dutyA = (a_state == 1) ? SIXSTEP_DUTYCYCLE : 
+                    (a_state == 0) ? (1.0f - SIXSTEP_DUTYCYCLE) : -1.0f;
+      float dutyB = (b_state == 1) ? SIXSTEP_DUTYCYCLE : 
+                    (b_state == 0) ? (1.0f - SIXSTEP_DUTYCYCLE) : -1.0f;
+      float dutyC = (c_state == 1) ? SIXSTEP_DUTYCYCLE : 
+                    (c_state == 0) ? (1.0f - SIXSTEP_DUTYCYCLE) : -1.0f;
       
       motorPWM.setDuty(dutyA, dutyB, dutyC);
-      
+      control_mode = MotorControlMode::MOTOR_MANUAL;
+      system_status.is_vvvf_running = false;
+      system_status.is_sixstep_running = false;
+      system_status.is_foc_running = false;
+
       // Read current Hall sensor state for debugging
       uint8_t hall_state = hallsensor.getState();  // Ensure this function exists
       char resp[64];
