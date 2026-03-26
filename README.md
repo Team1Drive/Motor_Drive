@@ -226,3 +226,67 @@ Click `Connect` to connect, a green dot will show if successful
 Select the path to the `.bin`file, then click `Program` to flash the programme, no other changes are needed, a success message will show if flashing is successful.
 
 Unplug the jumper cable on the board and press RESET, the STM32 should be running the programme.
+
+## MCU Command
+
+### `start`
+
+Starting the motor with open loop VVVF.
+
+### `stop`
+
+Immediately stopping the motor.
+
+### `sixstep`
+
+Run motor in six-step commutation.
+
+### `speed <target_speed>`
+
+Set target speed for speed loop.
+
+**`<target_speed>` Range -5000 to 5000 in RPM**
+
+### `duty <duty_A, duty_B, duty_C>`
+
+Set duty cycle for each phase.
+
+**`<duty_A, duty_B, duty_C>` Range -1.0 to 1.0, value below 0.0 will disable the phase**
+
+### `vec <vector>`
+
+Set three-phase output that follows a specific field orientation.
+
+**`<vector>` Range 0 to 5 representing 6 orientation**
+
+### `tune <subsys> <param> <value>`
+
+Tuning specific value. ***SAVE DATA BEFORE POWER DOWN***
+
+**`<subsys>` Select subsystem**
+
+**`<param>` Select parameter to tune**
+
+**`<value>` New value to be set**
+
+| Subsystem | Parameter                                 |
+|:---------:|:------------------------------------------|
+|`Speed`    |`p` `i` `d`                                |
+|`Current`  |`p` `i`                                    |
+|`adc`      |`ia` `ib` `ic` `va` `vb` `ibatt` `vbatt`   |
+
+### `print <operation> <variable>`
+
+Print selected variable through USB COM.
+
+**`<operation>` add or remove variable**
+
+**`<variable>` select variable to print**
+
+| Operation         | Variable                                  |
+|:-----------------:|:------------------------------------------|
+|`add` `Current`    |`hall` `hall_dec` `rpm` `pos` `duty_a` `duty_b` `duty_c` `ia` `ib` `ic` `va` `vb` `vbatt` `ibatt` `ia_raw` `ib_raw` `ic_raw` `va_raw` `vb_raw` `vbatt_raw` `ibatt_raw`     |
+
+### `print <format>`
+
+**`<operation>` select `utf8` for readable text in UTF8 or `bin` for binary**
