@@ -39,6 +39,13 @@ class ThreePhasePWMOut {
         void setDuty(float duty_A, float duty_B, float duty_C);
 
         /**
+         * Get the current duty cycle for a specified phase. The returned value is in the range [0.0, 1.0], where 0.0 corresponds to 0% duty and 1.0 corresponds to 100% duty.
+         * @param phase Phase index (0 for A, 1 for B, 2 for C)
+         * @return Current duty cycle for the specified phase, or -1.0f if the phase index is invalid.
+         */
+        float getDuty(uint8_t phase);
+
+        /**
          * Configure the dead time for the complementary outputs. The dead time is specified in nanoseconds and will be converted to timer ticks based on the timer clock frequency.
          * @param deadtime_ns Desired dead time in nanoseconds
          * @return HAL status code indicating success or failure of configuring the dead time.

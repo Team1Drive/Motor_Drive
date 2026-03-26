@@ -75,6 +75,36 @@ typedef struct {
     float torque;
 } Target_t;
 
+enum PrintData : uint32_t {
+    PRINT_HALLBIN   = 1 << 0,
+    PRINT_HALLDEC   = 1 << 1,
+    PRINT_RPM       = 1 << 2,
+    PRINT_POS       = 1 << 3,
+    PRINT_DUTY_A    = 1 << 4,
+    PRINT_DUTY_B    = 1 << 5,
+    PRINT_DUTY_C    = 1 << 6,
+    PRINT_IA        = 1 << 7,
+    PRINT_IB        = 1 << 8,
+    PRINT_IC        = 1 << 9,
+    PRINT_VA        = 1 << 10,
+    PRINT_VB        = 1 << 11,
+    PRINT_VBATT     = 1 << 12,
+    PRINT_IBATT     = 1 << 13,
+    PRINT_IA_RAW    = 1 << 14,
+    PRINT_IB_RAW    = 1 << 15,
+    PRINT_IC_RAW    = 1 << 16,
+    PRINT_VA_RAW    = 1 << 17,
+    PRINT_VB_RAW    = 1 << 18,
+    PRINT_VBATT_RAW = 1 << 19,
+    PRINT_IBATT_RAW = 1 << 20,
+    PRINT_COUNT     = 1 << 21
+};
+
+enum class PrintFormat : uint8_t {
+    PRINT_UTF8,
+    PRINT_BINARY
+};
+
 #pragma pack(1)
 typedef struct {
     uint16_t ia;

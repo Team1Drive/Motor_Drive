@@ -144,6 +144,23 @@ void ThreePhasePWMOut::setDuty(float dutyA, float dutyB, float dutyC) {
     __HAL_TIM_SET_COMPARE(htim_, TIM_CHANNEL_3, compare_C);
 }
 
+float ThreePhasePWMOut::getDuty(uint8_t phase) {
+    switch (phase) {
+        case 0:
+            return duty_A;
+            break;
+        case 1:
+            return duty_B;
+            break;
+        case 2:
+            return duty_C;
+            break;
+        default:
+            return -1.0f; // Invalid phase
+    }
+    return -1.0f; // Invalid phase
+}
+
 HAL_StatusTypeDef ThreePhasePWMOut::setDeadTime(uint32_t deadtime_ns) {
     HAL_StatusTypeDef status = HAL_OK;
 

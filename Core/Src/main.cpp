@@ -22,6 +22,10 @@ void MPU_Config(void);
 void timer2IRQ(void);
 void timer3IRQ(void);
 void timer6IRQ(void);
+
+void printTelemetryUTF8(void);
+void printTelemetryBinary(void);
+
 void speedControl(void);
 
 void startUpSequence(void);
@@ -84,6 +88,9 @@ MotorControlMode control_mode = MotorControlMode::MOTOR_STOP;
 SystemStatus_t system_status = { .is_vvvf_running = false, .is_sixstep_running = false, .is_foc_running = false, .led_increment_counter = 0};
 ADCGain_t adc_gain = { .ia_shunt = ADC_IA_SHUNT, .ib_shunt = ADC_IB_SHUNT, .ic_shunt = ADC_IC_SHUNT, .va_gain = ADC_VA_GAIN, .vb_gain = ADC_VB_GAIN, .ibatt_shunt = ADC_IBATT_SHUNT, .vbatt_gain = ADC_VBATT_GAIN };
 Target_t target = { .speed = 0.0f, .torque = 0.0f };
+
+volatile uint32_t print_mask = 0;
+volatile PrintFormat print_format = PrintFormat::PRINT_UTF8;
 
 static ring_buffer_t rx_ring = { .head = 0, .tail = 0 };
 
@@ -265,7 +272,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
     // 1 kHz control loop interrupt
     Encoder::irqHandlerSpeed();
     speedControl();
-    timer6IRQ();
+    //timer6IRQ();
+    printTelemetryBinary();
   }
   else if (htim->Instance == TIM7) {
     // 1 MHz timer interrupt (Interrupt every 65.536 ms)
@@ -273,7 +281,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
   }
   else if (htim->Instance == TIM2) {
     // 10 Hz timer interrupt
-    timer2IRQ();
+    //timer2IRQ();
+    printTelemetryUTF8();
   }
   else if (htim->Instance == TIM4) {
     Encoder::irqHandlerOverflow();
@@ -399,6 +408,263 @@ void timer6IRQ(void) {
   data.pos   = encoder.getPos();
 
   CDC_Transmit_HS((uint8_t*)&data, sizeof(LogData_t));
+}
+
+void printTelemetryUTF8(void) {
+  if (print_mask == 0 || (print_format != PrintFormat::PRINT_UTF8)) return;
+  
+  uint16_t adc1_raw[3];
+  uint16_t adc2_raw[2];
+  uint16_t adc3_raw[2];
+  float ia, ib, ic, va, vb, vbatt, ibatt;
+  if ((print_mask & (PRINT_IA
+                   | PRINT_VB
+                   | PRINT_VBATT
+                   | PRINT_IA_RAW
+                   | PRINT_VB_RAW
+                   | PRINT_VBATT_RAW)) != 0) {
+    adc1.getLatestData(adc1_raw);
+
+    ia = adcToCurrent(adc1_raw[0], 3.3f, 65536, 50.0f, 0.0f, adc_gain.ia_shunt);
+    vb = adcToVoltage(adc1_raw[1], 3.3f, 65536, adc_gain.vb_gain, 0.0f);
+    vbatt = adcToVoltage(adc1_raw[2], 3.3f, 65536, adc_gain.vbatt_gain, 0.0f);
+  }
+  if ((print_mask & (PRINT_IB
+                   | PRINT_VA
+                   | PRINT_IB_RAW
+                   | PRINT_VA_RAW)) != 0) {
+    adc2.getLatestData(adc2_raw);
+
+    ib = adcToCurrent(adc2_raw[0], 3.3f, 65536, 50.0f, 0.0f, adc_gain.ib_shunt);
+    va = adcToVoltage(adc2_raw[1], 3.3f, 65536, adc_gain.va_gain, 0.0f);
+  }
+  if ((print_mask & (PRINT_IC
+                   | PRINT_IBATT
+                   | PRINT_IC_RAW
+                   | PRINT_IBATT_RAW)) != 0) {
+    adc3.getLatestData(adc3_raw);
+
+    ic = adcToCurrent(adc3_raw[0], 3.3f, 4096, 50.0f, 0.0f, adc_gain.ic_shunt);
+    ibatt = adcToCurrent(adc3_raw[1], 3.3f, 4096, 50.0f, 0.0f, adc_gain.ibatt_shunt);
+  }
+
+  // Construct a UTF-8 string, e.g. "rpm 123.45 pos 67.89\r\n"
+  char buffer[128];
+  int pos = 0;
+  if (print_mask & PRINT_HALLBIN) {
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "hall %u%u%u ", hallsensor.getState() >> 2 & 1, hallsensor.getState() >> 1 & 1, hallsensor.getState() & 1);
+  }
+  if (print_mask & PRINT_HALLDEC) {
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "hall_ %u ", hallsensor.getState());
+  }
+  if (print_mask & PRINT_RPM) {
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "rpm %.2f ", encoder.getRPM());
+  }
+  if (print_mask & PRINT_POS) {
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "pos %u ", encoder.getPos());
+  }
+  if (print_mask & PRINT_DUTY_A) {
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "duty_a %.2f ", motorPWM.getDuty(0));
+  }
+  if (print_mask & PRINT_DUTY_B) {
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "duty_b %.2f ", motorPWM.getDuty(1));
+  }
+  if (print_mask & PRINT_DUTY_C) {
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "duty_c %.2f ", motorPWM.getDuty(2));
+  }
+  if (print_mask & PRINT_IA) {
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "ia %.2f ", ia);
+  }
+  if (print_mask & PRINT_IB) {
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "ib %.2f ", ib);
+  }
+  if (print_mask & PRINT_IC) {
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "ic %.2f ", ic);
+  }
+  if (print_mask & PRINT_VA) {
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "va %.2f ", va);
+  }
+  if (print_mask & PRINT_VB) {
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "vb %.2f ", vb);
+  }
+  if (print_mask & PRINT_VBATT) {
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "vbatt %.2f ", vbatt);
+  }
+  if (print_mask & PRINT_IBATT) {
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "ibatt %.2f ", ibatt);
+  }
+  if (print_mask & PRINT_IA_RAW) {
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "ia_ %u ", adc1_raw[0]);
+  }
+  if (print_mask & PRINT_IB_RAW) {
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "ib_ %u ", adc2_raw[0]);
+  }
+  if (print_mask & PRINT_IC_RAW) {
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "ic_ %u ", adc3_raw[0]);
+  }
+  if (print_mask & PRINT_VA_RAW) {
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "va_ %u ", adc2_raw[1]);
+  }
+  if (print_mask & PRINT_VB_RAW) {
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "vb_ %u ", adc1_raw[1]);
+  }
+  if (print_mask & PRINT_VBATT_RAW) {
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "vbatt_ %u ", adc1_raw[2]);
+  }
+  if (print_mask & PRINT_IBATT_RAW) {
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "ibatt_ %u ", adc3_raw[1]);
+  }
+  if (pos > 0) {
+    buffer[pos - 1] = '\n';
+    buffer[pos] = '\0';
+    CDC_Transmit_HS((uint8_t*)buffer, pos);
+  }
+}
+
+void printTelemetryBinary(void) {
+  if (print_mask == 0 || (print_format != PrintFormat::PRINT_BINARY)) return;
+
+  uint16_t adc1_raw[3];
+  uint16_t adc2_raw[2];
+  uint16_t adc3_raw[2];
+  float ia, ib, ic, va, vb, vbatt, ibatt;
+  if ((print_mask & (PRINT_IA
+                   | PRINT_VB
+                   | PRINT_VBATT
+                   | PRINT_IA_RAW
+                   | PRINT_VB_RAW
+                   | PRINT_VBATT_RAW)) != 0) {
+    adc1.getLatestData(adc1_raw);
+
+    ia = adcToCurrent(adc1_raw[0], 3.3f, 65536, 50.0f, 0.0f, adc_gain.ia_shunt);
+    vb = adcToVoltage(adc1_raw[1], 3.3f, 65536, adc_gain.vb_gain, 0.0f);
+    vbatt = adcToVoltage(adc1_raw[2], 3.3f, 65536, adc_gain.vbatt_gain, 0.0f);
+  }
+  if ((print_mask & (PRINT_IB
+                   | PRINT_VA
+                   | PRINT_IB_RAW
+                   | PRINT_VA_RAW)) != 0) {
+    adc2.getLatestData(adc2_raw);
+
+    ib = adcToCurrent(adc2_raw[0], 3.3f, 65536, 50.0f, 0.0f, adc_gain.ib_shunt);
+    va = adcToVoltage(adc2_raw[1], 3.3f, 65536, adc_gain.va_gain, 0.0f);
+  }
+  if ((print_mask & (PRINT_IC
+                   | PRINT_IBATT
+                   | PRINT_IC_RAW
+                   | PRINT_IBATT_RAW)) != 0) {
+    adc3.getLatestData(adc3_raw);
+
+    ic = adcToCurrent(adc3_raw[0], 3.3f, 4096, 50.0f, 0.0f, adc_gain.ic_shunt);
+    ibatt = adcToCurrent(adc3_raw[1], 3.3f, 4096, 50.0f, 0.0f, adc_gain.ibatt_shunt);
+  }
+
+  // Construct a binary packet
+  uint8_t buffer[128];
+    uint8_t* ptr = buffer;
+    if ((print_mask & PRINT_HALLBIN) || (print_mask & PRINT_HALLDEC)) {
+      uint8_t val = hallsensor.getState() & 0x07;
+      memcpy(ptr, &val, 1);
+      ptr += 1;
+    }
+    if (print_mask & PRINT_RPM) {
+      float val = encoder.getRPM();
+      memcpy(ptr, &val, 4);
+      ptr += 4;
+    }
+    if (print_mask & PRINT_POS) {
+      uint16_t val = encoder.getPos();
+      memcpy(ptr, &val, 2);
+      ptr += 2;
+    }
+    if (print_mask & PRINT_DUTY_A) {
+      float val = motorPWM.getDuty(0);
+      memcpy(ptr, &val, 4);
+      ptr += 4;
+    }
+    if (print_mask & PRINT_DUTY_B) {
+      float val = motorPWM.getDuty(1);
+      memcpy(ptr, &val, 4);
+      ptr += 4;
+    }
+    if (print_mask & PRINT_DUTY_C) {
+      float val = motorPWM.getDuty(2);
+      memcpy(ptr, &val, 4);
+      ptr += 4;
+    }
+    if (print_mask & PRINT_IA) {
+      float val = ia;
+      memcpy(ptr, &val, 4);
+      ptr += 4;
+    }
+    if (print_mask & PRINT_IB) {
+      float val = ib;
+      memcpy(ptr, &val, 4);
+      ptr += 4;
+    }
+    if (print_mask & PRINT_IC) {
+      float val = ic;
+      memcpy(ptr, &val, 4);
+      ptr += 4;
+    }
+    if (print_mask & PRINT_VA) {
+      float val = va;
+      memcpy(ptr, &val, 4);
+      ptr += 4;
+    }
+    if (print_mask & PRINT_VB) {
+      float val = vb;
+      memcpy(ptr, &val, 4);
+      ptr += 4;
+    }
+    if (print_mask & PRINT_VBATT) {
+      float val = vbatt;
+      memcpy(ptr, &val, 4);
+      ptr += 4;
+    }
+    if (print_mask & PRINT_IBATT) {
+      float val = ibatt;
+      memcpy(ptr, &val, 4);
+      ptr += 4;
+    }
+    if (print_mask & PRINT_IA_RAW) {
+      uint16_t val = adc1_raw[0];
+      memcpy(ptr, &val, 2);
+      ptr += 2;
+    }
+    if (print_mask & PRINT_IB_RAW) {
+      uint16_t val = adc2_raw[0];
+      memcpy(ptr, &val, 2);
+      ptr += 2;
+    }
+    if (print_mask & PRINT_IC_RAW) {
+      uint16_t val = adc3_raw[0];
+      memcpy(ptr, &val, 2);
+      ptr += 2;
+    }
+    if (print_mask & PRINT_VA_RAW) {
+      uint16_t val = adc2_raw[1];
+      memcpy(ptr, &val, 2);
+      ptr += 2;
+    }
+    if (print_mask & PRINT_VB_RAW) {
+      uint16_t val = adc1_raw[1];
+      memcpy(ptr, &val, 2);
+      ptr += 2;
+    }
+    if (print_mask & PRINT_VBATT_RAW) {
+      uint16_t val = adc1_raw[2];
+      memcpy(ptr, &val, 2);
+      ptr += 2;
+    }
+    if (print_mask & PRINT_IBATT_RAW) {
+      uint16_t val = adc3_raw[1];
+      memcpy(ptr, &val, 2);
+      ptr += 2;
+    }
+    if (ptr != buffer) {
+        CDC_Transmit_HS(buffer, ptr - buffer);
+    }
 }
 
 void speedControl(void) {
@@ -805,6 +1071,106 @@ static void process_command(const char* cmd) {
         // Error message already prepared
         CDC_Transmit_HS((uint8_t*)resp, strlen(resp));
     }
+
+  // Print variables or change print format
+  } else if (strncmp(cmd, "print ", 6) == 0) {
+    char cmd_copy[CMD_MAX_LEN];
+    strncpy(cmd_copy, cmd + 6, CMD_MAX_LEN - 1);
+    cmd_copy[CMD_MAX_LEN - 1] = '\0';
+
+    char* token = strtok(cmd_copy, " ");
+    if (token == NULL) {
+        CDC_Transmit_HS((uint8_t*)"Usage: print <add|rm|utf8|bin> [var]\r\n", 44);
+        return;
+    }
+
+    if (strcmp(token, "add") == 0) {
+        token = strtok(NULL, " ");
+        if (token == NULL) {
+            CDC_Transmit_HS((uint8_t*)"Missing variable name\r\n", 23);
+            return;
+        }
+        uint32_t flag = 0;
+        // Map variable names to print flags
+        if (strcmp(token, "hall") == 0) flag = PRINT_HALLBIN;
+        else if (strcmp(token, "hall_dec") == 0) flag = PRINT_HALLDEC;
+        else if (strcmp(token, "rpm") == 0) flag = PRINT_RPM;
+        else if (strcmp(token, "pos") == 0) flag = PRINT_POS;
+        else if (strcmp(token, "duty_a") == 0) flag = PRINT_DUTY_A;
+        else if (strcmp(token, "duty_b") == 0) flag = PRINT_DUTY_B;
+        else if (strcmp(token, "duty_c") == 0) flag = PRINT_DUTY_C;
+        else if (strcmp(token, "ia") == 0) flag = PRINT_IA;
+        else if (strcmp(token, "ib") == 0) flag = PRINT_IB;
+        else if (strcmp(token, "ic") == 0) flag = PRINT_IC;
+        else if (strcmp(token, "va") == 0) flag = PRINT_VA;
+        else if (strcmp(token, "vb") == 0) flag = PRINT_VB;
+        else if (strcmp(token, "vbatt") == 0) flag = PRINT_VBATT;
+        else if (strcmp(token, "ibatt") == 0) flag = PRINT_IBATT;
+        else if (strcmp(token, "ia_raw") == 0) flag = PRINT_IA_RAW;
+        else if (strcmp(token, "ib_raw") == 0) flag = PRINT_IB_RAW;
+        else if (strcmp(token, "ic_raw") == 0) flag = PRINT_IC_RAW;
+        else if (strcmp(token, "va_raw") == 0) flag = PRINT_VA_RAW;
+        else if (strcmp(token, "vb_raw") == 0) flag = PRINT_VB_RAW;
+        else if (strcmp(token, "vbatt_raw") == 0) flag = PRINT_VBATT_RAW;
+        else if (strcmp(token, "ibatt_raw") == 0) flag = PRINT_IBATT_RAW;
+        // Add more variables as needed
+        else {
+            CDC_Transmit_HS((uint8_t*)"Unknown variable\r\n", 18);
+            return;
+        }
+        print_mask |= flag;
+        CDC_Transmit_HS((uint8_t*)"Variable added\r\n", 16);
+    }
+    else if (strcmp(token, "rm") == 0) {
+        token = strtok(NULL, " ");
+        if (token == NULL) {
+            CDC_Transmit_HS((uint8_t*)"Missing variable name\r\n", 23);
+            return;
+        }
+        uint32_t flag = 0;
+        // Map variable names to print flags
+        if (strcmp(token, "hall") == 0) flag = PRINT_HALLBIN;
+        else if (strcmp(token, "hall_dec") == 0) flag = PRINT_HALLDEC;
+        else if (strcmp(token, "rpm") == 0) flag = PRINT_RPM;
+        else if (strcmp(token, "pos") == 0) flag = PRINT_POS;
+        else if (strcmp(token, "duty_a") == 0) flag = PRINT_DUTY_A;
+        else if (strcmp(token, "duty_b") == 0) flag = PRINT_DUTY_B;
+        else if (strcmp(token, "duty_c") == 0) flag = PRINT_DUTY_C;
+        else if (strcmp(token, "ia") == 0) flag = PRINT_IA;
+        else if (strcmp(token, "ib") == 0) flag = PRINT_IB;
+        else if (strcmp(token, "ic") == 0) flag = PRINT_IC;
+        else if (strcmp(token, "va") == 0) flag = PRINT_VA;
+        else if (strcmp(token, "vb") == 0) flag = PRINT_VB;
+        else if (strcmp(token, "vbatt") == 0) flag = PRINT_VBATT;
+        else if (strcmp(token, "ibatt") == 0) flag = PRINT_IBATT;
+        else if (strcmp(token, "ia_raw") == 0) flag = PRINT_IA_RAW;
+        else if (strcmp(token, "ib_raw") == 0) flag = PRINT_IB_RAW;
+        else if (strcmp(token, "ic_raw") == 0) flag = PRINT_IC_RAW;
+        else if (strcmp(token, "va_raw") == 0) flag = PRINT_VA_RAW;
+        else if (strcmp(token, "vb_raw") == 0) flag = PRINT_VB_RAW;
+        else if (strcmp(token, "vbatt_raw") == 0) flag = PRINT_VBATT_RAW;
+        else if (strcmp(token, "ibatt_raw") == 0) flag = PRINT_IBATT_RAW;
+        else if (strcmp(token, "all") == 0) print_mask = 0;
+        // Add more variables as needed
+        else {
+            CDC_Transmit_HS((uint8_t*)"Unknown variable\r\n", 18);
+            return;
+        }
+        print_mask &= ~flag;
+        CDC_Transmit_HS((uint8_t*)"Variable removed\r\n", 18);
+    }
+    else if (strcmp(token, "utf8") == 0) {
+        print_format = PrintFormat::PRINT_UTF8;
+        CDC_Transmit_HS((uint8_t*)"Print format set to UTF8\r\n", 27);
+    }
+    else if (strcmp(token, "bin") == 0) {
+        print_format = PrintFormat::PRINT_BINARY;
+        CDC_Transmit_HS((uint8_t*)"Print format set to BINARY\r\n", 28);
+    }
+    else {
+        CDC_Transmit_HS((uint8_t*)"Invalid print subcommand\r\n", 26);
+    }
+
     
   // Handle invalid case
   } else {
