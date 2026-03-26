@@ -53,8 +53,17 @@ class ADCSampler {
          */
         static void irqConvHalfCplt(ADC_HandleTypeDef* hadc);
 
+        /**
+         * Start ADC without DMA.
+         * @return HAL status code indicating success or failure of starting the ADC.
+         * @note Not to be called when using DMA, use startDMA() instead.
+         */
         HAL_StatusTypeDef startADC(void);
 
+        /**
+         * Start ADC with DMA.
+         * @return HAL status code indicating success or failure of starting the ADC with DMA.
+         */
         HAL_StatusTypeDef startDMA(void);
 
         /**

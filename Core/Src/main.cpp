@@ -79,9 +79,9 @@ DigitalOut relay(GPIOD, GPIO_PIN_8);
 Encoder encoder(&htim4, GPIO_PIN_9, ENCODER_PPR, TIM6_FREQ_HZ, ENCODER_STALL_THRESHOLD);
 HallSensor hallsensor(GPIOB, GPIO_PIN_5, GPIOB, GPIO_PIN_8, GPIOE, GPIO_PIN_4);
 
-uint16_t adc1_proc_buffer[ADC1_BUF_LEN];
-uint16_t adc2_proc_buffer[ADC2_BUF_LEN];
-uint16_t adc3_proc_buffer[ADC3_BUF_LEN];
+alignas(32) uint16_t adc1_proc_buffer[ADC1_BUF_LEN];
+alignas(32) uint16_t adc2_proc_buffer[ADC2_BUF_LEN];
+alignas(32) uint16_t adc3_proc_buffer[ADC3_BUF_LEN];
 
 volatile MotorControlMode control_mode = MotorControlMode::MOTOR_STOP;
 
@@ -580,110 +580,123 @@ void printTelemetryBinary(void) {
 
   // Construct a binary packet
   uint8_t buffer[128];
-    uint8_t* ptr = buffer;
-    if ((print_mask & PRINT_HALLBIN) || (print_mask & PRINT_HALLDEC)) {
-      uint8_t val = hallsensor.getState() & 0x07;
-      memcpy(ptr, &val, 1);
-      ptr += 1;
-    }
-    if (print_mask & PRINT_RPM) {
-      float val = encoder.getRPM();
-      memcpy(ptr, &val, 4);
-      ptr += 4;
-    }
-    if (print_mask & PRINT_POS) {
-      uint16_t val = encoder.getPos();
-      memcpy(ptr, &val, 2);
-      ptr += 2;
-    }
-    if (print_mask & PRINT_DUTY_A) {
-      float val = motorPWM.getDuty(0);
-      memcpy(ptr, &val, 4);
-      ptr += 4;
-    }
-    if (print_mask & PRINT_DUTY_B) {
-      float val = motorPWM.getDuty(1);
-      memcpy(ptr, &val, 4);
-      ptr += 4;
-    }
-    if (print_mask & PRINT_DUTY_C) {
-      float val = motorPWM.getDuty(2);
-      memcpy(ptr, &val, 4);
-      ptr += 4;
-    }
-    if (print_mask & PRINT_IA) {
-      float val = ia;
-      memcpy(ptr, &val, 4);
-      ptr += 4;
-    }
-    if (print_mask & PRINT_IB) {
-      float val = ib;
-      memcpy(ptr, &val, 4);
-      ptr += 4;
-    }
-    if (print_mask & PRINT_IC) {
-      float val = ic;
-      memcpy(ptr, &val, 4);
-      ptr += 4;
-    }
-    if (print_mask & PRINT_VA) {
-      float val = va;
-      memcpy(ptr, &val, 4);
-      ptr += 4;
-    }
-    if (print_mask & PRINT_VB) {
-      float val = vb;
-      memcpy(ptr, &val, 4);
-      ptr += 4;
-    }
-    if (print_mask & PRINT_VBATT) {
-      float val = vbatt;
-      memcpy(ptr, &val, 4);
-      ptr += 4;
-    }
-    if (print_mask & PRINT_IBATT) {
-      float val = ibatt;
-      memcpy(ptr, &val, 4);
-      ptr += 4;
-    }
-    if (print_mask & PRINT_IA_RAW) {
-      uint16_t val = adc1_raw[0];
-      memcpy(ptr, &val, 2);
-      ptr += 2;
-    }
-    if (print_mask & PRINT_IB_RAW) {
-      uint16_t val = adc2_raw[0];
-      memcpy(ptr, &val, 2);
-      ptr += 2;
-    }
-    if (print_mask & PRINT_IC_RAW) {
-      uint16_t val = adc3_raw[0];
-      memcpy(ptr, &val, 2);
-      ptr += 2;
-    }
-    if (print_mask & PRINT_VA_RAW) {
-      uint16_t val = adc2_raw[1];
-      memcpy(ptr, &val, 2);
-      ptr += 2;
-    }
-    if (print_mask & PRINT_VB_RAW) {
-      uint16_t val = adc1_raw[1];
-      memcpy(ptr, &val, 2);
-      ptr += 2;
-    }
-    if (print_mask & PRINT_VBATT_RAW) {
-      uint16_t val = adc1_raw[2];
-      memcpy(ptr, &val, 2);
-      ptr += 2;
-    }
-    if (print_mask & PRINT_IBATT_RAW) {
-      uint16_t val = adc3_raw[1];
-      memcpy(ptr, &val, 2);
-      ptr += 2;
-    }
-    if (ptr != buffer) {
-        CDC_Transmit_HS(buffer, ptr - buffer);
-    }
+  uint8_t* ptr = buffer;
+  uint32_t mask = print_mask;
+
+  *ptr++ = 0xAA;
+  *ptr++ = 0x55;
+  
+  memcpy(ptr, &mask, 4);
+  ptr += 4;
+
+  if (print_mask & PRINT_HALLBIN) {
+    uint8_t val = hallsensor.getState() & 0x07;
+    memcpy(ptr, &val, 1);
+    ptr += 1;
+  }
+  if (print_mask & PRINT_HALLDEC) {
+    uint8_t val = hallsensor.getState() & 0x07;
+    memcpy(ptr, &val, 1);
+    ptr += 1;
+  }
+  if (print_mask & PRINT_RPM) {
+    float val = encoder.getRPM();
+    memcpy(ptr, &val, 4);
+    ptr += 4;
+  }
+  if (print_mask & PRINT_POS) {
+    uint16_t val = encoder.getPos();
+    memcpy(ptr, &val, 2);
+    ptr += 2;
+  }
+  if (print_mask & PRINT_DUTY_A) {
+    float val = motorPWM.getDuty(0);
+    memcpy(ptr, &val, 4);
+    ptr += 4;
+  }
+  if (print_mask & PRINT_DUTY_B) {
+    float val = motorPWM.getDuty(1);
+    memcpy(ptr, &val, 4);
+    ptr += 4;
+  }
+  if (print_mask & PRINT_DUTY_C) {
+    float val = motorPWM.getDuty(2);
+    memcpy(ptr, &val, 4);
+    ptr += 4;
+  }
+  if (print_mask & PRINT_IA) {
+    float val = ia;
+    memcpy(ptr, &val, 4);
+    ptr += 4;
+  }
+  if (print_mask & PRINT_IB) {
+    float val = ib;
+    memcpy(ptr, &val, 4);
+    ptr += 4;
+  }
+  if (print_mask & PRINT_IC) {
+    float val = ic;
+    memcpy(ptr, &val, 4);
+    ptr += 4;
+  }
+  if (print_mask & PRINT_VA) {
+    float val = va;
+    memcpy(ptr, &val, 4);
+    ptr += 4;
+  }
+  if (print_mask & PRINT_VB) {
+    float val = vb;
+    memcpy(ptr, &val, 4);
+    ptr += 4;
+  }
+  if (print_mask & PRINT_VBATT) {
+    float val = vbatt;
+    memcpy(ptr, &val, 4);
+    ptr += 4;
+  }
+  if (print_mask & PRINT_IBATT) {
+    float val = ibatt;
+    memcpy(ptr, &val, 4);
+    ptr += 4;
+  }
+  if (print_mask & PRINT_IA_RAW) {
+    uint16_t val = adc1_raw[0];
+    memcpy(ptr, &val, 2);
+    ptr += 2;
+  }
+  if (print_mask & PRINT_IB_RAW) {
+    uint16_t val = adc2_raw[0];
+    memcpy(ptr, &val, 2);
+    ptr += 2;
+  }
+  if (print_mask & PRINT_IC_RAW) {
+    uint16_t val = adc3_raw[0];
+    memcpy(ptr, &val, 2);
+    ptr += 2;
+  }
+  if (print_mask & PRINT_VA_RAW) {
+    uint16_t val = adc2_raw[1];
+    memcpy(ptr, &val, 2);
+    ptr += 2;
+  }
+  if (print_mask & PRINT_VB_RAW) {
+    uint16_t val = adc1_raw[1];
+    memcpy(ptr, &val, 2);
+    ptr += 2;
+  }
+  if (print_mask & PRINT_VBATT_RAW) {
+    uint16_t val = adc1_raw[2];
+    memcpy(ptr, &val, 2);
+    ptr += 2;
+  }
+  if (print_mask & PRINT_IBATT_RAW) {
+    uint16_t val = adc3_raw[1];
+    memcpy(ptr, &val, 2);
+    ptr += 2;
+  }
+  if (ptr != buffer) {
+      CDC_Transmit_HS(buffer, ptr - buffer);
+  }
 }
 
 void speedControl(void) {
