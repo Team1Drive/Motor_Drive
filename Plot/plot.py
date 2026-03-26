@@ -16,10 +16,10 @@ PACKET_SIZE = 20    # 4 floats + 1 uint32_t = 20 bytes
 # Plot Configuration
 WINDOW_SIZE = 1000
 
-CHANNELS = [0, 3]
-CHANNEL_NAMES = ['Ia', 'Speed(RPM)']
+CHANNELS = [0, 1]
+CHANNEL_NAMES = ['Speed(RPM)', 'Ia(A)']
 
-Y_LIMITS = [(0, 65536), (0, 3000)]
+Y_LIMITS = [(-4000, 4000), (-3, 3)]
 
 # Initialize data queues for each channel
 data_queues = [deque(maxlen=WINDOW_SIZE) for _ in CHANNELS]
@@ -30,8 +30,8 @@ ser = serial.Serial(COM_PORT, BAUDRATE, timeout=1)
 # Packet Parsing Function
 def parse_packet(data: bytes):
     try:
-        ia, ib, ic, speed, pos = struct.unpack('<IIIfI', data)
-        return ia, ib, ic, speed, pos
+        speed, ia, ib, ic = struct.unpack('<ffff', data)
+        return speed, ia, ib, ic
     except struct.error:
         return None
 

@@ -83,11 +83,26 @@ uint16_t adc1_proc_buffer[ADC1_BUF_LEN];
 uint16_t adc2_proc_buffer[ADC2_BUF_LEN];
 uint16_t adc3_proc_buffer[ADC3_BUF_LEN];
 
-MotorControlMode control_mode = MotorControlMode::MOTOR_STOP;
+volatile MotorControlMode control_mode = MotorControlMode::MOTOR_STOP;
 
-SystemStatus_t system_status = { .is_vvvf_running = false, .is_sixstep_running = false, .is_foc_running = false, .led_increment_counter = 0};
-ADCGain_t adc_gain = { .ia_shunt = ADC_IA_SHUNT, .ib_shunt = ADC_IB_SHUNT, .ic_shunt = ADC_IC_SHUNT, .va_gain = ADC_VA_GAIN, .vb_gain = ADC_VB_GAIN, .ibatt_shunt = ADC_IBATT_SHUNT, .vbatt_gain = ADC_VBATT_GAIN };
-Target_t target = { .speed = 0.0f, .torque = 0.0f };
+volatile SystemStatus_t system_status = { .is_vvvf_running = false, .is_sixstep_running = false, .is_foc_running = false, .led_increment_counter = 0};
+volatile ADCGain_t adc_gain = {
+    .ia_shunt = ADC_IA_SHUNT,
+    .ib_shunt = ADC_IB_SHUNT,
+    .ic_shunt = ADC_IC_SHUNT,
+    .ia_offset = ADC_IA_OFFSET,
+    .ib_offset = ADC_IB_OFFSET,
+    .ic_offset = ADC_IC_OFFSET,
+    .va_gain = ADC_VA_GAIN,
+    .vb_gain = ADC_VB_GAIN,
+    .va_offset = ADC_VA_OFFSET,
+    .vb_offset = ADC_VB_OFFSET,
+    .ibatt_shunt = ADC_IBATT_SHUNT,
+    .ibatt_offset = ADC_IBATT_OFFSET,
+    .vbatt_gain = ADC_VBATT_GAIN,
+    .vbatt_offset = ADC_VBATT_OFFSET
+};
+volatile Target_t target = { .speed = 0.0f, .torque = 0.0f };
 
 volatile uint32_t print_mask = 0;
 volatile PrintFormat print_format = PrintFormat::PRINT_UTF8;
@@ -169,7 +184,6 @@ int main(void)
   if (HAL_TIM_Base_Start_IT(&htim3) != HAL_OK) error_flag = true;
   if (HAL_TIM_Base_Start_IT(&htim4) != HAL_OK) error_flag = true;
   if (HAL_TIM_Base_Start_IT(&htim6) != HAL_OK) error_flag = true;
-  if (HAL_TIM_Base_Start_IT(&htim7) != HAL_OK) error_flag = true;
 
   if (usTimer.init() != HAL_OK) error_flag = true;
 
@@ -265,7 +279,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 
     }
     else if (control_mode == MotorControlMode::MOTOR_VVVF) {
-      startUpSequence();
+      vvvfRampUp();
     }
   }
   else if (htim->Instance == TIM6) {
@@ -324,8 +338,8 @@ void timer2IRQ(void) {
   float ib = adcToCurrent(adc2_raw[0], 3.3f, 65536, 50.0f, 1.65f, adc_gain.ib_shunt);
   float ic = adcToCurrent(adc3_raw[0], 3.3f, 4096, 50.0f, 1.65f, adc_gain.ic_shunt);
 
-  float vab = adcToVoltage(adc2_raw[1], 3.3f, 65536, adc_gain.va_gain, 0.0f);
-  float vbc = adcToVoltage(adc1_raw[1], 3.3f, 65536, adc_gain.vb_gain, 0.0f);
+  float vab = adcToVoltage(adc2_raw[1], 3.3f, 65536, adc_gain.va_gain, 1.65f);
+  float vbc = adcToVoltage(adc1_raw[1], 3.3f, 65536, adc_gain.vb_gain, 1.65f);
 
   float vbatt = adcToVoltage(adc1_raw[2], 3.3f, 65536, adc_gain.vbatt_gain, 0.0f);
   float ibatt = adcToCurrent(adc3_raw[1], 3.3f, 4096, 50.0f, 1.65f, adc_gain.ibatt_shunt);
@@ -343,6 +357,11 @@ void timer2IRQ(void) {
  */
 void timer3IRQ(void) {
   switch (control_mode) {
+    case MotorControlMode::MOTOR_STOP:
+      led_green.write(0);
+      led_yellow_1.write(0);
+      led_yellow_2.write(0);
+      break;
     case MotorControlMode::MOTOR_STARTUP:
       led_yellow_1.write(1);
       led_yellow_2.write(1);
@@ -356,7 +375,7 @@ void timer3IRQ(void) {
       }
       break;
     case MotorControlMode::MOTOR_SIX_STEP:
-      if (system_status.led_increment_counter & 1) led_green.toggle();
+      led_green.toggle();
       if (system_status.led_increment_counter >> 1 & 1) {
         led_yellow_1.write(1);
         led_yellow_2.write(0);
@@ -390,15 +409,15 @@ void timer6IRQ(void) {
   adc2.getLatestData(adc2_raw);
   adc3.getLatestData(adc3_raw);
 
-  float ia = adcToCurrent(adc1_raw[0], 3.3f, 65536, 50.0f, 0.0f, adc_gain.ia_shunt);
-  float ib = adcToCurrent(adc2_raw[0], 3.3f, 65536, 50.0f, 0.0f, adc_gain.ib_shunt);
-  float ic = adcToCurrent(adc3_raw[0], 3.3f, 4096, 50.0f, 0.0f, adc_gain.ic_shunt);
+  float ia = adcToCurrent(adc1_raw[0], 3.3f, 65536, 50.0f, 1.65f, adc_gain.ia_shunt);
+  float ib = adcToCurrent(adc2_raw[0], 3.3f, 65536, 50.0f, 1.65f, adc_gain.ib_shunt);
+  float ic = adcToCurrent(adc3_raw[0], 3.3f, 4096, 50.0f, 1.65f, adc_gain.ic_shunt);
 
-  float vab = adcToVoltage(adc2_raw[1], 3.3f, 65536, adc_gain.va_gain, 0.0f);
-  float vbc = adcToVoltage(adc1_raw[1], 3.3f, 65536, adc_gain.vb_gain, 0.0f);
+  float vab = adcToVoltage(adc2_raw[1], 3.3f, 65536, adc_gain.va_gain, 1.65f);
+  float vbc = adcToVoltage(adc1_raw[1], 3.3f, 65536, adc_gain.vb_gain, 1.65f);
 
   float vbatt = adcToVoltage(adc1_raw[2], 3.3f, 65536, adc_gain.vbatt_gain, 0.0f);
-  float ibatt = adcToCurrent(adc3_raw[1], 3.3f, 4096, 50.0f, 0.0f, adc_gain.ibatt_shunt);
+  float ibatt = adcToCurrent(adc3_raw[1], 3.3f, 4096, 50.0f, 1.65f, adc_gain.ibatt_shunt);
 
   LogData_t data;
   data.ia    = adc1_raw[0];
@@ -425,9 +444,9 @@ void printTelemetryUTF8(void) {
                    | PRINT_VBATT_RAW)) != 0) {
     adc1.getLatestData(adc1_raw);
 
-    ia = adcToCurrent(adc1_raw[0], 3.3f, 65536, 50.0f, 0.0f, adc_gain.ia_shunt);
-    vb = adcToVoltage(adc1_raw[1], 3.3f, 65536, adc_gain.vb_gain, 0.0f);
-    vbatt = adcToVoltage(adc1_raw[2], 3.3f, 65536, adc_gain.vbatt_gain, 0.0f);
+    ia = adcToCurrent(adc1_raw[0], 3.3f, 65536, 50.0f, 1.65f + adc_gain.ia_offset, adc_gain.ia_shunt);
+    vb = adcToVoltage(adc1_raw[1], 3.3f, 65536, adc_gain.vb_gain, 1.65f + adc_gain.vb_offset);
+    vbatt = adcToVoltage(adc1_raw[2], 3.3f, 65536, adc_gain.vbatt_gain, 0.0f + adc_gain.vbatt_offset);
   }
   if ((print_mask & (PRINT_IB
                    | PRINT_VA
@@ -435,8 +454,8 @@ void printTelemetryUTF8(void) {
                    | PRINT_VA_RAW)) != 0) {
     adc2.getLatestData(adc2_raw);
 
-    ib = adcToCurrent(adc2_raw[0], 3.3f, 65536, 50.0f, 0.0f, adc_gain.ib_shunt);
-    va = adcToVoltage(adc2_raw[1], 3.3f, 65536, adc_gain.va_gain, 0.0f);
+    ib = adcToCurrent(adc2_raw[0], 3.3f, 65536, 50.0f, 1.65f + adc_gain.ib_offset, adc_gain.ib_shunt);
+    va = adcToVoltage(adc2_raw[1], 3.3f, 65536, adc_gain.va_gain, 1.65f + adc_gain.va_offset);
   }
   if ((print_mask & (PRINT_IC
                    | PRINT_IBATT
@@ -444,8 +463,8 @@ void printTelemetryUTF8(void) {
                    | PRINT_IBATT_RAW)) != 0) {
     adc3.getLatestData(adc3_raw);
 
-    ic = adcToCurrent(adc3_raw[0], 3.3f, 4096, 50.0f, 0.0f, adc_gain.ic_shunt);
-    ibatt = adcToCurrent(adc3_raw[1], 3.3f, 4096, 50.0f, 0.0f, adc_gain.ibatt_shunt);
+    ic = adcToCurrent(adc3_raw[0], 3.3f, 4096, 50.0f, 1.65f + adc_gain.ic_offset, adc_gain.ic_shunt);
+    ibatt = adcToCurrent(adc3_raw[1], 3.3f, 4096, 50.0f, 1.65f + adc_gain.ibatt_offset, adc_gain.ibatt_shunt);
   }
 
   // Construct a UTF-8 string, e.g. "rpm 123.45 pos 67.89\r\n"
@@ -473,25 +492,25 @@ void printTelemetryUTF8(void) {
     pos += snprintf(buffer + pos, sizeof(buffer) - pos, "duty_c %.2f ", motorPWM.getDuty(2));
   }
   if (print_mask & PRINT_IA) {
-    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "ia %.2f ", ia);
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "ia %.5f ", ia);
   }
   if (print_mask & PRINT_IB) {
-    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "ib %.2f ", ib);
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "ib %.5f ", ib);
   }
   if (print_mask & PRINT_IC) {
-    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "ic %.2f ", ic);
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "ic %.5f ", ic);
   }
   if (print_mask & PRINT_VA) {
-    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "va %.2f ", va);
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "va %.5f ", va);
   }
   if (print_mask & PRINT_VB) {
-    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "vb %.2f ", vb);
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "vb %.5f ", vb);
   }
   if (print_mask & PRINT_VBATT) {
-    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "vbatt %.2f ", vbatt);
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "vbatt %.5f ", vbatt);
   }
   if (print_mask & PRINT_IBATT) {
-    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "ibatt %.2f ", ibatt);
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "ibatt %.5f ", ibatt);
   }
   if (print_mask & PRINT_IA_RAW) {
     pos += snprintf(buffer + pos, sizeof(buffer) - pos, "ia_ %u ", adc1_raw[0]);
@@ -536,9 +555,9 @@ void printTelemetryBinary(void) {
                    | PRINT_VBATT_RAW)) != 0) {
     adc1.getLatestData(adc1_raw);
 
-    ia = adcToCurrent(adc1_raw[0], 3.3f, 65536, 50.0f, 0.0f, adc_gain.ia_shunt);
-    vb = adcToVoltage(adc1_raw[1], 3.3f, 65536, adc_gain.vb_gain, 0.0f);
-    vbatt = adcToVoltage(adc1_raw[2], 3.3f, 65536, adc_gain.vbatt_gain, 0.0f);
+    ia = adcToCurrent(adc1_raw[0], 3.3f, 65536, 50.0f, 1.65f + adc_gain.ia_offset, adc_gain.ia_shunt);
+    vb = adcToVoltage(adc1_raw[1], 3.3f, 65536, adc_gain.vb_gain, 1.65f + adc_gain.vb_offset);
+    vbatt = adcToVoltage(adc1_raw[2], 3.3f, 65536, adc_gain.vbatt_gain, 0.0f + adc_gain.vbatt_offset);
   }
   if ((print_mask & (PRINT_IB
                    | PRINT_VA
@@ -546,8 +565,8 @@ void printTelemetryBinary(void) {
                    | PRINT_VA_RAW)) != 0) {
     adc2.getLatestData(adc2_raw);
 
-    ib = adcToCurrent(adc2_raw[0], 3.3f, 65536, 50.0f, 0.0f, adc_gain.ib_shunt);
-    va = adcToVoltage(adc2_raw[1], 3.3f, 65536, adc_gain.va_gain, 0.0f);
+    ib = adcToCurrent(adc2_raw[0], 3.3f, 65536, 50.0f, 1.65f + adc_gain.ib_offset, adc_gain.ib_shunt);
+    va = adcToVoltage(adc2_raw[1], 3.3f, 65536, adc_gain.va_gain, 1.65f + adc_gain.va_offset);
   }
   if ((print_mask & (PRINT_IC
                    | PRINT_IBATT
@@ -555,8 +574,8 @@ void printTelemetryBinary(void) {
                    | PRINT_IBATT_RAW)) != 0) {
     adc3.getLatestData(adc3_raw);
 
-    ic = adcToCurrent(adc3_raw[0], 3.3f, 4096, 50.0f, 0.0f, adc_gain.ic_shunt);
-    ibatt = adcToCurrent(adc3_raw[1], 3.3f, 4096, 50.0f, 0.0f, adc_gain.ibatt_shunt);
+    ic = adcToCurrent(adc3_raw[0], 3.3f, 4096, 50.0f, 1.65f + adc_gain.ic_offset, adc_gain.ic_shunt);
+    ibatt = adcToCurrent(adc3_raw[1], 3.3f, 4096, 50.0f, 1.65f + adc_gain.ibatt_offset, adc_gain.ibatt_shunt);
   }
 
   // Construct a binary packet
@@ -683,6 +702,7 @@ void startUpSequence(void) {
  * @note To be called in the TIM8 update interrupt when running in MOTOR_STARTUP mode.
  */
 void vvvfRampUp(void) {
+  if (control_mode != MotorControlMode::MOTOR_VVVF) return;
   const uint32_t ramp_up = VVVF_RAMP_UP_SPEED; // RPM/s
   static float rpm;  
   static float angle;
@@ -793,12 +813,12 @@ const int8_t commutation_acw[8][3] = {
 }
 
 float adcToVoltage(uint32_t raw, float vref, uint32_t resolution, float gain, float offset) {
-  return ((float)raw / resolution) * vref / gain - offset;
+  return (((float)raw / (float)resolution) * vref - offset) / gain;
 }
 
 float adcToCurrent(uint32_t raw, float vref, uint32_t resolution, float gain, float offset, float shunt) {
-  float voltage = adcToVoltage(raw, vref, resolution, 1.0f, offset);
-  return voltage / (gain * shunt);
+  float voltage = adcToVoltage(raw, vref, resolution, gain, offset);
+  return voltage / shunt;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -879,14 +899,12 @@ static void process_command(const char* cmd) {
       if (values[0] >= -1.0f && values[0] <= 1.0f &&
           values[1] >= -1.0f && values[1] <= 1.0f &&
           values[2] >= -1.0f && values[2] <= 1.0f) {
+            relay.write(1);
             motorPWM.setDuty(values[0], values[1], values[2]);
             control_mode = MotorControlMode::MOTOR_MANUAL;
             system_status.is_vvvf_running = false;
             system_status.is_sixstep_running = false;
             system_status.is_foc_running = false;
-            if (values[0] >= 0.0f &&
-              values[1] >= 0.0f &&
-              values[2] >= 0.0f) relay.write(1);
             CDC_Transmit_HS((uint8_t*)"Duty set\r\n", 4);
       } else {
         CDC_Transmit_HS((uint8_t*)"Duty values out of range [-1,1]\r\n", 34);
@@ -1059,8 +1077,50 @@ static void process_command(const char* cmd) {
         snprintf(resp, sizeof(resp), "Vbatt gain set to %.4f was %.4f\r\n", value, original);
         success = true;
       } else {
-          snprintf(resp, sizeof(resp), "Unknown flux parameter '%s'\r\n", param);
+          snprintf(resp, sizeof(resp), "Unknown ADC parameter '%s'\r\n", param);
       }
+    
+    // ADC offset parameters
+    } else if (strcmp(subsys, "offset") == 0) {
+      if (strcmp(param, "ia") == 0) {
+        original = adc_gain.ia_offset;
+        adc_gain.ia_offset = value;
+        snprintf(resp, sizeof(resp), "Ia offset set to %.4f was %.4f\r\n", value, original);
+        success = true;
+      } else if (strcmp(param, "ib") == 0) {
+        original = adc_gain.ib_offset;
+        adc_gain.ib_offset = value;
+        snprintf(resp, sizeof(resp), "Ib offset set to %.4f was %.4f\r\n", value, original);
+        success = true;
+      } else if (strcmp(param, "ic") == 0) {
+        original = adc_gain.ic_offset;
+        adc_gain.ic_offset = value;
+        snprintf(resp, sizeof(resp), "Ic offset set to %.4f was %.4f\r\n", value, original);
+        success = true;
+      } else if (strcmp(param, "va") == 0) {
+        original = adc_gain.va_offset;
+        adc_gain.va_offset = value;
+        snprintf(resp, sizeof(resp), "Va offset set to %.4f was %.4f\r\n", value, original);
+        success = true;
+      } else if (strcmp(param, "vb") == 0) {
+        original = adc_gain.vb_offset;
+        adc_gain.vb_offset = value;
+        snprintf(resp, sizeof(resp), "Vb offset set to %.4f was %.4f\r\n", value, original);
+        success = true;
+      } else if (strcmp(param, "ibatt") == 0) {
+        original = adc_gain.ibatt_offset;
+        adc_gain.ibatt_offset = value;
+        snprintf(resp, sizeof(resp), "Ibatt offset set to %.4f was %.4f\r\n", value, original);
+        success = true;
+      } else if (strcmp(param, "vbatt") == 0) {
+        original = adc_gain.vbatt_offset;
+        adc_gain.vbatt_offset = value;
+        snprintf(resp, sizeof(resp), "Vbatt offset set to %.4f was %.4f\r\n", value, original);
+        success = true;
+      } else {
+          snprintf(resp, sizeof(resp), "Unknown ADC offset parameter '%s'\r\n", param);
+      }
+
     } else {
         snprintf(resp, sizeof(resp), "Unknown subsystem '%s'\r\n", subsys);
     }
@@ -1073,14 +1133,14 @@ static void process_command(const char* cmd) {
     }
 
   // Print variables or change print format
-  } else if (strncmp(cmd, "print ", 6) == 0) {
+  } else if (strncmp(cmd, "log ", 4) == 0) {
     char cmd_copy[CMD_MAX_LEN];
-    strncpy(cmd_copy, cmd + 6, CMD_MAX_LEN - 1);
+    strncpy(cmd_copy, cmd + 4, CMD_MAX_LEN - 1);
     cmd_copy[CMD_MAX_LEN - 1] = '\0';
 
     char* token = strtok(cmd_copy, " ");
     if (token == NULL) {
-        CDC_Transmit_HS((uint8_t*)"Usage: print <add|rm|utf8|bin> [var]\r\n", 44);
+        CDC_Transmit_HS((uint8_t*)"Usage: log <add|rm|utf8|bin> [var]\r\n", 44);
         return;
     }
 

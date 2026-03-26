@@ -208,7 +208,6 @@ e.g.
 
     bool use_proc_buffer;
 
-
 ## Flashing Programme onto STM32
 
 To set the STM32 into Bootloader mode, pull the `BOOT0` pin to 5 V and press the RESET button.
@@ -283,9 +282,9 @@ Print selected variable through USB COM.
 
 **`<variable>` select variable to print**
 
-| Operation         | Variable                                  |
-|:-----------------:|:------------------------------------------|
-|`add` `Current`    |`hall` `hall_dec` `rpm` `pos` `duty_a` `duty_b` `duty_c` `ia` `ib` `ic` `va` `vb` `vbatt` `ibatt` `ia_raw` `ib_raw` `ic_raw` `va_raw` `vb_raw` `vbatt_raw` `ibatt_raw`     |
+| Operation | Variable                                  |
+|:---------:|:------------------------------------------|
+|`add` `rm` |`hall` `hall_dec` `rpm` `pos` `duty_a` `duty_b` `duty_c` `ia` `ib` `ic` `va` `vb` `vbatt` `ibatt` `ia_raw` `ib_raw` `ic_raw` `va_raw` `vb_raw` `vbatt_raw` `ibatt_raw`     |
 
 ### `print <format>`
 

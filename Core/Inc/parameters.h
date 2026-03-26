@@ -10,13 +10,20 @@
 #define ADC2_NUM_CHANNELS   2U
 #define ADC3_NUM_CHANNELS   2U
 
-#define ADC_IA_SHUNT        0.013f // Ia channel gain (shunt resistor)
-#define ADC_IB_SHUNT        0.013f // Ib channel gain (shunt resistor)
-#define ADC_IC_SHUNT        0.013f // Ic channel gain (shunt resistor)
+#define ADC_IA_SHUNT        0.005f // Ia channel gain (shunt resistor)
+#define ADC_IB_SHUNT        -0.007f // Ib channel gain (shunt resistor)
+#define ADC_IC_SHUNT        0.003f // Ic channel gain (shunt resistor)
+#define ADC_IA_OFFSET       0.10f // Ia channel offset
+#define ADC_IB_OFFSET       -0.012f // Ib channel offset
+#define ADC_IC_OFFSET       0.009f // Ic channel offset
 #define ADC_VA_GAIN         11.0f // Va channel gain (voltage divider)
 #define ADC_VB_GAIN         11.0f // Vb channel gain (voltage divider)
+#define ADC_VA_OFFSET       0.0f // Va channel offset
+#define ADC_VB_OFFSET       0.0f // Vb channel offset
 #define ADC_IBATT_SHUNT     0.013f // Battery current channel gain (shunt resistor)
+#define ADC_IBATT_OFFSET    0.0f // Battery current channel offset
 #define ADC_VBATT_GAIN      0.130435f // Battery voltage channel gain (voltage divider)
+#define ADC_VBATT_OFFSET    0.0f // Battery voltage channel offset
 
 #define TIM6_FREQ_HZ        1000U
 
@@ -27,7 +34,7 @@
 #define SIXSTEP_DUTYCYCLE           1.0f // Range 1.0 to 0.5
 
 #define VVVF_RAMP_UP_SPEED          60U // 60 RPM/s
-#define VVVF_THRESHOLD_RPM          2000U // Minimum RPM to maintain after ramp-up
+#define VVVF_THRESHOLD_RPM          1800U // Minimum RPM to maintain after ramp-up
 
 #define ENCODER_PPR                 2048U // Pulses per revolution for the encoder
 #define ENCODER_STALL_THRESHOLD     10U // Threshold for detecting stall
@@ -64,10 +71,17 @@ typedef struct {
     float ia_shunt;
     float ib_shunt;
     float ic_shunt;
+    float ia_offset;
+    float ib_offset;
+    float ic_offset;
     float va_gain;
     float vb_gain;
+    float va_offset;
+    float vb_offset;
     float ibatt_shunt;
+    float ibatt_offset;
     float vbatt_gain;
+    float vbatt_offset;
 } ADCGain_t;
 
 typedef struct {
