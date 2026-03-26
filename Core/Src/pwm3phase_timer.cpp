@@ -199,7 +199,7 @@ HAL_StatusTypeDef ThreePhasePWMOut::setDeadTime(uint32_t deadtime_ns) {
 }
 
 HAL_StatusTypeDef ThreePhasePWMOut::setFrequency(uint32_t freq_Hz) {
-    HAL_StatusTypeDef status = HAL_OK;
+    if (!htim_ || freq_Hz == 0) return HAL_ERROR;
 
     pwm_freq_Hz = freq_Hz;
     uint32_t timer_clock = HAL_RCC_GetPCLK2Freq();
@@ -215,7 +215,7 @@ HAL_StatusTypeDef ThreePhasePWMOut::setFrequency(uint32_t freq_Hz) {
 
     updateCompareValues();
 
-    return status;
+    return HAL_OK;
 }
 
 uint32_t ThreePhasePWMOut::getFrequency(void) const {

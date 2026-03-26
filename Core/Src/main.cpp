@@ -7,6 +7,7 @@
 #include "modulation.h"
 #include "ustimer.h"
 #include "adc_sampler.h"
+#include "timer.h"
 #include <cstdint>
 
 #include "usbd_cdc_if.h"
@@ -72,6 +73,8 @@ MicrosecondTimer usTimer(&htim7);
 ADCSampler adc1(&hadc1, &hdma_adc1, adc1_buffer, ADC1_BUF_LEN);
 ADCSampler adc2(&hadc2, &hdma_adc2, adc2_buffer, ADC2_BUF_LEN);
 ADCSampler adc3(&hadc3, &hdma_adc3, adc3_buffer, ADC3_BUF_LEN);
+
+Timer adcTimer(&htim1), printTimer(&htim2), ledTimer(&htim3), encoderTimer(&htim4), speedControlTimer(&htim6);
 
 DigitalOut pwm_ch1_dis(GPIOA, GPIO_PIN_2), pwm_ch2_dis(GPIOB, GPIO_PIN_2), pwm_ch3_dis(GPIOB, GPIO_PIN_13);
 DigitalOut led_red(GPIOC, GPIO_PIN_9), led_green(GPIOA, GPIO_PIN_8), led_yellow_1(GPIOA, GPIO_PIN_9), led_yellow_2(GPIOA, GPIO_PIN_10);
@@ -179,11 +182,17 @@ int main(void)
   while (adc3.startDMA() != HAL_OK) usb_printf("Failed to start ADC3 DMA Error code: 0x%lx\r\n", HAL_DMA_GetError(&hdma_adc3));
   
   /* Start timers */
-  if (HAL_TIM_Base_Start(&htim1) != HAL_OK) error_flag = true;
-  if (HAL_TIM_Base_Start_IT(&htim2) != HAL_OK) error_flag = true;
-  if (HAL_TIM_Base_Start_IT(&htim3) != HAL_OK) error_flag = true;
-  if (HAL_TIM_Base_Start_IT(&htim4) != HAL_OK) error_flag = true;
-  if (HAL_TIM_Base_Start_IT(&htim6) != HAL_OK) error_flag = true;
+  //if (HAL_TIM_Base_Start(&htim1) != HAL_OK) error_flag = true;
+  //if (HAL_TIM_Base_Start_IT(&htim2) != HAL_OK) error_flag = true;
+  //if (HAL_TIM_Base_Start_IT(&htim3) != HAL_OK) error_flag = true;
+  //if (HAL_TIM_Base_Start_IT(&htim4) != HAL_OK) error_flag = true;
+  //if (HAL_TIM_Base_Start_IT(&htim6) != HAL_OK) error_flag = true;
+
+  if (adcTimer.start() != HAL_OK) error_flag = true;
+  if (printTimer.startIT() != HAL_OK) error_flag = true;
+  if (ledTimer.startIT() != HAL_OK) error_flag = true;
+  if (encoderTimer.startIT() != HAL_OK) error_flag = true;
+  if (speedControlTimer.startIT() != HAL_OK) error_flag = true;
 
   if (usTimer.init() != HAL_OK) error_flag = true;
 
