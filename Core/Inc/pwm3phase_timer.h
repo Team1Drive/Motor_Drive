@@ -43,7 +43,7 @@ class ThreePhasePWMOut {
          * @param phase Phase index (0 for A, 1 for B, 2 for C)
          * @return Current duty cycle for the specified phase, or -1.0f if the phase index is invalid.
          */
-        float getDuty(uint8_t phase);
+        float getDuty(uint8_t phase) const;
 
         /**
          * Configure the dead time for the complementary outputs. The dead time is specified in nanoseconds and will be converted to timer ticks based on the timer clock frequency.
@@ -63,5 +63,5 @@ class ThreePhasePWMOut {
          * Get the current PWM switching frequency.
          * @return Current PWM frequency in Hertz.
          */
-        uint32_t getFrequency(void);
+        uint32_t getFrequency(void) const;
 };

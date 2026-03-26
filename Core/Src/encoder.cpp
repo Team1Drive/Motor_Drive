@@ -150,26 +150,26 @@ void Encoder::reset(void) {
     stall_counter_ = 0;
 }
 
-uint16_t Encoder::getPos(void) {
+uint16_t Encoder::getPos(void) const {
     if (!is_synchronized_) return 0;
     uint16_t current_hw_cnt = (uint16_t)htim_->Instance->CNT;
     return (uint16_t)(current_hw_cnt - index_offset_) & (counts_per_rev_ - 1);
 }
 
-int8_t Encoder::getDirection(void) {
+int8_t Encoder::getDirection(void) const {
     return __HAL_TIM_IS_TIM_COUNTING_DOWN(htim_) ? -1 : 1;
 }
 
-float Encoder::getRPM(void) {
+float Encoder::getRPM(void) const {
     return rpm;
 }
 
-float Encoder::getPos_deg(void) {
+float Encoder::getPos_deg(void) const {
     float position = ((float)(getPos() % counts_per_rev_)) / counts_per_rev_ * 360.0f;
     return position;
 }
 
-float Encoder::getPos_rad(void) {
+float Encoder::getPos_rad(void) const {
     float position = ((float)(getPos() % counts_per_rev_)) / counts_per_rev_ * 2.0f * M_PI;
     return position;
 }

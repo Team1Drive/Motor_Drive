@@ -73,7 +73,7 @@ void HallSensor::irqHandlerFalling(uint16_t pin){
     }
 }
 
-uint8_t HallSensor::getState(void) {
+uint8_t HallSensor::getState(void) const {
     return state;
 }
 

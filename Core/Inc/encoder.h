@@ -61,14 +61,14 @@ class Encoder {
          * @brief Gets the current count of encoder pulses. This count is incremented on each rising edge of channel A and channel B, and can be reset to zero using the reset() function. The count represents the total number of pulses detected since the last reset, and can be used to calculate position, speed, and direction of rotation.
          * @return The current count of encoder pulses.
          */
-        uint16_t getPos(void);
+        uint16_t getPos(void) const;
 
         /**
          * @brief Gets the current direction of rotation based on the state of the encoder channels. The direction is determined by the sequence of rising and falling edges on channel A and channel B, and is typically represented as 1 for clockwise rotation, -1 for counterclockwise rotation, and 0 for no movement or invalid state.
          * @return The current direction of rotation: 1 for clockwise, -1 for counterclockwise, and 0 for no movement or invalid state.
           * The direction is decoded using the previous and current state of the encoder channels to determine the direction of rotation.
          */
-        int8_t getDirection(void);
+        int8_t getDirection(void) const;
 
         /**
          * @brief Gets the current speed of rotation in revolutions per minute (RPM). This is calculated based on the time interval between encoder pulses and the number of pulses per revolution (PPR) defined for the encoder. The function uses the pulse interval measured by the microsecond timer to calculate the RPM, which can be used for speed control and monitoring of the motor.
@@ -76,17 +76,17 @@ class Encoder {
          * The RPM is calculated using the formula: RPM = (Frequency * 60) / (PPR * 4), where Frequency is the inverse of the pulse interval in seconds, and PPR is the number of pulses per revolution for the encoder. The factor of 4 accounts for quadrature encoding, which provides four counts per pulse (rising and falling edges of both channels).
           * A simple low-pass filter can be applied to the pulse interval to smooth out RPM calculations, but this is optional and can be adjusted based on the application's requirements.
          */
-        float getRPM(void);
+        float getRPM(void) const;
 
         /**
          * @brief Gets the current position of the encoder in degrees. This is calculated based on the count of encoder pulses and the number of pulses per revolution (PPR) defined for the encoder. The position is represented as an angle between 0 and 360 degrees, where 0 degrees corresponds to the index pulse (if available) or the initial position at startup, and increases in the direction of rotation.
          * @return The current position of the encoder in degrees. The position is calculated using the formula: Position (degrees) = (Count % (PPR * 4)) / (PPR * 4) * 360, where Count is the current pulse count, PPR is the number of pulses per revolution, and the factor of 4 accounts for quadrature encoding.
          */
-        float getPos_deg(void);
+        float getPos_deg(void) const;
 
         /**
          * @brief Gets the current position of the encoder in radians. This is calculated based on the count of encoder pulses and the number of pulses per revolution (PPR) defined for the encoder. The position is represented as an angle between 0 and 2π radians, where 0 radians corresponds to the index pulse (if available) or the initial position at startup, and increases in the direction of rotation.
          * @return The current position of the encoder in radians. The position is calculated using the formula: Position (radians) = (Count % (PPR * 4)) / (PPR * 4) * 2π, where Count is the current pulse count, PPR is the number of pulses per revolution, and the factor of 4 accounts for quadrature encoding.
          */
-        float getPos_rad(void);
+        float getPos_rad(void) const;
 };

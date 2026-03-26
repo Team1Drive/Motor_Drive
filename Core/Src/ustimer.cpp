@@ -33,7 +33,7 @@ void MicrosecondTimer::start(uint8_t identifier) {
     __enable_irq();
 }
 
-uint64_t MicrosecondTimer::getTick(void) {
+uint64_t MicrosecondTimer::getTick(void) const {
     uint32_t overflow;
     uint32_t tick;
     __disable_irq();
@@ -43,29 +43,29 @@ uint64_t MicrosecondTimer::getTick(void) {
     return ((uint64_t)overflow << 16) | tick;
 }
 
-uint64_t MicrosecondTimer::getElapsedTime_us(uint8_t identifier) {
+uint64_t MicrosecondTimer::getElapsedTime_us(uint8_t identifier) const {
     if (identifier >= 256) return 0;
     uint64_t current_tick = getTick();
     uint64_t start_tick_full = ((uint64_t)start_overflow_count[identifier] << 16) | start_tick[identifier];
     return current_tick - start_tick_full;
 }
 
-uint64_t MicrosecondTimer::getElapsedTime_ms(uint8_t identifier) {
+uint64_t MicrosecondTimer::getElapsedTime_ms(uint8_t identifier) const {
     if (identifier >= 256) return 0;
     return getElapsedTime_us(identifier) / 1000U;
 }
 
-float MicrosecondTimer::getElapsedTimef_ms(uint8_t identifier) {
+float MicrosecondTimer::getElapsedTimef_ms(uint8_t identifier) const {
     if (identifier >= 256) return 0.0f;
     return getElapsedTime_us(identifier) / 1000.0f;
 }
 
-uint64_t MicrosecondTimer::getElapsedTime_s(uint8_t identifier) {
+uint64_t MicrosecondTimer::getElapsedTime_s(uint8_t identifier) const {
     if (identifier >= 256) return 0;
     return getElapsedTime_us(identifier) / 1000000U;
 }
 
-float MicrosecondTimer::getElapsedTimef_s(uint8_t identifier) {
+float MicrosecondTimer::getElapsedTimef_s(uint8_t identifier) const {
     if (identifier >= 256) return 0.0f;
     return getElapsedTime_us(identifier) / 1000000.0f;
 }

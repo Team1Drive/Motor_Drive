@@ -20,6 +20,6 @@ DigitalIn::DigitalIn(GPIO_TypeDef* port, uint16_t pin):
     pin_(pin)
     {}
 
-bool DigitalIn::read(void) {
+bool DigitalIn::read(void) const {
         return HAL_GPIO_ReadPin(port_, pin_) == GPIO_PIN_SET;
     }

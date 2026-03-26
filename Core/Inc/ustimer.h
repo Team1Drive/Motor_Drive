@@ -47,42 +47,42 @@ class MicrosecondTimer {
          * @return The current timer tick count in microseconds.
           * The upper 48 bits represent the overflow count (number of times the timer has overflowed), and the lower 16 bits represent the current timer counter value.
          */
-        uint64_t getTick(void);
+        uint64_t getTick(void) const;
 
         /**
          * @brief Gets the elapsed time in microseconds for a given identifier since the last call to start() for that identifier. This is calculated by taking the difference between the current timer tick and the recorded start tick for that identifier.
          * @param identifier The unique identifier (0-255) for the timing session to check the elapsed time for.
          * @return The elapsed time in microseconds since the last call to start() for the given identifier.
          */
-        uint64_t getElapsedTime_us(uint8_t identifier);
+        uint64_t getElapsedTime_us(uint8_t identifier) const;
 
         /**
          * @brief Gets the elapsed time in milliseconds for a given identifier since the last call to start() for that identifier. This is calculated by taking the difference between the current timer tick and the recorded start tick for that identifier, and then dividing by 1000.
          * @param identifier The unique identifier (0-255) for the timing session to check the elapsed time for.
          * @return The elapsed time in rounded milliseconds since the last call to start() for the given identifier.
          */
-        uint64_t getElapsedTime_ms(uint8_t identifier);
+        uint64_t getElapsedTime_ms(uint8_t identifier) const;
 
         /**
          * @brief Gets the elapsed time in milliseconds as a floating-point value for a given identifier since the last call to start() for that identifier. This is calculated by taking the difference between the current timer tick and the recorded start tick for that identifier, and then dividing by 1000.0f to get a more precise value.
          * @param identifier The unique identifier (0-255) for the timing session to check the elapsed time for.
          * @return The elapsed time in milliseconds as a floating-point value since the last call to start() for the given identifier.
          */
-        float getElapsedTimef_ms(uint8_t identifier);
+        float getElapsedTimef_ms(uint8_t identifier) const;
 
         /**
          * @brief Gets the elapsed time in seconds for a given identifier since the last call to start() for that identifier. This is calculated by taking the difference between the current timer tick and the recorded start tick for that identifier, and then dividing by 1,000,000.
          * @param identifier The unique identifier (0-255) for the timing session to check the elapsed time for.
          * @return The elapsed time in rounded seconds since the last call to start() for the given identifier.
          */
-        uint64_t getElapsedTime_s(uint8_t identifier);
+        uint64_t getElapsedTime_s(uint8_t identifier) const;
 
         /**
          * @brief Gets the elapsed time in seconds as a floating-point value for a given identifier since the last call to start() for that identifier. This is calculated by taking the difference between the current timer tick and the recorded start tick for that identifier, and then dividing by 1,000,000.0f to get a more precise value.
          * @param identifier The unique identifier (0-255) for the timing session to check the elapsed time for.
          * @return The elapsed time in seconds as a floating-point value since the last call to start() for the given identifier.
          */
-        float getElapsedTimef_s(uint8_t identifier);
+        float getElapsedTimef_s(uint8_t identifier) const;
 
         /**
          * @brief Resets the timer for a given identifier, stores the current tick, and returns the elapsed time in microseconds since the last reset. This is calculated by taking the difference between the current timer tick and the recorded start tick for that identifier, then updating the start tick and overflow count to the current values.

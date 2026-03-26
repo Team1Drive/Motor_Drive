@@ -27,5 +27,5 @@ class DigitalIn {
         DigitalIn(GPIO_TypeDef* port, uint16_t pin);
 
         // Read the input level of the pin
-        bool read(void);
+        bool read(void) const;
 };

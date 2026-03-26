@@ -144,7 +144,7 @@ void ThreePhasePWMOut::setDuty(float dutyA, float dutyB, float dutyC) {
     __HAL_TIM_SET_COMPARE(htim_, TIM_CHANNEL_3, compare_C);
 }
 
-float ThreePhasePWMOut::getDuty(uint8_t phase) {
+float ThreePhasePWMOut::getDuty(uint8_t phase) const {
     switch (phase) {
         case 0:
             return duty_A;
@@ -218,6 +218,6 @@ HAL_StatusTypeDef ThreePhasePWMOut::setFrequency(uint32_t freq_Hz) {
     return status;
 }
 
-uint32_t ThreePhasePWMOut::getFrequency(void) {
+uint32_t ThreePhasePWMOut::getFrequency(void) const {
     return pwm_freq_Hz;
 }

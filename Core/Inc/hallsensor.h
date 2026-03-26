@@ -38,7 +38,7 @@ class HallSensor {
 
         static void irqHandlerFalling(uint16_t pin);
 
-        uint8_t getState(void);
+        uint8_t getState(void) const;
 
         /**
          * @brief Fills the provided buffer with a string representation of the current Hall sensor state in the format "CBA", where A, B, and C are '0' or '1' representing the state of each sensor.
