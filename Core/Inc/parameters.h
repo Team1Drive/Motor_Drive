@@ -62,8 +62,10 @@ typedef struct {
 
 typedef struct {
     bool    is_vvvf_running;
+    bool    is_vvvf_ramp_up;
     bool    is_sixstep_running;
     bool    is_foc_running;
+    bool    is_audible;
     uint8_t led_increment_counter;
 } SystemStatus_t;
 

@@ -88,7 +88,7 @@ alignas(32) uint16_t adc3_proc_buffer[ADC3_BUF_LEN];
 
 volatile MotorControlMode control_mode = MotorControlMode::MOTOR_STOP;
 
-volatile SystemStatus_t system_status = { .is_vvvf_running = false, .is_sixstep_running = false, .is_foc_running = false, .led_increment_counter = 0};
+volatile SystemStatus_t system_status = { .is_vvvf_running = false, .is_vvvf_ramp_up = false, .is_sixstep_running = false, .is_foc_running = false, .is_audible = false, .led_increment_counter = 0};
 volatile ADCGain_t adc_gain = {
     .ia_shunt = ADC_IA_SHUNT,
     .ib_shunt = ADC_IB_SHUNT,
@@ -716,6 +716,7 @@ void startUpSequence(void) {
   if (control_mode != MotorControlMode::MOTOR_STARTUP) return;
   hallsensor.read();
   motorPWM.setDuty(1.0f, 0.0f, -1.0f);
+  system_status.is_vvvf_ramp_up = true;
   control_mode = MotorControlMode::MOTOR_VVVF;
 }
 
@@ -737,14 +738,41 @@ void vvvfRampUp(void) {
     system_status.is_vvvf_running = true;
   }
 
+  if (system_status.is_audible) {
+    if (rpm < 500.0f) {
+      motorPWM.setFrequency(550);
+    }
+    else {
+      motorPWM.setFrequency((uint32_t)rpm * 2);
+    }
+  }
+  else {
+    if (motorPWM.getFrequency() != 20000) motorPWM.setFrequency(20000);
+  }
+
   uint32_t frequency = motorPWM.getFrequency();
   float step_increment = (float)ramp_up / frequency;
 
-  if (accelerating) {
-    rpm += step_increment;
-    if (rpm >= VVVF_THRESHOLD_RPM) {
-      rpm = VVVF_THRESHOLD_RPM;
-      accelerating = false;
+  if (system_status.is_vvvf_ramp_up) {
+    if (accelerating) {
+      rpm += step_increment;
+      if (rpm >= VVVF_THRESHOLD_RPM) {
+        rpm = VVVF_THRESHOLD_RPM;
+        accelerating = false;
+      }
+    }
+  }
+  else {
+    if (rpm > 0.0f) {
+      rpm -= 2 * step_increment;
+      if (rpm <= 0.0f) {
+        rpm = 0.0f;
+        system_status.is_vvvf_running = false;
+        control_mode = MotorControlMode::MOTOR_STOP;
+        motorPWM.setDuty(-1.0f, -1.0f, -1.0f);
+        relay.write(0);
+        return;
+      }
     }
   }
 
@@ -861,12 +889,19 @@ static void process_command(const char* cmd) {
 
   // Stop
   } else if (strcmp(cmd, "stop") == 0) {
-    control_mode = MotorControlMode::MOTOR_STOP;
-    system_status.is_vvvf_running = false;
-    system_status.is_sixstep_running = false;
-    system_status.is_foc_running = false;
-    relay.write(0);
-    CDC_Transmit_HS((uint8_t*)"Stopping\r\n", 4);
+    if (control_mode == MotorControlMode::MOTOR_VVVF && system_status.is_vvvf_ramp_up) {
+      system_status.is_vvvf_ramp_up = false; // Start ramp down
+      CDC_Transmit_HS((uint8_t*)"VVVF ramping down\r\n", 21);
+    }
+    else {
+      control_mode = MotorControlMode::MOTOR_STOP;
+      system_status.is_vvvf_running = false;
+      system_status.is_sixstep_running = false;
+      system_status.is_foc_running = false;
+      motorPWM.setDuty(-1.0f, -1.0f, -1.0f);
+      relay.write(0);
+      CDC_Transmit_HS((uint8_t*)"Stopping\r\n", 4);
+    }
 
   // Six-step commutation
   } else if (strcmp(cmd, "sixstep") == 0) {
@@ -1253,6 +1288,15 @@ static void process_command(const char* cmd) {
         CDC_Transmit_HS((uint8_t*)"Invalid print subcommand\r\n", 26);
     }
 
+  // Toggle audible frequency
+  } else if (strcmp(cmd, "audible") == 0) {
+    if (system_status.is_audible) {
+      system_status.is_audible = false;
+      CDC_Transmit_HS((uint8_t*)"Audible frequency disabled\r\n", 28);
+    } else {
+      system_status.is_audible = true;
+      CDC_Transmit_HS((uint8_t*)"Audible frequency enabled\r\n", 27);
+    }
     
   // Handle invalid case
   } else {
