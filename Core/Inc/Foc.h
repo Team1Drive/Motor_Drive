@@ -2,213 +2,187 @@
 /*
  * foc.h  —  Field-Oriented Control for Motor_Drive (STM32H725)
  *
- * Architecture mirrors the MATLAB reference simulation:
- *   foc_svpwm_switched_inverter_multimode.m
+ * Designed to integrate cleanly with the real Motor_Drive repo.
+ * All motor parameters and gains are concentrated here.
  *
- * Control hierarchy (all running in the TIM8 update ISR at Ts = 50 µs):
+ * Control hierarchy (runs in TIM8 update ISR at 20 kHz = FOC_TS):
  *
- *   [Encoder] ──► theta_e, omega_m
- *   [ADC]     ──► Ia, Ib, Ic, Vdc
- *                     │
- *                 Clarke transform   (Ia,Ib,Ic  → Iα,Iβ)
- *                     │
- *                 Park   transform   (Iα,Iβ,θe  → Id,Iq)   ← feedback
- *                     │
- *            ┌────────┴──────────┐
- *      Speed PI (outer)      Field-weakening PI
- *      omega_ref → Iq_ref    Vdc/√3 − |u| → Id_ref (neg)
- *            │
- *      Current PI × 2 (inner, with decoupling feed-forward)
- *      Id_ref − Id → Vd_cmd
- *      Iq_ref − Iq → Vq_cmd
- *            │
- *      Inverse Park           (Vd,Vq,θe   → Vα,Vβ)
- *            │
- *      SVPWM_COMP             (Vα,Vβ,Vdc  → dA,dB,dC)
- *            │
- *      motorPWM.setDuty()     → TIM8 CCR1/2/3
+ *   [TIM4 encoder] → getPos_rad(), getRPM()  (RPM updated by TIM6 at 1 kHz)
+ *   [ADC1/2/3 DMA] → Ia, Ib, Ic, Vdc
+ *        │
+ *   Clarke transform     (Ia,Ib,Ic → Iα,Iβ)
+ *        │
+ *   Park   transform     (Iα,Iβ,θe → Id,Iq)
+ *        │
+ *   ┌────┴──────────────┐
+ *   Speed PI (outer,     Field-weakening PI
+ *   decimated)           (negative Id when |u| > Vdc/√3)
+ *   ω_ref → Iq_ref       → Id_ref
+ *        │
+ *   Current PI × 2 (inner, with decoupling feed-forward)
+ *   Id_ref − Id → Vd_cmd = PI_d + R·Id − ωe·L·Iq
+ *   Iq_ref − Iq → Vq_cmd = PI_q + R·Iq + ωe·L·Id + ωe·ψf
+ *        │
+ *   Inverse Park          (Vd,Vq,θe → Vα,Vβ)
+ *        │
+ *   SVPWM_COMP            (Vα,Vβ,Vdc → dA,dB,dC)
+ *        │
+ *   motorPWM.setDuty()    → TIM8 CCR1/2/3
  *
- * Motor assumed: surface-mount PMSM (Ld = Lq = L).
- *
- * TUNING CHECKLIST (set values in foc.h):
- *   1. FOC_POLE_PAIRS         — from motor datasheet (P/2)
- *   2. FOC_R, FOC_L           — per-phase resistance & inductance
- *   3. FOC_PSI_F              — PM flux linkage (= Kt / (1.5 * pp))
- *   4. FOC_IMAX               — peak current limit (A)
- *   5. FOC_KP_I / FOC_KI_I   — current PI (start low: Kp=0.5, Ki=50)
- *   6. FOC_KP_SP / FOC_KI_SP — speed  PI (start low: Kp=0.05, Ki=1)
- *   7. FOC_KI_FW              — field-weakening integral gain
- *   8. FOC_CURRENT_OFFSET_*   — calibrated at startup with motor at rest
+ * TUNING CHECKLIST (set defines below before first run):
+ *   1. Motor params correct  — BLY172S-24V-4000 values pre-loaded
+ *   2. FOC_KP_I / FOC_KI_I  — current PI, start very low
+ *   3. FOC_KP_SP / FOC_KI_SP — speed PI, start very low
+ *   4. Run encoder alignment before enabling FOC
+ *   5. Check current offsets print correctly via 'status' command
  */
 
 #include "stm32h7xx_hal.h"
-#include "parameters.h"   /* M_PI, SQRT3, ENCODER_PPR */
+#include "parameters.h"   /* MOTOR_POLE_PAIRS, ADCGain_t, M_PI */
 #include <cmath>
 #include <algorithm>
 
 /* =========================================================================
- * MOTOR PARAMETERS  — set these for your specific motor
+ * MOTOR PARAMETERS — BLY172S-24V-4000 (Anaheim Automation)
+ * These match the MATLAB reference simulation exactly.
+ * R = 1.5 * R_LL,  L = 1.5 * L_LL  (line-to-line → per-phase star model)
  * ========================================================================= */
 
-/** Number of pole pairs (P/2). For an 8-pole motor use 4. */
-#define FOC_POLE_PAIRS      4U
-
-/**
- * Per-phase stator resistance (Ohm).
- * From MATLAB ref: R = 1.5 * R_LL  = 1.5 * 0.80 = 1.20 Ω
- * Adjust for your motor; measure at room temperature.
- */
+/** Per-phase stator resistance (Ω).  1.5 × 0.80 Ω (datasheet) */
 #define FOC_R               1.20f
 
-/**
- * Per-phase stator inductance (H).
- * From MATLAB ref: L = 1.5 * L_LL  = 1.5 * 1.20e-3 = 1.80e-3 H
- */
+/** Per-phase stator inductance (H).  1.5 × 1.20e-3 H (datasheet) */
 #define FOC_L               1.80e-3f
 
 /**
- * PM flux linkage (Wb).  Derived from torque constant:
- *   Kt_SI = Kt_ozin * 0.007062  (Nm/A)
- *   psi_f = Kt_SI / (1.5 * pole_pairs)
- * For BLY172S-24V: Kt = 5.81 oz-in/A → 0.04103 Nm/A → psi_f ≈ 0.003419 Wb
- * Set to 0.0f if unknown; the FOC will still work but torque constant is wrong.
+ * PM flux linkage (Wb).
+ * Kt_SI = 5.81 oz-in/A × 0.007062 = 0.04103 Nm/A
+ * psi_f = Kt_SI / (1.5 × pole_pairs) = 0.04103 / (1.5 × 4) = 0.006838 Wb
+ *
+ * Note: MOTOR_POLE_PAIRS = 4 is defined in parameters.h
  */
-#define FOC_PSI_F           0.003419f
+#define FOC_PSI_F           0.006838f
 
 /* =========================================================================
- * CONTROLLER LIMITS
+ * CURRENT & VOLTAGE LIMITS
  * ========================================================================= */
 
-/** Maximum phase current magnitude (A). Keep below hardware overcurrent trip. */
+/** Peak phase current limit (A). Fault trips if any phase exceeds this. */
 #define FOC_IMAX            3.5f
 
 /** Most negative Id allowed during field weakening (A). */
 #define FOC_ID_FW_MIN      -3.5f
 
-/** Voltage limit for field weakening: Vdc/sqrt(3). Computed at runtime. */
-/* #define FOC_U_MAX_FW  computed as Vdc/sqrtf(3.0f) in foc_run() */
-
 /* =========================================================================
- * CONTROL LOOP TIMING
+ * TIMING
  * ========================================================================= */
 
-/** PWM / FOC period (s). Must match motorPWM.setFrequency(). */
+/** FOC / PWM period (s). Must match motorPWM.setFrequency(). */
 #define FOC_TS              (1.0f / 20000.0f)
 
 /**
- * Speed decimation factor.
- * Speed PI runs every FOC_SPEED_DIV FOC ticks = 20000/FOC_SPEED_DIV Hz.
- * Set to 1 to run at full 20 kHz (aggressive), 20 for 1 kHz (typical).
+ * Speed PI decimation.
+ * Speed PI runs every FOC_SPEED_DIV FOC ticks.
+ * 20 → runs at 1 kHz (matches TIM6 speed-update rate).
  */
 #define FOC_SPEED_DIV       20U
 
-/** Speed ramp rate (electrical rad/s per second = rad/s²). */
+/** Speed ramp rate (mechanical rad/s²). From MATLAB: 5000 RPM/s */
 #define FOC_RAMP_RATE       (5000.0f * 2.0f * M_PI / 60.0f)
 
 /* =========================================================================
- * CURRENT PI GAINS  (inner loop)
- * Starting point from MATLAB: Kp=15, Ki=3000.
- * On real hardware start with Kp=0.5, Ki=50 and ramp up cautiously.
+ * PI GAINS
+ * Start conservatively on real hardware. Increase cautiously.
+ * MATLAB reference used: Kp_i=15, Ki_i=3000, Kp_sp=0.15, Ki_sp=3
  * ========================================================================= */
+
+/** Current PI proportional gain. Start: 0.5, MATLAB ref: 15 */
 #define FOC_KP_I            0.5f
+
+/** Current PI integral gain. Start: 50, MATLAB ref: 3000 */
 #define FOC_KI_I            50.0f
 
-/** Current PI integrator clamp (V). Prevents windup. */
-#define FOC_INT_I_CLAMP     (0.1f)
+/** Current PI integrator clamp (V). Symmetric ±clamp. */
+#define FOC_INT_I_CLAMP     0.1f
 
-/* =========================================================================
- * SPEED PI GAINS  (outer loop)
- * Starting point from MATLAB: Kp=0.15, Ki=3.
- * ========================================================================= */
+/** Speed PI proportional gain. Start: 0.05, MATLAB ref: 0.15 */
 #define FOC_KP_SP           0.05f
+
+/** Speed PI integral gain. Start: 1.0, MATLAB ref: 3.0 */
 #define FOC_KI_SP           1.0f
 
-/* =========================================================================
- * FIELD-WEAKENING PI GAINS
- * Set Kp_fw=0 initially; only Ki_fw matters for steady-state FW.
- * ========================================================================= */
+/** Field-weakening PI proportional gain (typically 0 — only integral matters) */
 #define FOC_KP_FW           0.0f
+
+/** Field-weakening PI integral gain. From MATLAB ref: 500 */
 #define FOC_KI_FW           500.0f
 
 /* =========================================================================
- * ADC CURRENT OFFSETS  (calibrated at rest — motor not spinning)
- * adcToCurrent() assumes zero-current maps to Vref/2.
- * If there is a DC offset, measure the raw ADC value with motor stopped
- * and set these to the resulting zero-current ampere value.
+ * PI CONTROLLER — inline struct and update function (ISR-safe, no malloc)
  * ========================================================================= */
-#define FOC_CURRENT_OFFSET_A    0.0f   /* (A) */
-#define FOC_CURRENT_OFFSET_B    0.0f   /* (A) */
-#define FOC_CURRENT_OFFSET_C    0.0f   /* (A) */
 
-/* =========================================================================
- * PI CONTROLLER — generic struct and update function (inline, ISR-safe)
- * ========================================================================= */
 typedef struct {
     float kp;
     float ki;
     float integrator;
-    float clamp;      /* symmetric ±clamp on integrator AND output */
+    float clamp;    /* symmetric ±clamp applied to both integrator and output */
 } PI_t;
 
 /**
- * @brief Update a PI controller and return the clamped output.
- * Anti-windup: integrator is clamped independently from output.
- * Both clamps are symmetric: [-clamp, +clamp].
+ * @brief Run one PI step. Returns clamped output.
+ *        Anti-windup: integrator is clamped before output sum.
  */
 static inline float PI_update(PI_t* pi, float error, float dt)
 {
     pi->integrator += pi->ki * error * dt;
     if (pi->integrator >  pi->clamp) pi->integrator =  pi->clamp;
     if (pi->integrator < -pi->clamp) pi->integrator = -pi->clamp;
-
     float out = pi->kp * error + pi->integrator;
     if (out >  pi->clamp) out =  pi->clamp;
     if (out < -pi->clamp) out = -pi->clamp;
     return out;
 }
 
-/** Reset a PI controller to zero. Call when switching modes or on stop. */
-static inline void PI_reset(PI_t* pi)
-{
-    pi->integrator = 0.0f;
-}
+/** Reset integrator to zero. Call on mode switch or fault. */
+static inline void PI_reset(PI_t* pi) { pi->integrator = 0.0f; }
 
 /* =========================================================================
- * FOC STATE  — one instance lives in main.cpp as a global
+ * FOC STATE — one global instance declared in main.cpp
  * ========================================================================= */
+
 typedef struct {
 
     /* --- PI controllers --- */
-    PI_t pi_d;      /* d-axis current PI  */
-    PI_t pi_q;      /* q-axis current PI  */
-    PI_t pi_speed;  /* speed PI (outer)   */
-    PI_t pi_fw;     /* field-weakening PI */
+    PI_t pi_d;
+    PI_t pi_q;
+    PI_t pi_speed;
+    PI_t pi_fw;
 
     /* --- Setpoints --- */
-    float target_rpm;       /* commanded speed (RPM) */
-    float omega_ref;        /* ramped speed reference (electrical rad/s) */
-    float Id_ref;           /* d-axis current reference (A) */
-    float Iq_ref;           /* q-axis current reference (A) */
+    float target_rpm;   /* commanded speed (RPM), set via USB command    */
+    float omega_ref;    /* ramped speed reference (mechanical rad/s)     */
+    float Id_ref;       /* d-axis current reference (A)                  */
+    float Iq_ref;       /* q-axis current reference (A)                  */
 
-    /* --- Observables (written each tick, read by telemetry loop) --- */
-    volatile float Id;          /* measured d-axis current (A) */
-    volatile float Iq;          /* measured q-axis current (A) */
-    volatile float Ia;          /* phase A current (A) */
-    volatile float Ib;          /* phase B current (A) */
-    volatile float Ic;          /* phase C current (A) */
-    volatile float Vdc;         /* measured DC bus voltage (V) */
-    volatile float theta_e;     /* electrical angle (rad, 0‥2π) */
-    volatile float omega_e;     /* electrical angular velocity (rad/s) */
-    volatile float rpm;         /* mechanical RPM */
-    volatile float Vd_cmd;      /* d-axis voltage command (V) */
-    volatile float Vq_cmd;      /* q-axis voltage command (V) */
-    volatile float u_mag;       /* |Vd,Vq| voltage vector magnitude (V) */
+    /* --- Observables — written each tick, read by main loop / telemetry --- */
+    volatile float Id;
+    volatile float Iq;
+    volatile float Ia;
+    volatile float Ib;
+    volatile float Ic;
+    volatile float Vdc;
+    volatile float theta_e;
+    volatile float omega_e;
+    volatile float rpm;
+    volatile float Vd_cmd;
+    volatile float Vq_cmd;
+    volatile float u_mag;
 
     /* --- Speed decimation counter --- */
     uint32_t speed_div_cnt;
 
-    /* --- Fault flag --- */
-    volatile bool fault;        /* set on overcurrent or invalid angle */
+    /* --- Fault flag — set on overcurrent, cleared by foc_reset() --- */
+    volatile bool fault;
 
 } FOC_State_t;
 
@@ -217,25 +191,25 @@ typedef struct {
  * ========================================================================= */
 
 /**
- * @brief Initialise all PI controllers and reset state.
- *        Call once after hardware init, before enabling MOTOR_FOC_LINEAR.
+ * @brief Initialise all PI controllers and zero all state.
+ *        Call once in main() after hardware init.
  */
 void foc_init(FOC_State_t* foc);
 
 /**
- * @brief Run one complete FOC tick (Clarke → Park → PI → inv_Park → SVPWM).
- *        Called from HAL_TIM_PeriodElapsedCallback when TIM8 fires.
+ * @brief Run one complete FOC tick.
+ *        Called from HAL_TIM_PeriodElapsedCallback when TIM8 fires (20 kHz).
  *
- * @param foc      Pointer to the FOC state struct.
- * @param Ia       Phase A current, ADC-converted (A).
- * @param Ib       Phase B current, ADC-converted (A).
- * @param Ic       Phase C current, ADC-converted (A).
+ * @param foc      FOC state.
+ * @param Ia       Phase A current (A), already offset-corrected.
+ * @param Ib       Phase B current (A), already offset-corrected.
+ * @param Ic       Phase C current (A), already offset-corrected.
  * @param Vdc      DC bus voltage (V).
- * @param theta_e  Electrical angle from encoder (rad, 0‥2π).
- * @param omega_m  Mechanical angular velocity (rad/s), from encoder RPM.
- * @param[out] dutyA  Phase A duty cycle to pass to motorPWM.setDuty().
- * @param[out] dutyB  Phase B duty cycle.
- * @param[out] dutyC  Phase C duty cycle.
+ * @param theta_e  Electrical angle (rad, 0…2π).
+ * @param omega_m  Mechanical angular velocity (rad/s).
+ * @param[out] dutyA  Duty cycle for phase A → motorPWM.setDuty().
+ * @param[out] dutyB  Duty cycle for phase B.
+ * @param[out] dutyC  Duty cycle for phase C.
  */
 void foc_run(FOC_State_t* foc,
              float Ia, float Ib, float Ic,
@@ -244,6 +218,7 @@ void foc_run(FOC_State_t* foc,
              float* dutyA, float* dutyB, float* dutyC);
 
 /**
- * @brief Reset all integrators. Call on MOTOR_STOP or fault.
+ * @brief Reset all PI integrators and clear fault flag.
+ *        Call on MOTOR_STOP or when re-arming after a fault.
  */
 void foc_reset(FOC_State_t* foc);
