@@ -18,6 +18,7 @@ class ADCSampler {
         uint16_t* proc_buffer_;
         uint32_t  proc_len_;
         bool      use_proc_buffer_;
+        bool      data_ready_;
 
         /**
          * Helper function to determine the instance index based on the ADC handle. This is used to route the correct ADC handle to the corresponding ADCSampler instance in the static callback functions.
