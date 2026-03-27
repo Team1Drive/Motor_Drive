@@ -86,7 +86,10 @@ void ADCSampler::getLatestData(uint16_t* channel_data) {
     uint32_t written = length_ - ndtr;
     if (written == 0) written = length_;
     uint32_t latest_index = written - 1;
-    uint32_t group_start = (latest_index / num_channels_) * num_channels_;
+    uint32_t group_start = latest_index / num_channels_;
+    if (group_start <= 0) group_start = (length_ / num_channels_) - 1;
+    else group_start -= 1;
+    group_start *= num_channels_;
 
     // Copy the latest group of samples for each channel
     for (uint32_t i = 0; i < num_channels_; i++) {

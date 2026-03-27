@@ -34,7 +34,7 @@
 #define SIXSTEP_DUTYCYCLE           1.0f // Range 1.0 to 0.5
 
 #define VVVF_RAMP_UP_SPEED          60U // 60 RPM/s
-#define VVVF_THRESHOLD_RPM          1800U // Minimum RPM to maintain after ramp-up
+#define VVVF_THRESHOLD_RPM          1500U // Minimum RPM to maintain after ramp-up
 
 #define ENCODER_PPR                 2048U // Pulses per revolution for the encoder
 #define ENCODER_STALL_THRESHOLD     10U // Threshold for detecting stall
