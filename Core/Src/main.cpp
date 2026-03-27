@@ -114,6 +114,10 @@ static ring_buffer_t rx_ring = { .head = 0, .tail = 0 };
 
 
 
+// ─────────────────────────────────────────────────────────────────────────────
+//  Main Function
+// ─────────────────────────────────────────────────────────────────────────────
+
 int main(void)
 {
 
@@ -237,6 +241,9 @@ int main(void)
 }
 
 
+// ─────────────────────────────────────────────────────────────────────────────
+//  System Interrupt Handlers and Callbacks
+// ─────────────────────────────────────────────────────────────────────────────
 
 /* GPIO EXTI interrupt callback */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
@@ -318,15 +325,24 @@ void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* hadc) {
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
   ADCSampler::irqConvCplt(hadc);
 }
-
+/* USB CDC Receive Handler */
 void USB_CDC_RxHandler(uint8_t* Buf, uint32_t Len) {
   for (uint32_t i = 0; i < Len; i++) {
     ring_buffer_write(Buf[i]);
   }
 }
 
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Interrupt driven functions (e.g. control loops, status indicators, etc.)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * @brief Timer 2 interrupt running at 10 Hz.
+ * @note Currently not used.
+ */
 void timer2IRQ(void) {
-  uint16_t adc1_raw[3];
+  /* uint16_t adc1_raw[3];
   uint16_t adc2_raw[2];
   uint16_t adc3_raw[2];
 
@@ -350,7 +366,7 @@ void timer2IRQ(void) {
   //usb_printf("v ab/bc (V):\t%.2f\t%.2f\n", vab, vbc);
   //usb_printf("v batt (V): %.2f\t, i batt (A): %.2f\n", vbatt, ibatt);
 
-  //usb_printf("RPM: %.2f\t, Direction: %d\n", encoder.getRPM(), encoder.getDirection());
+  //usb_printf("RPM: %.2f\t, Direction: %d\n", encoder.getRPM(), encoder.getDirection()); */
 }
 
 /**
@@ -402,8 +418,12 @@ void timer3IRQ(void) {
   }
 }
 
+/**
+ * @brief Function to be called with TIM6 interrupt.
+ * @note Currently not used.
+ */
 void timer6IRQ(void) {
-  uint16_t adc1_raw[3];
+  /* uint16_t adc1_raw[3];
   uint16_t adc2_raw[2];
   uint16_t adc3_raw[2];
 
@@ -428,9 +448,13 @@ void timer6IRQ(void) {
   data.speed = encoder.getRPM();
   data.pos   = encoder.getPos();
 
-  CDC_Transmit_HS((uint8_t*)&data, sizeof(LogData_t));
+  CDC_Transmit_HS((uint8_t*)&data, sizeof(LogData_t)); */
 }
 
+/**
+ * @brief Function to print telemetry data in UTF-8 format over USB.
+ * @note The data fields to be printed are determined by the print_mask variable, and the format is determined by the print_format variable. The function reads the latest ADC data, processes it into physical units, and constructs a formatted string to be sent over USB.
+ */
 void printTelemetryUTF8(void) {
   if (print_mask == 0 || (print_format != PrintFormat::PRINT_UTF8)) return;
   
@@ -542,6 +566,11 @@ void printTelemetryUTF8(void) {
   }
 }
 
+/**
+ * @brief Function to print telemetry data in binary format over USB.
+ * @note The data fields to be printed are determined by the print_mask variable,with variable data packet length. The packet starts with a header (0xAA 0x55), followed by a 4-byte mask indicating which fields are included, and then the data fields in the order defined by the print_mask.
+ * @note Binary data sent is parsed automatically by a script on the host computer.
+ */
 void printTelemetryBinary(void) {
   if (print_mask == 0 || (print_format != PrintFormat::PRINT_BINARY)) return;
 
@@ -705,6 +734,9 @@ void speedControl(void) {
   uint32_t rpm = encoder.getRPM();
 }
 
+/**
+ * @brief The starting sequency to be called at every zero speed start.
+ */
 void startUpSequence(void) {
   if (control_mode != MotorControlMode::MOTOR_STARTUP) return;
   hallsensor.read();
@@ -724,6 +756,7 @@ void vvvfRampUp(void) {
   static float angle;
   static bool accelerating;
 
+  // Initialize on zero speed starting
   if (!system_status.is_vvvf_running) {
     rpm = 0.0f;
     angle = 0.0f;
@@ -731,6 +764,7 @@ void vvvfRampUp(void) {
     system_status.is_vvvf_running = true;
   }
 
+  // Audible frequency adjustment
   if (system_status.is_audible) {
     if (rpm < 500.0f) {
       motorPWM.setFrequency(550);
@@ -743,9 +777,11 @@ void vvvfRampUp(void) {
     if (motorPWM.getFrequency() != 20000) motorPWM.setFrequency(20000);
   }
 
+  // Increment aligned with interrupt frequency
   uint32_t frequency = motorPWM.getFrequency();
   float step_increment = (float)ramp_up / frequency;
 
+  // Ramp up or down the speed
   if (system_status.is_vvvf_ramp_up) {
     if (accelerating) {
       rpm += step_increment;
@@ -769,25 +805,26 @@ void vvvfRampUp(void) {
     }
   }
 
+  // Calculate electrical angle
   float electrical_freq = rpm / 60.0f * MOTOR_POLE_PAIRS;
 
   float delta_angle = 2.0f * M_PI * electrical_freq / frequency;
   angle += delta_angle;
   if (angle >= 2.0f * M_PI) angle -= 2.0f * M_PI;
 
-  // 改进的 V/f 曲线：增加最小电压和转折点
+  // Calculate voltage amplitude
   float amplitude;
-  const float MIN_VOLTAGE = 0.15f;      // 最小占空比幅度 15%
-  const float KNEE_RPM = 300.0f;        // 转折点转速 (RPM)
+  const float MIN_VOLTAGE = 0.15f;      // Boost start voltage
+  const float KNEE_RPM = 600.0f;        // Knee point (RPM)
   if (rpm < KNEE_RPM) {
-      // 低速段：线性从 MIN_VOLTAGE 升到 1.0
+      // Increase amplitude from MIN_VOLTAGE until knee point
       amplitude = MIN_VOLTAGE + (1.0f - MIN_VOLTAGE) * (rpm / KNEE_RPM);
   } else {
-      // 高速段：保持 1.0（或继续增加，但一般保持满压）
+      // Remains at maximum amplitude after knee point
       amplitude = 1.0f;
   }
 
-  // 限制最大幅度
+  // Limit output range
   if (amplitude > 1.0f) amplitude = 1.0f;
 
   float dutyA = 0.5f + amplitude * 0.5f * sinf(angle);
