@@ -20,6 +20,8 @@ class ADCSampler {
         bool      use_proc_buffer_;
         bool      data_ready_;
 
+        uint8_t temp_channel_index_;
+
         /**
          * Helper function to determine the instance index based on the ADC handle. This is used to route the correct ADC handle to the corresponding ADCSampler instance in the static callback functions.
          * @note This function is for mapping ADC1, ADC2, and ADC3 to indices 0, 1, and 2 respectively. It returns -1 for invalid handles. Internal use only.
@@ -30,6 +32,8 @@ class ADCSampler {
          * Process the 2nd half buffer when the conversion complete callback is triggered. This function should be called from the ADC conversion complete interrupt handler. It copies the data from the DMA buffer to the processing buffer if one is set, and sets the full_ready_ flag to indicate that new data is available for processing.
          */
         void processBuffer(void);
+
+        void temp_processBuffer(void);
 
         /**
          * Process the half buffer when the conversion half complete callback is triggered. This function should be called from the ADC conversion half complete interrupt handler. It copies the first half of the data from the DMA buffer to the processing buffer if one is set, and sets the half_ready_ flag to indicate that new data is available for processing.
@@ -79,4 +83,6 @@ class ADCSampler {
          * @param channel_data Pointer to an array where the latest ADC values for each channel will be copied. The caller is responsible for ensuring that this array has enough space to hold the number of channels configured in the ADC.
          */
         void getLatestData(uint16_t* channel_data);
+
+        void temp_getLatestData(uint16_t* channel_data);
 };

@@ -22,6 +22,13 @@ void ADCSampler::processBuffer(void) {
     full_ready_ = true;
 }
 
+void ADCSampler::temp_processBuffer(void) {
+    buffer_[temp_channel_index_++] = HAL_ADC_GetValue(hadc_);
+    if (temp_channel_index_ >= num_channels_) {
+        temp_channel_index_ = 0;
+    }
+}
+
 void ADCSampler::processHalfBuffer(void) {
     // Process the half buffer (first half)
     if (use_proc_buffer_) {
@@ -51,6 +58,7 @@ ADCSampler::ADCSampler(ADC_HandleTypeDef* hadc, DMA_HandleTypeDef* hdma, uint16_
         uint32_t i = getInstanceIndex(hadc_);
         instance_[i] = this;
         data_ready_ = false;
+        temp_channel_index_ = 0;
     }
 
 void ADCSampler::setProcessingBuffer(uint16_t* proc_buf, uint32_t proc_len) {
@@ -62,7 +70,8 @@ void ADCSampler::setProcessingBuffer(uint16_t* proc_buf, uint32_t proc_len) {
 void ADCSampler::irqConvCplt(ADC_HandleTypeDef* hadc) {
     uint32_t i = getInstanceIndex(hadc);
     if (instance_[i] != nullptr) {
-        instance_[i]->processBuffer();
+        //instance_[i]->processBuffer();
+        instance_[i]->temp_processBuffer();
     }
 }
 
@@ -105,5 +114,11 @@ void ADCSampler::getLatestData(uint16_t* channel_data) {
     // Copy the latest group of samples for each channel
     for (uint32_t i = 0; i < num_channels_; i++) {
         channel_data[i] = buffer_[group_start + i];
+    }
+}
+
+void ADCSampler::temp_getLatestData(uint16_t* channel_data) {
+    for (uint32_t i = 0; i < num_channels_; i++) {
+        channel_data[i] = buffer_[i];
     }
 }

@@ -48,6 +48,10 @@ alignas(32) uint16_t adc1_buffer[ADC1_BUF_LEN] __attribute__((section(".sram_d1"
 alignas(32) uint16_t adc2_buffer[ADC2_BUF_LEN] __attribute__((section(".sram_d1")));
 alignas(32) uint16_t adc3_buffer[ADC3_BUF_LEN] __attribute__((section(".sram_d1")));
 
+uint16_t temp_adc1_buffer[ADC1_NUM_CHANNELS];
+uint16_t temp_adc2_buffer[ADC2_NUM_CHANNELS];
+uint16_t temp_adc3_buffer[ADC3_NUM_CHANNELS];
+
 /* Declare timer handles */
 extern TIM_HandleTypeDef htim1;
 extern TIM_HandleTypeDef htim2;
@@ -70,9 +74,13 @@ ThreePhasePWMOut motorPWM(&htim8);
 
 MicrosecondTimer usTimer(&htim7);
 
-ADCSampler adc1(&hadc1, &hdma_adc1, adc1_buffer, ADC1_BUF_LEN);
-ADCSampler adc2(&hadc2, &hdma_adc2, adc2_buffer, ADC2_BUF_LEN);
-ADCSampler adc3(&hadc3, &hdma_adc3, adc3_buffer, ADC3_BUF_LEN);
+//ADCSampler adc1(&hadc1, &hdma_adc1, adc1_buffer, ADC1_BUF_LEN);
+//ADCSampler adc2(&hadc2, &hdma_adc2, adc2_buffer, ADC2_BUF_LEN);
+//ADCSampler adc3(&hadc3, &hdma_adc3, adc3_buffer, ADC3_BUF_LEN);
+
+ADCSampler adc1(&hadc1, &hdma_adc1, temp_adc1_buffer, ADC1_NUM_CHANNELS);
+ADCSampler adc2(&hadc2, &hdma_adc2, temp_adc2_buffer, ADC2_NUM_CHANNELS);
+ADCSampler adc3(&hadc3, &hdma_adc3, temp_adc3_buffer, ADC3_NUM_CHANNELS);
 
 Timer adcTimer(&htim1), printTimer(&htim2), ledTimer(&htim3), encoderTimer(&htim4), speedControlTimer(&htim6);
 
@@ -472,7 +480,7 @@ void printTelemetryUTF8(void) {
                    | PRINT_IA_RAW
                    | PRINT_VB_RAW
                    | PRINT_VBATT_RAW)) != 0) {
-    adc1.getLatestData(adc1_raw);
+    adc1.temp_getLatestData(adc1_raw);
 
     va = adcToVoltage(adc1_raw[0], 3.3f, 65536, adc_gain.va_gain, 1.65f + adc_gain.va_offset);
     vb = adcToVoltage(adc1_raw[1], 3.3f, 65536, adc_gain.vb_gain, 1.65f + adc_gain.vb_offset);
@@ -482,7 +490,7 @@ void printTelemetryUTF8(void) {
                    | PRINT_VA
                    | PRINT_IB_RAW
                    | PRINT_VA_RAW)) != 0) {
-    adc2.getLatestData(adc2_raw);
+    adc2.temp_getLatestData(adc2_raw);
 
     ib = adcToCurrent(adc2_raw[0], 3.3f, 65536, 50.0f, 1.65f + adc_gain.ib_offset, adc_gain.ib_shunt);
     ia = adcToCurrent(adc2_raw[1], 3.3f, 65536, 50.0f, 1.65f + adc_gain.ia_offset, adc_gain.ia_shunt);
@@ -491,7 +499,7 @@ void printTelemetryUTF8(void) {
                    | PRINT_IBATT
                    | PRINT_IC_RAW
                    | PRINT_IBATT_RAW)) != 0) {
-    adc3.getLatestData(adc3_raw);
+    adc3.temp_getLatestData(adc3_raw);
 
     ic = adcToCurrent(adc3_raw[0], 3.3f, 4096, 50.0f, 1.65f + adc_gain.ic_offset, adc_gain.ic_shunt);
     ibatt = adcToCurrent(adc3_raw[1], 3.3f, 4096, 50.0f, 1.65f + adc_gain.ibatt_offset, adc_gain.ibatt_shunt);
@@ -588,7 +596,7 @@ void printTelemetryBinary(void) {
                    | PRINT_IA_RAW
                    | PRINT_VB_RAW
                    | PRINT_VBATT_RAW)) != 0) {
-    adc1.getLatestData(adc1_raw);
+    adc1.temp_getLatestData(adc1_raw);
 
     va = adcToVoltage(adc1_raw[0], 3.3f, 65536, adc_gain.va_gain, 1.65f + adc_gain.va_offset);
     vb = adcToVoltage(adc1_raw[1], 3.3f, 65536, adc_gain.vb_gain, 1.65f + adc_gain.vb_offset);
@@ -598,7 +606,7 @@ void printTelemetryBinary(void) {
                    | PRINT_VA
                    | PRINT_IB_RAW
                    | PRINT_VA_RAW)) != 0) {
-    adc2.getLatestData(adc2_raw);
+    adc2.temp_getLatestData(adc2_raw);
 
     ib = adcToCurrent(adc2_raw[0], 3.3f, 65536, 50.0f, 1.65f + adc_gain.ib_offset, adc_gain.ib_shunt);
     ia = adcToCurrent(adc2_raw[1], 3.3f, 65536, 50.0f, 1.65f + adc_gain.ia_offset, adc_gain.ia_shunt);
@@ -607,7 +615,7 @@ void printTelemetryBinary(void) {
                    | PRINT_IBATT
                    | PRINT_IC_RAW
                    | PRINT_IBATT_RAW)) != 0) {
-    adc3.getLatestData(adc3_raw);
+    adc3.temp_getLatestData(adc3_raw);
 
     ic = adcToCurrent(adc3_raw[0], 3.3f, 4096, 50.0f, 1.65f + adc_gain.ic_offset, adc_gain.ic_shunt);
     ibatt = adcToCurrent(adc3_raw[1], 3.3f, 4096, 50.0f, 1.65f + adc_gain.ibatt_offset, adc_gain.ibatt_shunt);
