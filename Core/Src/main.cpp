@@ -195,6 +195,10 @@ int main(void)
   while (adc1.startADC() != HAL_OK) usb_printf("Failed to start ADC1 Error code: 0x%lx\r\n", HAL_ADC_GetError(&hadc1));
   while (adc2.startADC() != HAL_OK) usb_printf("Failed to start ADC2 Error code: 0x%lx\r\n", HAL_ADC_GetError(&hadc2));
   while (adc3.startADC() != HAL_OK) usb_printf("Failed to start ADC3 Error code: 0x%lx\r\n", HAL_ADC_GetError(&hadc3));
+
+  if (HAL_ADC_Start_IT(&hadc1) != HAL_OK) error_flag = true;
+  if (HAL_ADC_Start_IT(&hadc2) != HAL_OK) error_flag = true;
+  if (HAL_ADC_Start_IT(&hadc3) != HAL_OK) error_flag = true;
   
   /* Start timers */
   if (adcTimer.start() != HAL_OK) error_flag = true;
