@@ -176,7 +176,7 @@ int main(void)
   while (HAL_ADCEx_Calibration_Start(&hadc1, ADC_CALIB_OFFSET_LINEARITY, ADC_DIFFERENTIAL_ENDED) != HAL_OK) usb_printf("Failed to calibrate ADC1 linearity Error code: 0x%lx\r\n", HAL_ADC_GetError(&hadc1));
   while (HAL_ADCEx_Calibration_Start(&hadc2, ADC_CALIB_OFFSET, ADC_SINGLE_ENDED) != HAL_OK) usb_printf("Failed to calibrate ADC2 Error code: 0x%lx\r\n", HAL_ADC_GetError(&hadc2));
   while (HAL_ADCEx_Calibration_Start(&hadc2, ADC_CALIB_OFFSET_LINEARITY, ADC_SINGLE_ENDED) != HAL_OK) usb_printf("Failed to calibrate ADC2 linearity Error code: 0x%lx\r\n", HAL_ADC_GetError(&hadc2));
-  while (HAL_ADCEx_Calibration_Start(&hadc2, ADC_CALIB_OFFSET_LINEARITY, ADC_DIFFERENTIAL_ENDED) != HAL_OK) usb_printf("Failed to calibrate ADC2 linearity Error code: 0x%lx\r\n", HAL_ADC_GetError(&hadc2));
+  //while (HAL_ADCEx_Calibration_Start(&hadc2, ADC_CALIB_OFFSET_LINEARITY, ADC_DIFFERENTIAL_ENDED) != HAL_OK) usb_printf("Failed to calibrate ADC2 linearity Error code: 0x%lx\r\n", HAL_ADC_GetError(&hadc2));
   while (HAL_ADCEx_Calibration_Start(&hadc3, ADC_CALIB_OFFSET, ADC_SINGLE_ENDED) != HAL_OK) usb_printf("Failed to calibrate ADC3 Error code: 0x%lx\r\n", HAL_ADC_GetError(&hadc3));
   while (HAL_ADCEx_Calibration_Start(&hadc3, ADC_CALIB_OFFSET_LINEARITY, ADC_SINGLE_ENDED) != HAL_OK) usb_printf("Failed to calibrate ADC3 linearity Error code: 0x%lx\r\n", HAL_ADC_GetError(&hadc3));
 
@@ -470,7 +470,7 @@ void printTelemetryUTF8(void) {
                    | PRINT_VBATT_RAW)) != 0) {
     adc1.getLatestData(adc1_raw);
 
-    ia = adcToCurrent(adc1_raw[0], 3.3f, 65536, 50.0f, 1.65f + adc_gain.ia_offset, adc_gain.ia_shunt);
+    va = adcToVoltage(adc1_raw[0], 3.3f, 65536, adc_gain.va_gain, 1.65f + adc_gain.va_offset);
     vb = adcToVoltage(adc1_raw[1], 3.3f, 65536, adc_gain.vb_gain, 1.65f + adc_gain.vb_offset);
     vbatt = adcToVoltage(adc1_raw[2], 3.3f, 65536, adc_gain.vbatt_gain, 0.0f + adc_gain.vbatt_offset);
   }
@@ -481,7 +481,7 @@ void printTelemetryUTF8(void) {
     adc2.getLatestData(adc2_raw);
 
     ib = adcToCurrent(adc2_raw[0], 3.3f, 65536, 50.0f, 1.65f + adc_gain.ib_offset, adc_gain.ib_shunt);
-    va = adcToVoltage(adc2_raw[1], 3.3f, 65536, adc_gain.va_gain, 1.65f + adc_gain.va_offset);
+    ia = adcToCurrent(adc2_raw[1], 3.3f, 65536, 50.0f, 1.65f + adc_gain.ia_offset, adc_gain.ia_shunt);
   }
   if ((print_mask & (PRINT_IC
                    | PRINT_IBATT
@@ -586,7 +586,7 @@ void printTelemetryBinary(void) {
                    | PRINT_VBATT_RAW)) != 0) {
     adc1.getLatestData(adc1_raw);
 
-    ia = adcToCurrent(adc1_raw[0], 3.3f, 65536, 50.0f, 1.65f + adc_gain.ia_offset, adc_gain.ia_shunt);
+    va = adcToVoltage(adc1_raw[0], 3.3f, 65536, adc_gain.va_gain, 1.65f + adc_gain.va_offset);
     vb = adcToVoltage(adc1_raw[1], 3.3f, 65536, adc_gain.vb_gain, 1.65f + adc_gain.vb_offset);
     vbatt = adcToVoltage(adc1_raw[2], 3.3f, 65536, adc_gain.vbatt_gain, 0.0f + adc_gain.vbatt_offset);
   }
@@ -597,7 +597,7 @@ void printTelemetryBinary(void) {
     adc2.getLatestData(adc2_raw);
 
     ib = adcToCurrent(adc2_raw[0], 3.3f, 65536, 50.0f, 1.65f + adc_gain.ib_offset, adc_gain.ib_shunt);
-    va = adcToVoltage(adc2_raw[1], 3.3f, 65536, adc_gain.va_gain, 1.65f + adc_gain.va_offset);
+    ia = adcToCurrent(adc2_raw[1], 3.3f, 65536, 50.0f, 1.65f + adc_gain.ia_offset, adc_gain.ia_shunt);
   }
   if ((print_mask & (PRINT_IC
                    | PRINT_IBATT
