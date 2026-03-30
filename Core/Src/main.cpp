@@ -8,6 +8,7 @@
 #include "ustimer.h"
 #include "adc_sampler.h"
 #include "timer.h"
+#include "foc.h"
 #include <cstdint>
 
 #include "usbd_cdc_if.h"
@@ -112,6 +113,12 @@ volatile PrintFormat print_format = PrintFormat::PRINT_UTF8;
 
 static ring_buffer_t rx_ring = { .head = 0, .tail = 0 };
 
+/* FOC state — single global instance */
+FOC_State_t foc_state;
+
+/* Forward declaration for FOC ISR helper */
+static void foc_isr_tick(void);
+
 
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -208,6 +215,9 @@ int main(void)
   motorPWM.setFrequency(20000);
   motorPWM.setDeadTime(1000);
 
+  /* Initialise FOC controller */
+  foc_init(&foc_state);
+
   adc1.setProcessingBuffer(adc1_proc_buffer, ADC1_BUF_LEN);
   adc2.setProcessingBuffer(adc2_proc_buffer, ADC2_BUF_LEN);
   adc3.setProcessingBuffer(adc3_proc_buffer, ADC3_BUF_LEN);
@@ -284,8 +294,9 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
   if (htim->Instance == TIM8) {
     // PWM update interrupt
-    if (control_mode == MotorControlMode::MOTOR_FOC_LINEAR) {
-
+    if (control_mode == MotorControlMode::MOTOR_FOC_LINEAR ||
+        control_mode == MotorControlMode::MOTOR_FOC_DPWM) {
+      foc_isr_tick();
     }
     else if (control_mode == MotorControlMode::MOTOR_VVVF) {
       vvvfRampUp();
@@ -928,10 +939,45 @@ static void process_command(const char* cmd) {
       system_status.is_vvvf_running = false;
       system_status.is_sixstep_running = false;
       system_status.is_foc_running = false;
-      motorPWM.setDuty(-1.0f, -1.0f, -1.0f);
+      motorPWM.stop();
+      foc_reset(&foc_state);
       relay.write(0);
-      CDC_Transmit_HS((uint8_t*)"Stopping\r\n", 4);
+      CDC_Transmit_HS((uint8_t*)"Stopping\r\n", 10);
     }
+
+  // FOC: "foc <rpm>" — align encoder, start FOC at target RPM
+  } else if (strncmp(cmd, "foc ", 4) == 0) {
+    int rpm_cmd;
+    if (sscanf(cmd + 4, "%d", &rpm_cmd) == 1) {
+      foc_reset(&foc_state);
+      foc_state.target_rpm = (float)rpm_cmd;
+      system_status.is_foc_running = true;
+      relay.write(1);
+      motorPWM.start();
+      control_mode = MotorControlMode::MOTOR_FOC_LINEAR;
+      usb_printf("FOC started  target=%d RPM\r\n", rpm_cmd);
+    } else {
+      CDC_Transmit_HS((uint8_t*)"Usage: foc <rpm>\r\n", 18);
+    }
+
+  // RPM: "rpm <value>" — update FOC speed setpoint while running
+  } else if (strncmp(cmd, "rpm ", 4) == 0) {
+    int rpm_cmd;
+    if (sscanf(cmd + 4, "%d", &rpm_cmd) == 1) {
+      foc_state.target_rpm = (float)rpm_cmd;
+      usb_printf("Target RPM set to %d\r\n", rpm_cmd);
+    } else {
+      CDC_Transmit_HS((uint8_t*)"Usage: rpm <value>\r\n", 20);
+    }
+
+  // FOC status telemetry
+  } else if (strcmp(cmd, "foc_status") == 0) {
+    usb_printf("RPM=%.1f  Id=%.3fA  Iq=%.3fA  Vd=%.2fV  Vq=%.2fV  Vdc=%.2fV  |u|=%.2fV  fault=%d\r\n",
+               foc_state.rpm,
+               foc_state.Id,  foc_state.Iq,
+               foc_state.Vd_cmd, foc_state.Vq_cmd,
+               foc_state.Vdc, foc_state.u_mag,
+               (int)foc_state.fault);
 
   // Six-step commutation
   } else if (strcmp(cmd, "sixstep") == 0) {
@@ -1389,6 +1435,114 @@ static bool read_line_from_ring(char* line, int max_len) {
         }
     }
     return false;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  FOC ISR tick — called from TIM8 update interrupt at 20 kHz
+// ─────────────────────────────────────────────────────────────────────────────
+
+/*
+ * foc_isr_tick
+ *
+ * Reads ADC and encoder, converts to SI units using the same formula and
+ * adc_gain struct as the rest of the codebase, then calls foc_run() and
+ * applies the resulting duty cycles to the inverter.
+ *
+ * ADC formula (from main.cpp adcToVoltage):
+ *   voltage = ((raw / resolution) * vref - offset) / gain
+ *   current = voltage / shunt
+ *
+ * Current offsets: 1.65f (Vref/2 midpoint) + adc_gain.i*_offset (per-board trim)
+ *
+ * Encoder: getPos_rad() reads TIM4 hardware counter (updated continuously).
+ *          getRPM() is updated by TIM6 at 1 kHz — safe to read any time.
+ *
+ * Must complete within one PWM period (50 µs at 20 kHz).
+ */
+static void foc_isr_tick(void)
+{
+    /* Guard: fault latched — stop inverter and return to STOP mode */
+    if (foc_state.fault) {
+        motorPWM.stop();
+        control_mode = MotorControlMode::MOTOR_STOP;
+        system_status.is_foc_running = false;
+        return;
+    }
+
+    /* -----------------------------------------------------------------------
+     * 1. Read ADC — latest DMA sample (interrupt-safe via NDTR)
+     *
+     * Channel mapping (from parameters.h comment block):
+     *   ADC1[0] = I_A   (PA7,  INP7,  16-bit)
+     *   ADC1[1] = V_B+  (PA0,  INP16, 16-bit)  — not used in FOC loop
+     *   ADC1[2] = V_BATT(PB0,  INP9,  16-bit)
+     *   ADC2[0] = I_B   (PB1,  INP5,  16-bit)
+     *   ADC2[1] = V_A+  (PC4,  INP4,  16-bit)  — not used in FOC loop
+     *   ADC3[0] = I_C   (PC1,  INP11, 12-bit → 4096 counts)
+     *   ADC3[1] = I_BATT(PC0,  INP10, 12-bit)  — not used in FOC loop
+     * --------------------------------------------------------------------- */
+    uint16_t adc1_raw[3];
+    uint16_t adc2_raw[2];
+    uint16_t adc3_raw[2];
+
+    adc1.getLatestData(adc1_raw);
+    adc2.getLatestData(adc2_raw);
+    adc3.getLatestData(adc3_raw);
+
+    /*
+     * Convert raw ADC to amps using the real formula:
+     *   adcToVoltage: ((raw/resolution)*vref - offset) / gain
+     *   adcToCurrent: adcToVoltage(..., gain=1) / shunt
+     *
+     * offset = 1.65f (op-amp Vref/2) + adc_gain.i*_offset (per-board trim)
+     * shunt  = adc_gain.i*_shunt  (from parameters.h, e.g. ADC_IA_SHUNT)
+     *
+     * Note: gain parameter passed as 1.0f to adcToVoltage for current
+     *       channels — the op-amp gain of 50 is already embedded in the
+     *       shunt value (effective sensitivity = 50 × shunt V/A).
+     */
+    float Ia = adcToCurrent(adc1_raw[0], 3.3f, 65536, 1.0f,
+                            1.65f + adc_gain.ia_offset, adc_gain.ia_shunt);
+    float Ib = adcToCurrent(adc2_raw[0], 3.3f, 65536, 1.0f,
+                            1.65f + adc_gain.ib_offset, adc_gain.ib_shunt);
+    float Ic = adcToCurrent(adc3_raw[0], 3.3f,  4096, 1.0f,
+                            1.65f + adc_gain.ic_offset, adc_gain.ic_shunt);
+
+    /* DC bus voltage */
+    float Vdc = adcToVoltage(adc1_raw[2], 3.3f, 65536,
+                             adc_gain.vbatt_gain, adc_gain.vbatt_offset);
+
+    /* Guard: Vdc too low — SVPWM would divide by zero */
+    if (Vdc < 1.0f) return;
+
+    /* -----------------------------------------------------------------------
+     * 2. Read encoder
+     *    getPos_rad() — reads TIM4 CNT register directly (hardware quadrature)
+     *    getRPM()     — filtered, updated by TIM6 at 1 kHz
+     *
+     *    theta_e = theta_mech × pole_pairs, wrapped to [0, 2π)
+     *    omega_m = mechanical angular velocity (rad/s)
+     * --------------------------------------------------------------------- */
+    float theta_mech = encoder.getPos_rad();
+    float theta_e    = fmodf(theta_mech * (float)MOTOR_POLE_PAIRS, 2.0f * M_PI);
+    if (theta_e < 0.0f) theta_e += 2.0f * M_PI;
+
+    float omega_m = encoder.getRPM() * (2.0f * M_PI / 60.0f);
+
+    /* -----------------------------------------------------------------------
+     * 3. Run one FOC tick
+     * --------------------------------------------------------------------- */
+    float dutyA, dutyB, dutyC;
+    foc_run(&foc_state,
+            Ia, Ib, Ic,
+            Vdc,
+            theta_e, omega_m,
+            &dutyA, &dutyB, &dutyC);
+
+    /* -----------------------------------------------------------------------
+     * 4. Apply to inverter
+     * --------------------------------------------------------------------- */
+    motorPWM.setDuty(dutyA, dutyB, dutyC);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
