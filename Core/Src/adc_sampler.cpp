@@ -66,8 +66,8 @@ void ADCSampler::setProcessingBuffer(uint16_t* proc_buf, uint32_t proc_len) {
 void ADCSampler::irqConvCplt(ADC_HandleTypeDef* hadc) {
     uint32_t i = getInstanceIndex(hadc);
     if (instance_[i] != nullptr) {
-        //instance_[i]->processBuffer();
-        instance_[i]->temp_processBuffer();
+        instance_[i]->processBuffer();
+        //instance_[i]->temp_processBuffer();
     }
 }
 

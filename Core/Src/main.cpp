@@ -180,13 +180,13 @@ int main(void)
   while (HAL_ADCEx_Calibration_Start(&hadc3, ADC_CALIB_OFFSET, ADC_SINGLE_ENDED) != HAL_OK) usb_printf("Failed to calibrate ADC3 Error code: 0x%lx\r\n", HAL_ADC_GetError(&hadc3));
   while (HAL_ADCEx_Calibration_Start(&hadc3, ADC_CALIB_OFFSET_LINEARITY, ADC_SINGLE_ENDED) != HAL_OK) usb_printf("Failed to calibrate ADC3 linearity Error code: 0x%lx\r\n", HAL_ADC_GetError(&hadc3));
 
-  //while (adc1.startDMA() != HAL_OK) usb_printf("Failed to start ADC1 DMA Error code: 0x%lx\r\n", HAL_DMA_GetError(&hdma_adc1));
-  //while (adc2.startDMA() != HAL_OK) usb_printf("Failed to start ADC2 DMA Error code: 0x%lx\r\n", HAL_DMA_GetError(&hdma_adc2));
-  //while (adc3.startDMA() != HAL_OK) usb_printf("Failed to start ADC3 DMA Error code: 0x%lx\r\n", HAL_DMA_GetError(&hdma_adc3));
+  while (adc1.startDMA() != HAL_OK) usb_printf("Failed to start ADC1 DMA Error code: 0x%lx\r\n", HAL_DMA_GetError(&hdma_adc1));
+  while (adc2.startDMA() != HAL_OK) usb_printf("Failed to start ADC2 DMA Error code: 0x%lx\r\n", HAL_DMA_GetError(&hdma_adc2));
+  while (adc3.startDMA() != HAL_OK) usb_printf("Failed to start ADC3 DMA Error code: 0x%lx\r\n", HAL_DMA_GetError(&hdma_adc3));
   
-  while (adc1.startADC() != HAL_OK) usb_printf("Failed to start ADC1 Error code: 0x%lx\r\n", HAL_ADC_GetError(&hadc1));
-  while (adc2.startADC() != HAL_OK) usb_printf("Failed to start ADC2 Error code: 0x%lx\r\n", HAL_ADC_GetError(&hadc2));
-  while (adc3.startADC() != HAL_OK) usb_printf("Failed to start ADC3 Error code: 0x%lx\r\n", HAL_ADC_GetError(&hadc3));
+  //while (adc1.startADC() != HAL_OK) usb_printf("Failed to start ADC1 Error code: 0x%lx\r\n", HAL_ADC_GetError(&hadc1));
+  //while (adc2.startADC() != HAL_OK) usb_printf("Failed to start ADC2 Error code: 0x%lx\r\n", HAL_ADC_GetError(&hadc2));
+  //while (adc3.startADC() != HAL_OK) usb_printf("Failed to start ADC3 Error code: 0x%lx\r\n", HAL_ADC_GetError(&hadc3));
   
   /* Start timers */
   if (adcTimer.start() != HAL_OK) error_flag = true;
@@ -473,7 +473,7 @@ void printTelemetryUTF8(void) {
                    | PRINT_VA_RAW
                    | PRINT_VB_RAW
                    | PRINT_VBATT_RAW)) != 0) {
-    adc1.temp_getLatestData(adc1_raw);
+    adc1.getLatestData(adc1_raw);
 
     va = adcToVoltage(adc1_raw[0], 3.3f, 65536, adc_gain.va_gain, 1.65f + adc_gain.va_offset);
     vb = adcToVoltage(adc1_raw[1], 3.3f, 65536, adc_gain.vb_gain, 1.65f + adc_gain.vb_offset);
@@ -483,7 +483,7 @@ void printTelemetryUTF8(void) {
                    | PRINT_IA
                    | PRINT_IB_RAW
                    | PRINT_IA_RAW)) != 0) {
-    adc2.temp_getLatestData(adc2_raw);
+    adc2.getLatestData(adc2_raw);
 
     ib = adcToCurrent(adc2_raw[0], 3.3f, 65536, 50.0f, 1.65f + adc_gain.ib_offset, adc_gain.ib_shunt);
     ia = adcToCurrent(adc2_raw[1], 3.3f, 65536, 50.0f, 1.65f + adc_gain.ia_offset, adc_gain.ia_shunt);
@@ -492,7 +492,7 @@ void printTelemetryUTF8(void) {
                    | PRINT_IBATT
                    | PRINT_IC_RAW
                    | PRINT_IBATT_RAW)) != 0) {
-    adc3.temp_getLatestData(adc3_raw);
+    adc3.getLatestData(adc3_raw);
 
     ic = adcToCurrent(adc3_raw[0], 3.3f, 4096, 50.0f, 1.65f + adc_gain.ic_offset, adc_gain.ic_shunt);
     ibatt = adcToCurrent(adc3_raw[1], 3.3f, 4096, 50.0f, 1.65f + adc_gain.ibatt_offset, adc_gain.ibatt_shunt);
@@ -589,7 +589,7 @@ void printTelemetryBinary(void) {
                    | PRINT_IA_RAW
                    | PRINT_VB_RAW
                    | PRINT_VBATT_RAW)) != 0) {
-    adc1.temp_getLatestData(adc1_raw);
+    adc1.getLatestData(adc1_raw);
 
     va = adcToVoltage(adc1_raw[0], 3.3f, 65536, adc_gain.va_gain, 1.65f + adc_gain.va_offset);
     vb = adcToVoltage(adc1_raw[1], 3.3f, 65536, adc_gain.vb_gain, 1.65f + adc_gain.vb_offset);
@@ -599,7 +599,7 @@ void printTelemetryBinary(void) {
                    | PRINT_IA
                    | PRINT_IB_RAW
                    | PRINT_VA_RAW)) != 0) {
-    adc2.temp_getLatestData(adc2_raw);
+    adc2.getLatestData(adc2_raw);
 
     ib = adcToCurrent(adc2_raw[0], 3.3f, 65536, 50.0f, 1.65f + adc_gain.ib_offset, adc_gain.ib_shunt);
     ia = adcToCurrent(adc2_raw[1], 3.3f, 65536, 50.0f, 1.65f + adc_gain.ia_offset, adc_gain.ia_shunt);
@@ -608,7 +608,7 @@ void printTelemetryBinary(void) {
                    | PRINT_IBATT
                    | PRINT_IC_RAW
                    | PRINT_IBATT_RAW)) != 0) {
-    adc3.temp_getLatestData(adc3_raw);
+    adc3.getLatestData(adc3_raw);
 
     ic = adcToCurrent(adc3_raw[0], 3.3f, 4096, 50.0f, 1.65f + adc_gain.ic_offset, adc_gain.ic_shunt);
     ibatt = adcToCurrent(adc3_raw[1], 3.3f, 4096, 50.0f, 1.65f + adc_gain.ibatt_offset, adc_gain.ibatt_shunt);

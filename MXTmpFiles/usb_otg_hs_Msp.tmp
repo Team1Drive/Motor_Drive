@@ -1,0 +1,35 @@
+
+#nvoid HAL_PCD_MspInit(PCD_HandleTypeDef* pcdHandle)
+{
+#tif(pcdHandle->Instance==USB_OTG_HS)
+#t{
+#t/* USER CODE BEGIN USB_OTG_HS_MspInit 0 */
+#n#t/* USER CODE END USB_OTG_HS_MspInit 0 */
+#n#t/** Enable USB Voltage detector#n#t*/
+#t#tHAL_PWREx_EnableUSBVoltageDetector();
+#n
+#n
+#t#t/* Peripheral clock enable */
+#t#t__HAL_RCC_USB_OTG_HS_CLK_ENABLE();
+#n#t#t/* Peripheral interrupt init */
+#t#tHAL_NVIC_SetPriority(OTG_HS_IRQn, 0, 0);
+#t#tHAL_NVIC_EnableIRQ(OTG_HS_IRQn);
+#t/* USER CODE BEGIN USB_OTG_HS_MspInit 1 */
+#n#t/* USER CODE END USB_OTG_HS_MspInit 1 */
+#t}
+}
+
+#nvoid HAL_PCD_MspDeInit(PCD_HandleTypeDef* pcdHandle)
+{
+#tif(pcdHandle->Instance==USB_OTG_HS)
+#t{
+#t/* USER CODE BEGIN USB_OTG_HS_MspDeInit 0 */
+#n#t/* USER CODE END USB_OTG_HS_MspDeInit 0 */
+#t#t/* Peripheral clock disable */
+#t#t__HAL_RCC_USB_OTG_HS_CLK_DISABLE();
+#n#t#t/* Peripheral interrupt Deinit*/
+#t#tHAL_NVIC_DisableIRQ(OTG_HS_IRQn);#n
+#t/* USER CODE BEGIN USB_OTG_HS_MspDeInit 1 */
+#n#t/* USER CODE END USB_OTG_HS_MspDeInit 1 */
+#t}
+}
