@@ -45,9 +45,9 @@ static bool ring_buffer_write(uint8_t data);
 static bool read_line_from_ring(char* line, int max_len);
 
 /* Declare ADC buffers */
-alignas(32) uint16_t adc1_buffer[ADC1_BUF_LEN] __attribute__((section(".sram_d1")));
-alignas(32) uint16_t adc2_buffer[ADC2_BUF_LEN] __attribute__((section(".sram_d1")));
-alignas(32) uint16_t adc3_buffer[ADC3_BUF_LEN] __attribute__((section(".sram_d1")));
+alignas(32) volatile uint16_t adc1_buffer[ADC1_BUF_LEN] __attribute__((section(".sram_d1")));
+alignas(32) volatile uint16_t adc2_buffer[ADC2_BUF_LEN] __attribute__((section(".sram_d1")));
+alignas(32) volatile uint16_t adc3_buffer[ADC3_BUF_LEN] __attribute__((section(".sram_d1")));
 
 /* Declare timer handles */
 extern TIM_HandleTypeDef htim1;
@@ -190,6 +190,10 @@ int main(void)
   while (adc1.startDMA() != HAL_OK) usb_printf("Failed to start ADC1 DMA Error code: 0x%lx\r\n", HAL_DMA_GetError(&hdma_adc1));
   while (adc2.startDMA() != HAL_OK) usb_printf("Failed to start ADC2 DMA Error code: 0x%lx\r\n", HAL_DMA_GetError(&hdma_adc2));
   while (adc3.startDMA() != HAL_OK) usb_printf("Failed to start ADC3 DMA Error code: 0x%lx\r\n", HAL_DMA_GetError(&hdma_adc3));
+  
+  //while (adc1.startADC() != HAL_OK) usb_printf("Failed to start ADC1 Error code: 0x%lx\r\n", HAL_ADC_GetError(&hadc1));
+  //while (adc2.startADC() != HAL_OK) usb_printf("Failed to start ADC2 Error code: 0x%lx\r\n", HAL_ADC_GetError(&hadc2));
+  //while (adc3.startADC() != HAL_OK) usb_printf("Failed to start ADC3 Error code: 0x%lx\r\n", HAL_ADC_GetError(&hadc3));
   
   /* Start timers */
   if (adcTimer.start() != HAL_OK) error_flag = true;
@@ -336,6 +340,7 @@ void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* hadc) {
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
   ADCSampler::irqConvCplt(hadc);
 }
+
 /* USB CDC Receive Handler */
 void USB_CDC_RxHandler(uint8_t* Buf, uint32_t Len) {
   for (uint32_t i = 0; i < Len; i++) {
@@ -778,7 +783,10 @@ void vvvfRampUp(void) {
   // Audible frequency adjustment
   if (system_status.is_audible) {
     if (rpm < 500.0f) {
-      motorPWM.setFrequency(550);
+      motorPWM.setFrequency(450);
+    }
+    else if (rpm < 1000.0f) {
+      motorPWM.setFrequency(900);
     }
     else {
       motorPWM.setFrequency((uint32_t)rpm * 2);

@@ -10,18 +10,18 @@
 #define ADC2_NUM_CHANNELS   2U
 #define ADC3_NUM_CHANNELS   2U
 
-#define ADC_IA_SHUNT        0.005f // Ia channel gain (shunt resistor)
-#define ADC_IB_SHUNT        -0.007f // Ib channel gain (shunt resistor)
+#define ADC_IA_SHUNT        0.004f // Ia channel gain (shunt resistor)
+#define ADC_IB_SHUNT        0.0026f // Ib channel gain (shunt resistor)
 #define ADC_IC_SHUNT        0.003f // Ic channel gain (shunt resistor)
-#define ADC_IA_OFFSET       0.10f // Ia channel offset
-#define ADC_IB_OFFSET       -0.012f // Ib channel offset
-#define ADC_IC_OFFSET       0.009f // Ic channel offset
-#define ADC_VA_GAIN         11.0f // Va channel gain (voltage divider)
-#define ADC_VB_GAIN         11.0f // Vb channel gain (voltage divider)
+#define ADC_IA_OFFSET       0.006f // Ia channel offset
+#define ADC_IB_OFFSET       0.006f // Ib channel offset
+#define ADC_IC_OFFSET       0.005f // Ic channel offset
+#define ADC_VA_GAIN         0.0316f // Va channel gain (voltage divider)
+#define ADC_VB_GAIN         0.0316f // Vb channel gain (voltage divider)
 #define ADC_VA_OFFSET       0.0f // Va channel offset
 #define ADC_VB_OFFSET       0.0f // Vb channel offset
-#define ADC_IBATT_SHUNT     0.013f // Battery current channel gain (shunt resistor)
-#define ADC_IBATT_OFFSET    0.0f // Battery current channel offset
+#define ADC_IBATT_SHUNT     0.0028f // Battery current channel gain (shunt resistor)
+#define ADC_IBATT_OFFSET    0.004f // Battery current channel offset
 #define ADC_VBATT_GAIN      0.130435f // Battery voltage channel gain (voltage divider)
 #define ADC_VBATT_OFFSET    0.0f // Battery voltage channel offset
 
