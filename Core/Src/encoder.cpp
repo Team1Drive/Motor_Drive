@@ -4,8 +4,9 @@
 
 Encoder* Encoder::instance_ = nullptr;
 
-Encoder::Encoder(TIM_HandleTypeDef* htim, uint16_t index_pin, uint32_t pulses_per_rev, uint32_t speedloop_freq, uint8_t stall_threshold):
+Encoder::Encoder(TIM_HandleTypeDef* htim, MicrosecondTimer timer, uint16_t index_pin, uint32_t pulses_per_rev, uint32_t speedloop_freq, uint8_t stall_threshold):
     htim_(htim),
+    timer_(timer),
     indexPin_(index_pin),
     counts_per_rev_(pulses_per_rev * 4),
     speedloop_period(1.0f / (float)speedloop_freq),

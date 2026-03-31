@@ -33,6 +33,10 @@ void speedControl(void);
 void startUpSequence(void);
 void vvvfRampUp(void);
 void sixStepCommutation(void);
+
+/* Forward declaration for FOC ISR helper */
+static void foc_isr_tick(void);
+
 void test_PWM(void);
 void test_PWM_sweep(void);
 
@@ -80,7 +84,7 @@ Timer adcTimer(&htim1), printTimer(&htim2), ledTimer(&htim3), encoderTimer(&htim
 DigitalOut pwm_ch1_dis(GPIOA, GPIO_PIN_2), pwm_ch2_dis(GPIOB, GPIO_PIN_2), pwm_ch3_dis(GPIOB, GPIO_PIN_13);
 DigitalOut led_red(GPIOC, GPIO_PIN_9), led_green(GPIOA, GPIO_PIN_8), led_yellow_1(GPIOA, GPIO_PIN_9), led_yellow_2(GPIOA, GPIO_PIN_10);
 DigitalOut relay(GPIOD, GPIO_PIN_8);
-Encoder encoder(&htim4, GPIO_PIN_9, ENCODER_PPR, TIM6_FREQ_HZ, ENCODER_STALL_THRESHOLD);
+Encoder encoder(&htim4, usTimer, GPIO_PIN_9, ENCODER_PPR, TIM6_FREQ_HZ, ENCODER_STALL_THRESHOLD);
 HallSensor hallsensor(GPIOB, GPIO_PIN_5, GPIOB, GPIO_PIN_8, GPIOE, GPIO_PIN_4);
 
 alignas(32) uint16_t adc1_proc_buffer[ADC1_BUF_LEN];
@@ -116,8 +120,6 @@ static ring_buffer_t rx_ring = { .head = 0, .tail = 0 };
 /* FOC state — single global instance */
 FOC_State_t foc_state;
 
-/* Forward declaration for FOC ISR helper */
-static void foc_isr_tick(void);
 
 
 
@@ -424,6 +426,13 @@ void timer3IRQ(void) {
       break;
     case MotorControlMode::MOTOR_FOC_DPWM:
       led_green.write(1);
+      led_yellow_2.write(0);
+      if (system_status.led_increment_counter >> 2 & 1) {
+        led_yellow_1.write(1);
+      }
+      else {
+        led_yellow_1.write(0);
+      }
       break;
     default:
       break;
@@ -804,8 +813,8 @@ void vvvfRampUp(void) {
   if (system_status.is_vvvf_ramp_up) {
     if (accelerating) {
       rpm += step_increment;
-      if (rpm >= VVVF_THRESHOLD_RPM) {
-        rpm = VVVF_THRESHOLD_RPM;
+      if (rpm >= VVVF_MAX_RPM >> 1) {
+        rpm = VVVF_MAX_RPM >> 1;
         accelerating = false;
       }
     }
@@ -828,7 +837,7 @@ void vvvfRampUp(void) {
   float electrical_freq = rpm / 60.0f * MOTOR_POLE_PAIRS;
 
   float delta_angle = 2.0f * M_PI * electrical_freq / frequency;
-  angle += delta_angle;
+  angle += delta_angle * MOTOR_ROTATION_DIRECTION * -1.0f;
   if (angle >= 2.0f * M_PI) angle -= 2.0f * M_PI;
 
   // Calculate voltage amplitude
@@ -851,6 +860,12 @@ void vvvfRampUp(void) {
   float dutyC = 0.5f + amplitude * 0.5f * sinf(angle + 4.0f * M_PI / 3.0f);
 
   motorPWM.setDuty(dutyA, dutyB, dutyC);
+
+  if (FOC_ALLOWED && encoder.is_synchronized_ && rpm >= VVVF_THRESHOLD_RPM) {
+    system_status.is_vvvf_running = false;
+    system_status.is_foc_running = true;
+    control_mode = MotorControlMode::MOTOR_FOC_LINEAR;
+  }
 }
 
 /**
@@ -894,11 +909,11 @@ const int8_t commutation_acw[8][3] = {
   int8_t a_state, b_state, c_state;
 
   // Determine the desired state of each phase based on the current Hall sensor state and rotation direction
-  if (MOTOR_ROTATION_DIRECTION == 1) {
+  if (MOTOR_ROTATION_DIRECTION == -1) {
       a_state = commutation_cw[hall_state][0];
       b_state = commutation_cw[hall_state][1];
       c_state = commutation_cw[hall_state][2];
-  } else if (MOTOR_ROTATION_DIRECTION == -1) {
+  } else if (MOTOR_ROTATION_DIRECTION == 1) {
       a_state = commutation_acw[hall_state][0];
       b_state = commutation_acw[hall_state][1];
       c_state = commutation_acw[hall_state][2];
@@ -1003,6 +1018,7 @@ static void process_command(const char* cmd) {
       relay.write(1);
         // Insert speed loop set speed
       target.speed = speed;
+      foc_state.target_rpm = speed;
       CDC_Transmit_HS((uint8_t*)"Speed set\r\n", 11);
     } else {
       // Wrong speed format
@@ -1140,34 +1156,70 @@ static void process_command(const char* cmd) {
     if (strcmp(subsys, "speed") == 0) {
       if (strcmp(param, "p") == 0) {
         // Set speed loop proportional gain
-          // Replace with your actual function
-        snprintf(resp, sizeof(resp), "Speed Kp set to %.3f\r\n", value);
+        original = foc_state.pi_speed.kp;
+        foc_state.pi_speed.kp = value;
+        snprintf(resp, sizeof(resp), "Speed Kp set to %.4f was %.4f\r\n", value, original);
         success = true;
       } else if (strcmp(param, "i") == 0) {
-          // Replace with your actual function
-        snprintf(resp, sizeof(resp), "Speed Ki set to %.3f\r\n", value);
-        success = true;
-      } else if (strcmp(param, "d") == 0) {
-          // Replace with your actual function
-        snprintf(resp, sizeof(resp), "Speed Kd set to %.3f\r\n", value);
+        original = foc_state.pi_speed.ki;
+        foc_state.pi_speed.ki = value;
+        snprintf(resp, sizeof(resp), "Speed Ki set to %.4f was %.4f\r\n", value, original);
         success = true;
       } else {
         snprintf(resp, sizeof(resp), "Unknown speed parameter '%s'\r\n", param);
       }
 
-    // Current loop parameters
-    } else if (strcmp(subsys, "current") == 0) {
+    // Current Id loop parameters
+    } else if (strcmp(subsys, "id") == 0) {
       if (strcmp(param, "p") == 0) {
         // Set current loop proportional gain
-          // Replace with your actual function
-        snprintf(resp, sizeof(resp), "Current Kp set to %.3f\r\n", value);
+        original = foc_state.pi_d.kp;
+        foc_state.pi_d.kp = value;
+        snprintf(resp, sizeof(resp), "Id Kp set to %.4f was %.4f\r\n", value, original);
+        success = true;
+      } else if (strcmp(param, "i") == 0) {
+        original = foc_state.pi_d.ki;
+        foc_state.pi_d.ki = value;
+        snprintf(resp, sizeof(resp), "Id Ki set to %.4f was %.4f\r\n", value, original);
+        success = true;
+      } else {
+        snprintf(resp, sizeof(resp), "Unknown Id parameter '%s'\r\n", param);
+      }
+
+    // Current Iq loop parameters
+    } else if (strcmp(subsys, "iq") == 0) {
+      if (strcmp(param, "p") == 0) {
+        // Set current loop proportional gain
+        original = foc_state.pi_q.kp;
+        foc_state.pi_q.kp = value;
+        snprintf(resp, sizeof(resp), "Iq Kp set to %.4f was %.4f\r\n", value, original);
         success = true;
       } else if (strcmp(param, "i") == 0) {
           // Replace with your actual function
-        snprintf(resp, sizeof(resp), "Current Ki set to %.3f\r\n", value);
+        original = foc_state.pi_q.ki;
+        foc_state.pi_q.ki = value;
+        snprintf(resp, sizeof(resp), "Iq Ki set to %.4f was %.4f\r\n", value, original);
         success = true;
       } else {
-        snprintf(resp, sizeof(resp), "Unknown current parameter '%s'\r\n", param);
+        snprintf(resp, sizeof(resp), "Unknown Iq parameter '%s'\r\n", param);
+      }
+
+    // Field weakening loop parameters
+    } else if (strcmp(subsys, "fw") == 0) {
+      if (strcmp(param, "p") == 0) {
+        // Set field weakening loop proportional gain
+        original = foc_state.pi_fw.kp;
+        foc_state.pi_fw.kp = value;
+        snprintf(resp, sizeof(resp), "Fw Kp set to %.4f was %.4f\r\n", value, original);
+        success = true;
+      } else if (strcmp(param, "i") == 0) {
+          // Replace with your actual function
+        original = foc_state.pi_fw.ki;
+        foc_state.pi_fw.ki = value;
+        snprintf(resp, sizeof(resp), "Fw Ki set to %.4f was %.4f\r\n", value, original);
+        success = true;
+      } else {
+        snprintf(resp, sizeof(resp), "Unknown Fw parameter '%s'\r\n", param);
       }
 
     // Add more subsystems and parameters as needed
@@ -1472,6 +1524,8 @@ static void foc_isr_tick(void)
     /* Guard: fault latched — stop inverter and return to STOP mode */
     if (foc_state.fault) {
         motorPWM.stop();
+        relay.write(0);
+        led_red.write(1);
         control_mode = MotorControlMode::MOTOR_STOP;
         system_status.is_foc_running = false;
         return;

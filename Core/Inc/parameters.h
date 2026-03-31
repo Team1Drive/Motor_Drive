@@ -29,14 +29,19 @@
 
 #define MOTOR_POLE_PAIRS            4U
 
-#define MOTOR_ROTATION_DIRECTION    1 // 1 for clockwise, -1 for counterclockwise
+#define MOTOR_ROTATION_DIRECTION    1 // 1 for anticlockwise, -1 for clockwise
 
 #define SIXSTEP_DUTYCYCLE           1.0f // Range 1.0 to 0.5
 
 #define VVVF_RAMP_UP_SPEED          60U // 60 RPM/s
-#define VVVF_THRESHOLD_RPM          1500U // Minimum RPM to maintain after ramp-up
+#define VVVF_MAX_RPM                3000U // Max RPM for VVVF mod
+#define VVVF_THRESHOLD_RPM          3000U // Minimum RPM to maintain after ramp-up
+
+#define FOC_ALLOWED                 false // Allow FOC mode in the system (set to false to disable FOC-related code and save flash/RAM)
 
 #define ENCODER_PPR                 2048U // Pulses per revolution for the encoder
+#define ENCODER_MT_THRESHOLD        500U // Threshold in RPM for switching between M and T methods
+#define ENCODER_ONEPULSE_THRESHOLD  1000U // Threshold in RPM for using one pulse counting
 #define ENCODER_STALL_THRESHOLD     10U // Threshold for detecting stall
 
 #define USTIMER_ENCODER_PULSE_ID  0U // Identifier for encoder pulse timing in the microsecond timer
