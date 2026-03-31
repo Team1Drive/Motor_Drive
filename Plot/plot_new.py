@@ -36,7 +36,7 @@ FIELDS = [
 ]
 
 # 选择要显示的字段（从上面列表中选）
-PLOT_FIELDS = ['RPM', 'IA', 'IB', 'IC', 'VA', 'VBATT']   # 示例：转速和三相电流
+PLOT_FIELDS = ['RPM', 'IA', 'IB', 'IC', 'VA', 'VB', 'VBATT', 'IBATT']   # 示例：转速和三相电流
 
 # 每个字段的Y轴范围（可选，根据实际量程调整）
 Y_LIMITS = {
@@ -44,8 +44,10 @@ Y_LIMITS = {
     'IA':  (-3, 3),
     'IB':  (-3, 3),
     'IC':  (-3, 3),
-    'VA':  (-10, 10),
-    'VBATT': (0, 30),
+    'VA':  (-25, 25),
+    'VB':  (-25, 25),
+    'VBATT':  (0, 25),
+    'IBATT': (-3, 3),
 }
 
 WINDOW_SIZE = 200          # 波形窗口显示的点数
