@@ -772,7 +772,10 @@ void vvvfRampUp(void) {
   // Audible frequency adjustment
   if (system_status.is_audible) {
     if (rpm < 500.0f) {
-      motorPWM.setFrequency(550);
+      motorPWM.setFrequency(450);
+    }
+    else if (rpm < 1000.0f) {
+      motorPWM.setFrequency(900);
     }
     else {
       motorPWM.setFrequency((uint32_t)rpm * 2);
