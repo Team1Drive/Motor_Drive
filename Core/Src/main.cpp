@@ -44,13 +44,9 @@ static bool ring_buffer_write(uint8_t data);
 static bool read_line_from_ring(char* line, int max_len);
 
 /* Declare ADC buffers */
-alignas(32) uint16_t adc1_buffer[ADC1_BUF_LEN] __attribute__((section(".sram_d1")));
-alignas(32) uint16_t adc2_buffer[ADC2_BUF_LEN] __attribute__((section(".sram_d1")));
-alignas(32) uint16_t adc3_buffer[ADC3_BUF_LEN] __attribute__((section(".sram_d1")));
-
-uint16_t temp_adc1_buffer[ADC1_NUM_CHANNELS];
-uint16_t temp_adc2_buffer[ADC2_NUM_CHANNELS];
-uint16_t temp_adc3_buffer[ADC3_NUM_CHANNELS];
+alignas(32) volatile uint16_t adc1_buffer[ADC1_BUF_LEN] __attribute__((section(".sram_d1")));
+alignas(32) volatile uint16_t adc2_buffer[ADC2_BUF_LEN] __attribute__((section(".sram_d1")));
+alignas(32) volatile uint16_t adc3_buffer[ADC3_BUF_LEN] __attribute__((section(".sram_d1")));
 
 /* Declare timer handles */
 extern TIM_HandleTypeDef htim1;
@@ -74,13 +70,9 @@ ThreePhasePWMOut motorPWM(&htim8);
 
 MicrosecondTimer usTimer(&htim7);
 
-//ADCSampler adc1(&hadc1, &hdma_adc1, adc1_buffer, ADC1_BUF_LEN);
-//ADCSampler adc2(&hadc2, &hdma_adc2, adc2_buffer, ADC2_BUF_LEN);
-//ADCSampler adc3(&hadc3, &hdma_adc3, adc3_buffer, ADC3_BUF_LEN);
-
-ADCSampler adc1(&hadc1, &hdma_adc1, temp_adc1_buffer, ADC1_NUM_CHANNELS);
-ADCSampler adc2(&hadc2, &hdma_adc2, temp_adc2_buffer, ADC2_NUM_CHANNELS);
-ADCSampler adc3(&hadc3, &hdma_adc3, temp_adc3_buffer, ADC3_NUM_CHANNELS);
+ADCSampler adc1(&hadc1, &hdma_adc1, adc1_buffer, ADC1_BUF_LEN);
+ADCSampler adc2(&hadc2, &hdma_adc2, adc2_buffer, ADC2_BUF_LEN);
+ADCSampler adc3(&hadc3, &hdma_adc3, adc3_buffer, ADC3_BUF_LEN);
 
 Timer adcTimer(&htim1), printTimer(&htim2), ledTimer(&htim3), encoderTimer(&htim4), speedControlTimer(&htim6);
 
@@ -195,10 +187,6 @@ int main(void)
   while (adc1.startADC() != HAL_OK) usb_printf("Failed to start ADC1 Error code: 0x%lx\r\n", HAL_ADC_GetError(&hadc1));
   while (adc2.startADC() != HAL_OK) usb_printf("Failed to start ADC2 Error code: 0x%lx\r\n", HAL_ADC_GetError(&hadc2));
   while (adc3.startADC() != HAL_OK) usb_printf("Failed to start ADC3 Error code: 0x%lx\r\n", HAL_ADC_GetError(&hadc3));
-
-  if (HAL_ADC_Start_IT(&hadc1) != HAL_OK) error_flag = true;
-  if (HAL_ADC_Start_IT(&hadc2) != HAL_OK) error_flag = true;
-  if (HAL_ADC_Start_IT(&hadc3) != HAL_OK) error_flag = true;
   
   /* Start timers */
   if (adcTimer.start() != HAL_OK) error_flag = true;
@@ -341,6 +329,7 @@ void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* hadc) {
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
   ADCSampler::irqConvCplt(hadc);
 }
+
 /* USB CDC Receive Handler */
 void USB_CDC_RxHandler(uint8_t* Buf, uint32_t Len) {
   for (uint32_t i = 0; i < Len; i++) {
@@ -478,10 +467,10 @@ void printTelemetryUTF8(void) {
   uint16_t adc2_raw[2];
   uint16_t adc3_raw[2];
   float ia, ib, ic, va, vb, vbatt, ibatt;
-  if ((print_mask & (PRINT_IA
+  if ((print_mask & (PRINT_VA
                    | PRINT_VB
                    | PRINT_VBATT
-                   | PRINT_IA_RAW
+                   | PRINT_VA_RAW
                    | PRINT_VB_RAW
                    | PRINT_VBATT_RAW)) != 0) {
     adc1.temp_getLatestData(adc1_raw);
@@ -491,9 +480,9 @@ void printTelemetryUTF8(void) {
     vbatt = adcToVoltage(adc1_raw[2], 3.3f, 65536, adc_gain.vbatt_gain, 0.0f + adc_gain.vbatt_offset);
   }
   if ((print_mask & (PRINT_IB
-                   | PRINT_VA
+                   | PRINT_IA
                    | PRINT_IB_RAW
-                   | PRINT_VA_RAW)) != 0) {
+                   | PRINT_IA_RAW)) != 0) {
     adc2.temp_getLatestData(adc2_raw);
 
     ib = adcToCurrent(adc2_raw[0], 3.3f, 65536, 50.0f, 1.65f + adc_gain.ib_offset, adc_gain.ib_shunt);
@@ -594,7 +583,7 @@ void printTelemetryBinary(void) {
   uint16_t adc2_raw[2];
   uint16_t adc3_raw[2];
   float ia, ib, ic, va, vb, vbatt, ibatt;
-  if ((print_mask & (PRINT_IA
+  if ((print_mask & (PRINT_VA
                    | PRINT_VB
                    | PRINT_VBATT
                    | PRINT_IA_RAW
@@ -607,7 +596,7 @@ void printTelemetryBinary(void) {
     vbatt = adcToVoltage(adc1_raw[2], 3.3f, 65536, adc_gain.vbatt_gain, 0.0f + adc_gain.vbatt_offset);
   }
   if ((print_mask & (PRINT_IB
-                   | PRINT_VA
+                   | PRINT_IA
                    | PRINT_IB_RAW
                    | PRINT_VA_RAW)) != 0) {
     adc2.temp_getLatestData(adc2_raw);

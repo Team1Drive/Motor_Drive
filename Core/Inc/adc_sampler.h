@@ -8,7 +8,7 @@ class ADCSampler {
     private:
         ADC_HandleTypeDef* hadc_;
         DMA_HandleTypeDef* hdma_;
-        uint16_t* buffer_;
+        volatile uint16_t* buffer_;
         uint32_t length_;
         uint32_t half_len_;
         uint32_t num_channels_;
@@ -34,7 +34,7 @@ class ADCSampler {
         void processBuffer(void);
 
         void temp_processBuffer(void);
-
+        
         /**
          * Process the half buffer when the conversion half complete callback is triggered. This function should be called from the ADC conversion half complete interrupt handler. It copies the first half of the data from the DMA buffer to the processing buffer if one is set, and sets the half_ready_ flag to indicate that new data is available for processing.
          */
@@ -44,7 +44,7 @@ class ADCSampler {
         volatile bool half_ready_;
         volatile bool full_ready_;
 
-        ADCSampler(ADC_HandleTypeDef* hadc, DMA_HandleTypeDef* hdma, uint16_t* buffer, uint32_t length);
+        ADCSampler(ADC_HandleTypeDef* hadc, DMA_HandleTypeDef* hdma, volatile uint16_t* buffer, uint32_t length);
 
         /**
          * Static callback function to be called from the ADC conversion complete interrupt handler. This function identifies which ADC instance triggered the interrupt and calls the corresponding instance's processBuffer method to handle the new data.

@@ -17,7 +17,7 @@ void ADCSampler::processBuffer(void) {
         // Invalidate data cache to ensure latest date is read
         SCB_InvalidateDCache_by_Addr((uint32_t *)(buffer_ + half_len_), half_len_ * sizeof(uint16_t));
         // Copy the second half of the buffer to the processing buffer
-        memcpy(proc_buffer_ + half_len_, buffer_ + half_len_, half_len_ * sizeof(uint16_t));
+        memcpy(proc_buffer_ + half_len_, (uint16_t*)buffer_ + half_len_, half_len_ * sizeof(uint16_t));
     }
     full_ready_ = true;
 }
@@ -35,7 +35,7 @@ void ADCSampler::processHalfBuffer(void) {
         // Invalidate data cache to ensure latest date is read
         SCB_InvalidateDCache_by_Addr((uint32_t *)buffer_, half_len_ * sizeof(uint16_t));
         // Copy the first half of the buffer to the processing buffer
-        memcpy(proc_buffer_, buffer_, half_len_ * sizeof(uint16_t));
+        memcpy(proc_buffer_, (uint16_t*)buffer_, half_len_ * sizeof(uint16_t));
     }
     half_ready_ = true;
 
@@ -44,7 +44,7 @@ void ADCSampler::processHalfBuffer(void) {
     }
 }
 
-ADCSampler::ADCSampler(ADC_HandleTypeDef* hadc, DMA_HandleTypeDef* hdma, uint16_t* buffer, uint32_t length):
+ADCSampler::ADCSampler(ADC_HandleTypeDef* hadc, DMA_HandleTypeDef* hdma, volatile uint16_t* buffer, uint32_t length):
     hadc_(hadc),
     hdma_(hdma),
     buffer_(buffer),
@@ -53,10 +53,6 @@ ADCSampler::ADCSampler(ADC_HandleTypeDef* hadc, DMA_HandleTypeDef* hdma, uint16_
     latest_group_(0),
     half_ready_(false),
     full_ready_(false) {
-        num_channels_ = hadc_->Init.NbrOfConversion;
-        if (num_channels_ == 0) num_channels_ = 1;
-        uint32_t i = getInstanceIndex(hadc_);
-        instance_[i] = this;
         data_ready_ = false;
         temp_channel_index_ = 0;
     }
@@ -83,11 +79,21 @@ void ADCSampler::irqConvHalfCplt(ADC_HandleTypeDef* hadc) {
 }
 
 HAL_StatusTypeDef ADCSampler::startADC(void) {
-    return HAL_ADC_Start(hadc_);
+    uint32_t i = getInstanceIndex(hadc_);
+    if (i != (uint32_t)-1) instance_[i] = this;
+    if (HAL_ADC_Start_IT(hadc_) != HAL_OK) return HAL_ERROR;
+    num_channels_ = hadc_->Init.NbrOfConversion;
+    if (num_channels_ == 0) num_channels_ = 1;
+    return HAL_OK;
 }
 
 HAL_StatusTypeDef ADCSampler::startDMA(void) {
-    return HAL_ADC_Start_DMA(hadc_, (uint32_t*)buffer_, length_);
+    uint32_t i = getInstanceIndex(hadc_);
+    if (i != (uint32_t)-1) instance_[i] = this;
+    if (HAL_ADC_Start_DMA(hadc_, (uint32_t*)buffer_, length_) != HAL_OK) return HAL_ERROR;
+    num_channels_ = hadc_->Init.NbrOfConversion;
+    if (num_channels_ == 0) num_channels_ = 1;
+    return HAL_OK;
 }
 
 void ADCSampler::getLatestData(uint16_t* channel_data) {
