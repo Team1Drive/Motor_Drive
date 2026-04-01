@@ -42,6 +42,7 @@ void test_PWM_sweep(void);
 
 float adcToVoltage(uint32_t raw, float vref, uint32_t resolution, float gain, float offset);
 float adcToCurrent(uint32_t raw, float vref, uint32_t resolution, float gain, float offset, float shunt);
+uint16_t fastAverage(uint16_t* data_ptr, uint16_t size);
 
 static void process_command(const char* cmd);
 void usb_printf(const char *format, ...);
@@ -935,6 +936,24 @@ float adcToCurrent(uint32_t raw, float vref, uint32_t resolution, float gain, fl
   return voltage / shunt;
 }
 
+/**
+ * @brief Computes the average of an array of uint16_t values using a fast method that avoids overflow. The function sums all values in a uint32_t variable and then right shifts by the number of bits corresponding to the size of the array (assuming size is a power of 2) to get the average.
+ * @param data_ptr Pointer to the array of uint16_t values.
+ * @param size The number of elements in the array (must be a power of 2).
+ * @return The average value as a uint16_t.
+ * @note `size` must be a power of 2.
+ */
+uint16_t fastAverage(uint16_t* data_ptr, uint16_t size) {
+  uint32_t sum = 0;
+  for (uint16_t i = 0; i < size; i++) {
+    sum += data_ptr[i];
+  }
+
+  uint32_t shift = 31 - __builtin_clz(size);
+
+  return (uint16_t)(sum >> shift);
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 //  USB Command Processing
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1543,13 +1562,23 @@ static void foc_isr_tick(void)
      *   ADC3[0] = I_C   (PC1,  INP11, 12-bit → 4096 counts)
      *   ADC3[1] = I_BATT(PC0,  INP10, 12-bit)  — not used in FOC loop
      * --------------------------------------------------------------------- */
-    uint16_t adc1_raw[3];
-    uint16_t adc2_raw[2];
-    uint16_t adc3_raw[2];
+    //uint16_t adc1_raw[3];
+    //uint16_t adc2_raw[2];
+    //uint16_t adc3_raw[2];
 
-    adc1.getLatestData(adc1_raw);
-    adc2.getLatestData(adc2_raw);
-    adc3.getLatestData(adc3_raw);
+    //adc1.getLatestData(adc1_raw);
+    //adc2.getLatestData(adc2_raw);
+    //adc3.getLatestData(adc3_raw);
+
+    uint16_t ia_sample[FOC_OVERSAMPLING_SIZE];
+    uint16_t ib_sample[FOC_OVERSAMPLING_SIZE];
+    uint16_t ic_sample[FOC_OVERSAMPLING_SIZE];
+    uint16_t vdc_sample[FOC_OVERSAMPLING_SIZE];
+
+    adc1.getLatestChannel(0, ia_sample, FOC_OVERSAMPLING_SIZE);
+    adc2.getLatestChannel(0, ib_sample, FOC_OVERSAMPLING_SIZE);
+    adc3.getLatestChannel(0, ic_sample, FOC_OVERSAMPLING_SIZE);
+    adc1.getLatestChannel(2, vdc_sample, FOC_OVERSAMPLING_SIZE);
 
     /*
      * Convert raw ADC to amps using the real formula:
@@ -1563,15 +1592,25 @@ static void foc_isr_tick(void)
      *       channels — the op-amp gain of 50 is already embedded in the
      *       shunt value (effective sensitivity = 50 × shunt V/A).
      */
-    float Ia = adcToCurrent(adc1_raw[0], 3.3f, 65536, 1.0f,
+    //float Ia = adcToCurrent(adc1_raw[0], 3.3f, 65536, 1.0f,
+    //                        1.65f + adc_gain.ia_offset, adc_gain.ia_shunt);
+    //float Ib = adcToCurrent(adc2_raw[0], 3.3f, 65536, 1.0f,
+    //                        1.65f + adc_gain.ib_offset, adc_gain.ib_shunt);
+    //float Ic = adcToCurrent(adc3_raw[0], 3.3f,  4096, 1.0f,
+    //                        1.65f + adc_gain.ic_offset, adc_gain.ic_shunt);
+
+    float Ia = adcToCurrent(fastAverage(ia_sample, FOC_OVERSAMPLING_SIZE), 3.3f, 65536, 1.0f,
                             1.65f + adc_gain.ia_offset, adc_gain.ia_shunt);
-    float Ib = adcToCurrent(adc2_raw[0], 3.3f, 65536, 1.0f,
+    float Ib = adcToCurrent(fastAverage(ib_sample, FOC_OVERSAMPLING_SIZE), 3.3f, 65536, 1.0f,
                             1.65f + adc_gain.ib_offset, adc_gain.ib_shunt);
-    float Ic = adcToCurrent(adc3_raw[0], 3.3f,  4096, 1.0f,
+    float Ic = adcToCurrent(fastAverage(ic_sample, FOC_OVERSAMPLING_SIZE), 3.3f,  4096, 1.0f,
                             1.65f + adc_gain.ic_offset, adc_gain.ic_shunt);
 
     /* DC bus voltage */
-    float Vdc = adcToVoltage(adc1_raw[2], 3.3f, 65536,
+    //float Vdc = adcToVoltage(adc1_raw[2], 3.3f, 65536,
+    //                         adc_gain.vbatt_gain, adc_gain.vbatt_offset);
+                             
+    float Vdc = adcToVoltage(fastAverage(vdc_sample, FOC_OVERSAMPLING_SIZE), 3.3f, 65536,
                              adc_gain.vbatt_gain, adc_gain.vbatt_offset);
 
     /* Guard: Vdc too low — SVPWM would divide by zero */

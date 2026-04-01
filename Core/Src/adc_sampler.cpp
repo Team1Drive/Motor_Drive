@@ -87,11 +87,11 @@ HAL_StatusTypeDef ADCSampler::startDMA(void) {
     return HAL_OK;
 }
 
-void ADCSampler::getLatestData(uint16_t* channel_data) {
+void ADCSampler::getLatestData(uint16_t* data_ptr) {
     // Return zeros before the first half full DMA interrupt to prevent processing invalid date
     if (!data_ready_) {
         for (uint32_t i = 0; i < num_channels_; i++) {
-            channel_data[i] = 0;
+            data_ptr[i] = 0;
         }
         return;
     }
@@ -110,6 +110,42 @@ void ADCSampler::getLatestData(uint16_t* channel_data) {
 
     // Copy the latest group of samples for each channel
     for (uint32_t i = 0; i < num_channels_; i++) {
-        channel_data[i] = buffer_[group_start + i];
+        data_ptr[i] = buffer_[group_start + i];
+    }
+}
+
+uint16_t ADCSampler::getLatestChannel(uint8_t channel) {
+    uint16_t data[num_channels_];
+    getLatestData(data);
+    return data[channel];
+}
+
+void ADCSampler::getLatestChannel(uint8_t channel, uint16_t* data_ptr, uint32_t set_length) {
+    // Return zeros before the first half full DMA interrupt to prevent processing invalid date
+    if (!data_ready_) {
+        for (uint32_t i = 0; i < set_length; i++) {
+            data_ptr[i] = 0;
+        }
+        return;
+    }
+
+    // Calculate how many samples have been written by checking the DMA NDTR register
+    __disable_irq();
+    uint32_t ndtr = __HAL_DMA_GET_COUNTER(hdma_);
+    __enable_irq();
+
+    // Calculate the index of the latest complete group of samples
+    uint32_t written = length_ - ndtr;
+    uint32_t written_groups = written / num_channels_;
+    if (written_groups == 0) written_groups = length_ / num_channels_;
+    written_groups--;
+    uint32_t group_start = written_groups * num_channels_;
+
+    // Copy the latest group of samples for each channel
+    int32_t buffer_index = group_start + channel;
+    for (uint32_t i = 0; i < set_length; i++) {
+        data_ptr[i] = buffer_[buffer_index];
+        buffer_index -= num_channels_;
+        if (buffer_index < 0) buffer_index += length_;
     }
 }

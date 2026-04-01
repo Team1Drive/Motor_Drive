@@ -78,5 +78,9 @@ class ADCSampler {
          * Get the latest ADC data for each channel. This function should be called after the half_ready_ or full_ready_ flag is set to true, indicating that new data is available. The channel_data array should have enough space to hold the number of channels configured in the ADC. The function copies the latest ADC values for each channel into the provided array.
          * @param channel_data Pointer to an array where the latest ADC values for each channel will be copied. The caller is responsible for ensuring that this array has enough space to hold the number of channels configured in the ADC.
          */
-        void getLatestData(uint16_t* channel_data);
+        void getLatestData(uint16_t* data_ptr);
+
+        uint16_t getLatestChannel(uint8_t channel);
+
+        void getLatestChannel(uint8_t channel, uint16_t* data_ptr, uint32_t length);
 };
