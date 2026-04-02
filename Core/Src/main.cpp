@@ -96,7 +96,6 @@ volatile MotorControlMode control_mode = MotorControlMode::MOTOR_STOP;
 
 volatile uint32_t system_flag = 0;
 volatile uint32_t error_flag = 0;
-volatile SystemStatus_t system_status = { .is_vvvf_running = false, .is_vvvf_ramp_up = false, .is_sixstep_running = false, .is_foc_running = false, .is_audible = false};
 volatile ADCGain_t adc_gain = {
     .ia_shunt = ADC_IA_SHUNT,
     .ib_shunt = ADC_IB_SHUNT,
@@ -231,7 +230,7 @@ int main(void)
   adc2.setProcessingBuffer(adc2_proc_buffer, ADC2_BUF_LEN);
   adc3.setProcessingBuffer(adc3_proc_buffer, ADC3_BUF_LEN);
 
-  if (error_flag != 0) led_red.write(0);
+  if (error_flag) led_red.write(0);
   led_green.write(0);
   led_yellow_1.write(0);
   led_yellow_2.write(0);
@@ -788,7 +787,7 @@ void startUpSequence(void) {
   if (control_mode != MotorControlMode::MOTOR_STARTUP) return;
   hallsensor.read();
   motorPWM.setDuty(1.0f, 0.0f, -1.0f);
-  system_status.is_vvvf_ramp_up = true;
+  system_flag |= FLAG_VVVF_RAMP_UP;
   control_mode = MotorControlMode::MOTOR_VVVF;
 }
 
@@ -804,15 +803,15 @@ void vvvfRampUp(void) {
   static bool accelerating;
 
   // Initialize on zero speed starting
-  if (!system_status.is_vvvf_running) {
+  if (system_flag & FLAG_VVVF_RUNNING == 0) {
     rpm = 0.0f;
     angle = 0.0f;
     accelerating = true;
-    system_status.is_vvvf_running = true;
+    system_flag |= FLAG_VVVF_RUNNING;
   }
 
   // Audible frequency adjustment
-  if (system_status.is_audible) {
+  if (system_flag & FLAG_AUDIBLE) {
     if (rpm < 500.0f) {
       motorPWM.setFrequency(450);
     }
@@ -832,7 +831,7 @@ void vvvfRampUp(void) {
   float step_increment = (float)ramp_up / frequency;
 
   // Ramp up or down the speed
-  if (system_status.is_vvvf_ramp_up) {
+  if (system_flag & FLAG_VVVF_RAMP_UP) {
     if (accelerating) {
       rpm += step_increment;
       if (rpm >= VVVF_MAX_RPM >> 1) {
@@ -846,7 +845,7 @@ void vvvfRampUp(void) {
       rpm -= 2 * step_increment;
       if (rpm <= 0.0f) {
         rpm = 0.0f;
-        system_status.is_vvvf_running = false;
+        system_flag &= ~FLAG_VVVF_RUNNING;
         control_mode = MotorControlMode::MOTOR_STOP;
         motorPWM.setDuty(-1.0f, -1.0f, -1.0f);
         relay.write(0);
@@ -884,8 +883,8 @@ void vvvfRampUp(void) {
   motorPWM.setDuty(dutyA, dutyB, dutyC);
 
   if (FOC_ALLOWED && encoder.is_synchronized_ && rpm >= VVVF_THRESHOLD_RPM >> 1) {
-    system_status.is_vvvf_running = false;
-    system_status.is_foc_running = true;
+    system_flag &= ~FLAG_VVVF_RUNNING;
+    system_flag |= FLAG_FOC_RUNNING;
     control_mode = MotorControlMode::MOTOR_FOC_LINEAR;
     CDC_Transmit_HS((uint8_t*)"Entering FOC mode\r\n", 19);
   }
@@ -920,9 +919,9 @@ const int8_t commutation_acw[8][3] = {
     { -1, -1, -1 }  // 7 (Invalid)
 };
 
-  if (!system_status.is_sixstep_running) {
+  if (system_flag & FLAG_SIXSTEP_RUNNING == 0) {
     hallsensor.read();
-    system_status.is_sixstep_running = true;
+    system_flag |= FLAG_SIXSTEP_RUNNING;
   }
 
   uint8_t hall_state = hallsensor.getState();
@@ -985,24 +984,24 @@ static void process_command(const char* cmd) {
   // Start
   if (strcmp(cmd, "start") == 0) {
     control_mode = MotorControlMode::MOTOR_STARTUP;
-    system_status.is_vvvf_running = false;
-    system_status.is_sixstep_running = false;
-    system_status.is_foc_running = false;
+    system_flag &= ~FLAG_VVVF_RUNNING;
+    system_flag &= ~FLAG_SIXSTEP_RUNNING;
+    system_flag &= ~FLAG_FOC_RUNNING;
     relay.write(1);
     startUpSequence();
     CDC_Transmit_HS((uint8_t*)"Starting\r\n", 10);
 
   // Stop
   } else if (strcmp(cmd, "stop") == 0) {
-    if (control_mode == MotorControlMode::MOTOR_VVVF && system_status.is_vvvf_ramp_up) {
-      system_status.is_vvvf_ramp_up = false; // Start ramp down
+    if (control_mode == MotorControlMode::MOTOR_VVVF && system_flag & FLAG_VVVF_RAMP_UP) {
+      system_flag &= ~FLAG_VVVF_RAMP_UP; // Start ramp down
       CDC_Transmit_HS((uint8_t*)"VVVF ramping down\r\n", 21);
     }
     else {
       control_mode = MotorControlMode::MOTOR_STOP;
-      system_status.is_vvvf_running = false;
-      system_status.is_sixstep_running = false;
-      system_status.is_foc_running = false;
+      system_flag &= ~FLAG_VVVF_RUNNING;
+      system_flag &= ~FLAG_SIXSTEP_RUNNING;
+      system_flag &= ~FLAG_FOC_RUNNING;
       motorPWM.stop();
       foc_reset(&foc_state);
       relay.write(0);
@@ -1012,9 +1011,9 @@ static void process_command(const char* cmd) {
   // Reset
   } else if (strcmp(cmd, "reset") == 0) {
       control_mode = MotorControlMode::MOTOR_STOP;
-      system_status.is_vvvf_running = false;
-      system_status.is_sixstep_running = false;
-      system_status.is_foc_running = false;
+      system_flag &= ~FLAG_VVVF_RUNNING;
+      system_flag &= ~FLAG_SIXSTEP_RUNNING;
+      system_flag &= ~FLAG_FOC_RUNNING;
       motorPWM.stop();
       led_red.write(0);
       foc_reset(&foc_state);
@@ -1027,7 +1026,7 @@ static void process_command(const char* cmd) {
     if (sscanf(cmd + 4, "%d", &rpm_cmd) == 1) {
       foc_reset(&foc_state);
       foc_state.target_rpm = (float)rpm_cmd;
-      system_status.is_foc_running = true;
+      system_flag |= FLAG_FOC_RUNNING;
       relay.write(1);
       motorPWM.start();
       control_mode = MotorControlMode::MOTOR_FOC_LINEAR;
@@ -1058,8 +1057,8 @@ static void process_command(const char* cmd) {
   // Six-step commutation
   } else if (strcmp(cmd, "sixstep") == 0) {
     control_mode = MotorControlMode::MOTOR_SIX_STEP;
-    system_status.is_vvvf_running = false;
-    system_status.is_foc_running = false;
+    system_flag &= ~FLAG_VVVF_RUNNING;
+    system_flag &= ~FLAG_FOC_RUNNING;
     relay.write(1);
     sixStepCommutation();
     CDC_Transmit_HS((uint8_t*)"Six-step running\r\n", 31);
@@ -1112,9 +1111,9 @@ static void process_command(const char* cmd) {
             relay.write(1);
             motorPWM.setDuty(values[0], values[1], values[2]);
             control_mode = MotorControlMode::MOTOR_MANUAL;
-            system_status.is_vvvf_running = false;
-            system_status.is_sixstep_running = false;
-            system_status.is_foc_running = false;
+            system_flag &= ~FLAG_VVVF_RUNNING;
+            system_flag &= ~FLAG_SIXSTEP_RUNNING;
+            system_flag &= ~FLAG_FOC_RUNNING;
             CDC_Transmit_HS((uint8_t*)"Duty set\r\n", 4);
       } else {
         CDC_Transmit_HS((uint8_t*)"Duty values out of range [-1,1]\r\n", 34);
@@ -1152,9 +1151,9 @@ static void process_command(const char* cmd) {
       
       motorPWM.setDuty(dutyA, dutyB, dutyC);
       control_mode = MotorControlMode::MOTOR_MANUAL;
-      system_status.is_vvvf_running = false;
-      system_status.is_sixstep_running = false;
-      system_status.is_foc_running = false;
+      system_flag &= ~FLAG_VVVF_RUNNING;
+      system_flag &= ~FLAG_SIXSTEP_RUNNING;
+      system_flag &= ~FLAG_FOC_RUNNING;
 
       // Read current Hall sensor state for debugging
       uint8_t hall_state = hallsensor.getState();  // Ensure this function exists
@@ -1479,11 +1478,11 @@ static void process_command(const char* cmd) {
 
   // Toggle audible frequency
   } else if (strcmp(cmd, "audible") == 0) {
-    if (system_status.is_audible) {
-      system_status.is_audible = false;
+    if (system_flag & FLAG_AUDIBLE) {
+      system_flag &= ~FLAG_AUDIBLE;
       CDC_Transmit_HS((uint8_t*)"Audible frequency disabled\r\n", 28);
     } else {
-      system_status.is_audible = true;
+      system_flag |= FLAG_AUDIBLE;
       CDC_Transmit_HS((uint8_t*)"Audible frequency enabled\r\n", 27);
     }
     
@@ -1594,7 +1593,7 @@ static void foc_isr_tick(void)
       led_red.write(1);
       // Set control mode to STOP and clear FOC running flag
       control_mode = MotorControlMode::MOTOR_STOP;
-      system_status.is_foc_running = false;
+      system_flag &= ~FLAG_FOC_RUNNING;
       tick_counter = 0;
       return;
     }
