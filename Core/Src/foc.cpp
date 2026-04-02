@@ -94,23 +94,9 @@ void foc_run(FOC_State_t* foc,
              float Vdc,
              float theta_e, float omega_m,
              float* dutyA, float* dutyB, float* dutyC)
-{
+             {
     /* ------------------------------------------------------------------
-     * 0. Overcurrent protection
-     *    Compare against Imax². All three phases checked.
-     *    On trip: output 0.5 duty (mid-rail, no net current), latch fault.
-     * ------------------------------------------------------------------ */
-    const float Imax_sq = FOC_IMAX * FOC_IMAX;
-    if (Ia*Ia > Imax_sq || Ib*Ib > Imax_sq || Ic*Ic > Imax_sq) {
-        foc->fault = true;
-        *dutyA = 0.5f;
-        *dutyB = 0.5f;
-        *dutyC = 0.5f;
-        return;
-    }
-
-    /* ------------------------------------------------------------------
-     * 1. Store observables
+     * 0. Store observables
      * ------------------------------------------------------------------ */
     const float omega_e  = omega_m * (float)MOTOR_POLE_PAIRS;
     const float rpm_meas = omega_m * (60.0f / (2.0f * M_PI));
@@ -122,6 +108,20 @@ void foc_run(FOC_State_t* foc,
     foc->theta_e = theta_e;
     foc->omega_e = omega_e;
     foc->rpm     = rpm_meas;
+
+    /* ------------------------------------------------------------------
+     * 1. Overcurrent protection
+     *    Compare against Imax². All three phases checked.
+     *    On trip: output 0.5 duty (mid-rail, no net current), latch fault.
+     * ------------------------------------------------------------------ */
+    const float Imax_sq = FOC_IMAX * FOC_IMAX;
+    if (foc->Ia*foc->Ia > Imax_sq || foc->Ib*foc->Ib > Imax_sq || foc->Ic*foc->Ic > Imax_sq) {
+        foc->fault = true;
+        *dutyA = 0.5f;
+        *dutyB = 0.5f;
+        *dutyC = 0.5f;
+        return;
+    }
 
     /* ------------------------------------------------------------------
      * 2. Clarke transform: Ia,Ib,Ic → Iα,Iβ  (stationary frame)
