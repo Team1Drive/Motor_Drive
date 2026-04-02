@@ -974,8 +974,13 @@ uint16_t fastAverage(uint16_t* data_ptr, uint16_t size) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  USB Command Processing
+//  USB Command Handling
+//  The following functions facilitate handling of USB commands received from host computer
 // ─────────────────────────────────────────────────────────────────────────────
+/**
+ * @brief Command handler for "start" command.
+ * @note Initializes the motor control system and starts the VVVF ramp-up sequence.
+ */
 void cmd_start(int argc, char** argv) {
     control_mode = MotorControlMode::MOTOR_STARTUP;
     system_status.is_vvvf_running = false;
@@ -986,6 +991,11 @@ void cmd_start(int argc, char** argv) {
     CDC_Transmit_HS((uint8_t*)"Starting\r\n", 10);
 }
 
+/**
+ * @brief Command handler for "stop" command.
+ * @note Stops the motor immediately and resets the control state.
+ * @note If currently in VVVF ramp-up, it will start ramping down instead of an immediate stop.
+ */
 void cmd_stop(int argc, char** argv) {
     if (control_mode == MotorControlMode::MOTOR_VVVF && system_status.is_vvvf_ramp_up) {
         system_status.is_vvvf_ramp_up = false; // Start ramp down
@@ -1002,6 +1012,10 @@ void cmd_stop(int argc, char** argv) {
     }
 }
 
+/**
+ * @brief Command handler for "reset" command.
+ * @note Resets the entire system to a known safe state, stopping the motor and clearing any active control modes or flags.
+ */
 void cmd_reset(int argc, char** argv) {
     control_mode = MotorControlMode::MOTOR_STOP;
     system_status.is_vvvf_running = false;
@@ -1014,6 +1028,11 @@ void cmd_reset(int argc, char** argv) {
     CDC_Transmit_HS((uint8_t*)"Resetting\r\n", 11);
 }
 
+/**
+ * @brief Command handler for "foc" command.
+ * @note If the argument is "status" or "stat", it prints the current FOC state including RPM, currents, voltages, and fault status.
+ * @note Otherwise, it treats the argument as a target RPM value, resets the FOC state, and starts FOC control to reach the target RPM.
+ */
 void cmd_foc(int argc, char** argv) {
     if (strcmp(argv[1], "status") == 0 || strcmp(argv[1], "stat") == 0) {
         usb_printf("RPM=%.1f  Id=%.3fA  Iq=%.3fA  Vd=%.2fV  Vq=%.2fV  Vdc=%.2fV  |u|=%.2fV  fault=%d\r\n",
@@ -1037,12 +1056,20 @@ void cmd_foc(int argc, char** argv) {
     }
 }
 
+/**
+ * @brief Command handler for "rpm" command.
+ * @note Sets the target RPM for the motor
+ */
 void cmd_rpm(int argc, char** argv) {
     int rpm_cmd = atoi(argv[1]);
     foc_state.target_rpm = (float)rpm_cmd;
     usb_printf("Target RPM set to %d\r\n", rpm_cmd);
 }
 
+/**
+ * @brief Command handler for "sixstep" command.
+ * @note Starts six-step commutation control mode.
+ */
 void cmd_sixstep(int argc, char** argv) {
     control_mode = MotorControlMode::MOTOR_SIX_STEP;
     system_status.is_vvvf_running = false;
@@ -1052,6 +1079,10 @@ void cmd_sixstep(int argc, char** argv) {
     CDC_Transmit_HS((uint8_t*)"Six-step running\r\n", 31);
 }
 
+/**
+ * @brief Command handler for "vvvf" command.
+ * @note Set the speed setpoint for FOC speed loop.
+ */
 void cmd_speed(int argc, char** argv) {
     float speed = atof(argv[1]);
     if (speed >= -5000.0f && speed <= 5000.0f) {
@@ -1065,6 +1096,12 @@ void cmd_speed(int argc, char** argv) {
     }
 }
 
+/**
+ * @brief Command handler for "duty" command.
+ * @note Sets the duty cycle for each phase directly.
+ * @attention ONLY use when supplied with a CURRENT LIMITED power source.
+ * @attention This command overrides all control modes and should be used with caution.
+ */
 void cmd_duty(int argc, char** argv) {
     // argv[1] lands as "0.3,0.3,0.3" from the universal space tokenizer.
     // We split it via commas using strtok in-place.
@@ -1098,6 +1135,12 @@ void cmd_duty(int argc, char** argv) {
     }
 }
 
+/**
+ * @brief Command handler for "vec" command.
+ * @note Applies a predefined six-step commutation vector based on the input number (0-5).
+ * @attention ONLY use when supplied with a CURRENT LIMITED power source.
+ * @attention This command overrides all control modes and should be used with caution.
+ */
 void cmd_vec(int argc, char** argv) {
     relay.write(1);
     int vec_num = atoi(argv[1]);
@@ -1135,6 +1178,10 @@ void cmd_vec(int argc, char** argv) {
     }
 }
 
+/**
+ * @brief Command handler for "tune" command.
+ * @note Allows tuning of various parameters such as PID gains and ADC calibration values via USB commands.
+ */
 void cmd_tune(int argc, char** argv) {
     // "tune speed p 0.1" -> argv[1]="speed", argv[2]="p", argv[3]="0.1"
     char* subsys = argv[1];
@@ -1272,6 +1319,10 @@ void cmd_tune(int argc, char** argv) {
     }
 }
 
+/**
+ * @brief Command handler for "log" command.
+ * @note Allows dynamic configuration of which variables to include in the data log output andoutput encoding.
+ */
 void cmd_log(int argc, char** argv) {
     char* action = argv[1];
 
