@@ -1326,7 +1326,38 @@ void cmd_tune(int argc, char** argv) {
 void cmd_log(int argc, char** argv) {
     char* action = argv[1];
 
-    if (strcmp(action, "add") == 0 || strcmp(action, "rm") == 0) {
+    if (strcmp(action, "preset") == 0) {
+        if (argc < 3) {
+            CDC_Transmit_HS((uint8_t*)"Missing preset number\r\n", 23);
+            return;
+        }
+        
+        int preset_id = atoi(argv[2]); // Safe conversion of "1", "2", etc.
+        
+        switch (preset_id) {
+            case 1: // Preset 1: FOC Tuning
+                print_mask = PRINT_RPM | PRINT_IA | PRINT_IB | PRINT_IC | PRINT_VBATT;
+                CDC_Transmit_HS((uint8_t*)"Preset 1 active\r\n", 37);
+                break;
+                
+            case 2: // Preset 2: Raw Sensor Calibration
+                print_mask = PRINT_IA | PRINT_IB | PRINT_IC | PRINT_IA_RAW | PRINT_IB_RAW | PRINT_IC_RAW;
+                CDC_Transmit_HS((uint8_t*)"Preset 2 active\r\n", 45);
+                break;
+                
+            case 3: // Preset 3: Power Monitoring
+                print_mask = PRINT_VBATT | PRINT_IBATT | PRINT_DUTY_A | PRINT_DUTY_B | PRINT_DUTY_C;
+                CDC_Transmit_HS((uint8_t*)"Preset 3 active\r\n", 40);
+                break;
+                
+            default:
+                CDC_Transmit_HS((uint8_t*)"Unknown preset. Try 1, 2, or 3\r\n", 32);
+                break;
+        }
+        return; // Exit here
+    }
+
+    else if (strcmp(action, "add") == 0 || strcmp(action, "rm") == 0) {
         if (argc < 3) {
             CDC_Transmit_HS((uint8_t*)"Missing variable name\r\n", 23);
             return;
