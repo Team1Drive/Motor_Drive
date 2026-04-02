@@ -994,9 +994,9 @@ uint16_t fastAverage(uint16_t* data_ptr, uint16_t size) {
  */
 void cmd_start(int argc, char** argv) {
     control_mode = MotorControlMode::MOTOR_STARTUP;
-    system_status.is_vvvf_running = false;
-    system_status.is_sixstep_running = false;
-    system_status.is_foc_running = false;
+    system_flag &= ~FLAG_VVVF_RUNNING;
+    system_flag &= ~FLAG_SIXSTEP_RUNNING;
+    system_flag &= ~FLAG_FOC_RUNNING;
     relay.write(1);
     startUpSequence();
     CDC_Transmit_HS((uint8_t*)"Starting\r\n", 10);
@@ -1008,14 +1008,14 @@ void cmd_start(int argc, char** argv) {
  * @note If currently in VVVF ramp-up, it will start ramping down instead of an immediate stop.
  */
 void cmd_stop(int argc, char** argv) {
-    if (control_mode == MotorControlMode::MOTOR_VVVF && system_status.is_vvvf_ramp_up) {
-        system_status.is_vvvf_ramp_up = false; // Start ramp down
+    if (control_mode == MotorControlMode::MOTOR_VVVF && system_flag & FLAG_VVVF_RAMP_UP) {
+        system_flag &= ~FLAG_VVVF_RAMP_UP; // Start ramp down
         CDC_Transmit_HS((uint8_t*)"VVVF ramping down\r\n", 21);
     } else {
         control_mode = MotorControlMode::MOTOR_STOP;
-        system_status.is_vvvf_running = false;
-        system_status.is_sixstep_running = false;
-        system_status.is_foc_running = false;
+        system_flag &= ~FLAG_VVVF_RUNNING;
+        system_flag &= ~FLAG_SIXSTEP_RUNNING;
+        system_flag &= ~FLAG_FOC_RUNNING;
         motorPWM.stop();
         foc_reset(&foc_state);
         relay.write(0);
@@ -1029,9 +1029,9 @@ void cmd_stop(int argc, char** argv) {
  */
 void cmd_reset(int argc, char** argv) {
     control_mode = MotorControlMode::MOTOR_STOP;
-    system_status.is_vvvf_running = false;
-    system_status.is_sixstep_running = false;
-    system_status.is_foc_running = false;
+    system_flag &= ~FLAG_VVVF_RUNNING;
+    system_flag &= ~FLAG_SIXSTEP_RUNNING;
+    system_flag &= ~FLAG_FOC_RUNNING;
     motorPWM.stop();
     led_red.write(0);
     foc_reset(&foc_state);
@@ -1059,7 +1059,9 @@ void cmd_foc(int argc, char** argv) {
         
         foc_reset(&foc_state);
         foc_state.target_rpm = (float)rpm_cmd;
-        system_status.is_foc_running = true;
+        system_flag &= ~FLAG_VVVF_RUNNING;
+        system_flag &= ~FLAG_SIXSTEP_RUNNING;
+        system_flag |= FLAG_FOC_RUNNING;
         relay.write(1);
         motorPWM.start();
         control_mode = MotorControlMode::MOTOR_FOC_LINEAR;
@@ -1083,8 +1085,8 @@ void cmd_rpm(int argc, char** argv) {
  */
 void cmd_sixstep(int argc, char** argv) {
     control_mode = MotorControlMode::MOTOR_SIX_STEP;
-    system_status.is_vvvf_running = false;
-    system_status.is_foc_running = false;
+    system_flag &= ~FLAG_VVVF_RUNNING;
+    system_flag &= ~FLAG_FOC_RUNNING;
     relay.write(1);
     sixStepCommutation();
     CDC_Transmit_HS((uint8_t*)"Six-step running\r\n", 31);
@@ -1134,9 +1136,9 @@ void cmd_duty(int argc, char** argv) {
             relay.write(1);
             motorPWM.setDuty(values[0], values[1], values[2]);
             control_mode = MotorControlMode::MOTOR_MANUAL;
-            system_status.is_vvvf_running = false;
-            system_status.is_sixstep_running = false;
-            system_status.is_foc_running = false;
+            system_flag &= ~FLAG_VVVF_RUNNING;
+            system_flag &= ~FLAG_SIXSTEP_RUNNING;
+            system_flag &= ~FLAG_FOC_RUNNING;
             CDC_Transmit_HS((uint8_t*)"Duty set\r\n", 10);
         } else {
             CDC_Transmit_HS((uint8_t*)"Duty values out of range [-1,1]\r\n", 34);
@@ -1176,9 +1178,9 @@ void cmd_vec(int argc, char** argv) {
       
         motorPWM.setDuty(dutyA, dutyB, dutyC);
         control_mode = MotorControlMode::MOTOR_MANUAL;
-        system_status.is_vvvf_running = false;
-        system_status.is_sixstep_running = false;
-        system_status.is_foc_running = false;
+        system_flag &= ~FLAG_VVVF_RUNNING;
+        system_flag &= ~FLAG_SIXSTEP_RUNNING;
+        system_flag &= ~FLAG_FOC_RUNNING;
 
         uint8_t hall_state = hallsensor.getState();
         char resp[64];
@@ -1428,11 +1430,11 @@ void cmd_log(int argc, char** argv) {
 }
 
 void cmd_audible(int argc, char** argv) {
-    if (system_status.is_audible) {
-        system_status.is_audible = false;
+    if (system_flag & FLAG_AUDIBLE) {
+        system_flag &= ~FLAG_AUDIBLE;
         CDC_Transmit_HS((uint8_t*)"Audible frequency disabled\r\n", 28);
     } else {
-        system_status.is_audible = true;
+        system_flag |= FLAG_AUDIBLE;
         CDC_Transmit_HS((uint8_t*)"Audible frequency enabled\r\n", 27);
     }
 }
