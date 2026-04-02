@@ -52,6 +52,7 @@
 
 
 enum class MotorControlMode : uint8_t {
+    MOTOR_PROTECTION,
     MOTOR_STOP,
     MOTOR_MANUAL,
     MOTOR_STARTUP,
@@ -82,7 +83,8 @@ enum ErrorFlag : uint32_t {
     ERROR_DMA_CONFIG        = 1 << 2,
     ERROR_TIM_CONFIG        = 1 << 3,
     ERROR_ENCODER_CONFIG    = 1 << 4,
-    ERROR_FOC_CONFIG        = 1 << 5
+    ERROR_FOC_CONFIG        = 1 << 5,
+    ERROR_OVERCURRENT       = 1 << 6
 };
 
 typedef struct {

@@ -96,6 +96,7 @@ volatile MotorControlMode control_mode = MotorControlMode::MOTOR_STOP;
 
 volatile uint32_t system_flag = 0;
 volatile uint32_t error_flag = 0;
+
 volatile ADCGain_t adc_gain = {
     .ia_shunt = ADC_IA_SHUNT,
     .ib_shunt = ADC_IB_SHUNT,
@@ -439,6 +440,15 @@ void timer3IRQ(void) {
       break;
     default:
       break;
+  }
+
+  if (error_flag & ERROR_OVERCURRENT) {
+    if (led_increment_counter & 1) {
+      led_red.write(1);
+    }
+    else {
+      led_red.write(0);
+    }
   }
   
   if (led_increment_counter++ >= 7) {
@@ -1026,6 +1036,8 @@ static void process_command(const char* cmd) {
     if (sscanf(cmd + 4, "%d", &rpm_cmd) == 1) {
       foc_reset(&foc_state);
       foc_state.target_rpm = (float)rpm_cmd;
+      system_flag &= ~FLAG_VVVF_RUNNING;
+      system_flag &= ~FLAG_SIXSTEP_RUNNING;
       system_flag |= FLAG_FOC_RUNNING;
       relay.write(1);
       motorPWM.start();
@@ -1589,10 +1601,10 @@ static void foc_isr_tick(void)
       motorPWM.stop();
       // De-energize relay
       relay.write(0);
-      // Turn on fault LED
-      led_red.write(1);
-      // Set control mode to STOP and clear FOC running flag
-      control_mode = MotorControlMode::MOTOR_STOP;
+      // Set fault flag
+      error_flag |= ERROR_OVERCURRENT;
+      // Set control mode to PROTECTION and clear FOC running flag
+      control_mode = MotorControlMode::MOTOR_PROTECTION;
       system_flag &= ~FLAG_FOC_RUNNING;
       tick_counter = 0;
       return;
