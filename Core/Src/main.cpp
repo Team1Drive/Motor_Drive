@@ -224,6 +224,7 @@ int main(void)
 
   /* Initialise FOC controller */
   foc_init(&foc_state);
+  foc_state.target_rpm = FOC_INITIAL_RPM;
 
   adc1.setProcessingBuffer(adc1_proc_buffer, ADC1_BUF_LEN);
   adc2.setProcessingBuffer(adc2_proc_buffer, ADC2_BUF_LEN);
@@ -635,6 +636,24 @@ void printTelemetryBinary(void) {
     ibatt = adcToCurrent(adc3_raw[1], 3.3f, 4096, 50.0f, 1.65f + adc_gain.ibatt_offset, adc_gain.ibatt_shunt);
   }
 
+  uint16_t ia_sample[FOC_OVERSAMPLING_SIZE], ib_sample[FOC_OVERSAMPLING_SIZE], ic_sample[FOC_OVERSAMPLING_SIZE];
+  uint16_t va_sample[FOC_OVERSAMPLING_SIZE], vb_sample[FOC_OVERSAMPLING_SIZE], vbatt_sample[FOC_OVERSAMPLING_SIZE], ibatt_sample[FOC_OVERSAMPLING_SIZE];
+  adc1.getLatestChannel(0, ia_sample, FOC_OVERSAMPLING_SIZE);
+  adc2.getLatestChannel(0, ib_sample, FOC_OVERSAMPLING_SIZE);
+  adc3.getLatestChannel(0, ic_sample, FOC_OVERSAMPLING_SIZE);
+  adc2.getLatestChannel(1, va_sample, FOC_OVERSAMPLING_SIZE);
+  adc1.getLatestChannel(1, vb_sample, FOC_OVERSAMPLING_SIZE);
+  adc1.getLatestChannel(2, vbatt_sample, FOC_OVERSAMPLING_SIZE);
+  adc3.getLatestChannel(1, ibatt_sample, FOC_OVERSAMPLING_SIZE);
+
+  ia = adcToCurrent(fastAverage(ia_sample, FOC_OVERSAMPLING_SIZE), 3.3f, 65536, 50.0f, 1.65f + adc_gain.ia_offset, adc_gain.ia_shunt);
+  ib = adcToCurrent(fastAverage(ib_sample, FOC_OVERSAMPLING_SIZE), 3.3f, 65536, 50.0f, 1.65f + adc_gain.ib_offset, adc_gain.ib_shunt);
+  ic = adcToCurrent(fastAverage(ic_sample, FOC_OVERSAMPLING_SIZE), 3.3f, 4096, 50.0f, 1.65f + adc_gain.ic_offset, adc_gain.ic_shunt);
+  va = adcToVoltage(fastAverage(va_sample, FOC_OVERSAMPLING_SIZE), 3.3f, 65536, adc_gain.va_gain, 1.65f + adc_gain.va_offset);
+  vb = adcToVoltage(fastAverage(vb_sample, FOC_OVERSAMPLING_SIZE), 3.3f, 65536, adc_gain.vb_gain, 1.65f + adc_gain.vb_offset);
+  vbatt = adcToVoltage(fastAverage(vbatt_sample, FOC_OVERSAMPLING_SIZE), 3.3f, 65536, adc_gain.vbatt_gain, 0.0f + adc_gain.vbatt_offset);
+  ibatt = adcToCurrent(fastAverage(ibatt_sample, FOC_OVERSAMPLING_SIZE), 3.3f, 4096, 50.0f, 1.65f + adc_gain.ibatt_offset, adc_gain.ibatt_shunt);
+
   // Construct a binary packet
   uint8_t buffer[128];
   uint8_t* ptr = buffer;
@@ -844,7 +863,7 @@ void vvvfRampUp(void) {
   // Calculate voltage amplitude
   float amplitude;
   const float MIN_VOLTAGE = 0.15f;      // Boost start voltage
-  const float KNEE_RPM = 600.0f;        // Knee point (RPM)
+  const float KNEE_RPM = 1000.0f;        // Knee point (RPM)
   if (rpm < KNEE_RPM) {
       // Increase amplitude from MIN_VOLTAGE until knee point
       amplitude = MIN_VOLTAGE + (1.0f - MIN_VOLTAGE) * (rpm / KNEE_RPM);
@@ -862,10 +881,11 @@ void vvvfRampUp(void) {
 
   motorPWM.setDuty(dutyA, dutyB, dutyC);
 
-  if (FOC_ALLOWED && encoder.is_synchronized_ && rpm >= VVVF_THRESHOLD_RPM) {
+  if (FOC_ALLOWED && encoder.is_synchronized_ && rpm >= VVVF_THRESHOLD_RPM >> 1) {
     system_status.is_vvvf_running = false;
     system_status.is_foc_running = true;
     control_mode = MotorControlMode::MOTOR_FOC_LINEAR;
+    CDC_Transmit_HS((uint8_t*)"Entering FOC mode\r\n", 19);
   }
 }
 
@@ -968,7 +988,7 @@ static void process_command(const char* cmd) {
     system_status.is_foc_running = false;
     relay.write(1);
     startUpSequence();
-    CDC_Transmit_HS((uint8_t*)"Starting\r\n", 4);
+    CDC_Transmit_HS((uint8_t*)"Starting\r\n", 10);
 
   // Stop
   } else if (strcmp(cmd, "stop") == 0) {
@@ -986,6 +1006,18 @@ static void process_command(const char* cmd) {
       relay.write(0);
       CDC_Transmit_HS((uint8_t*)"Stopping\r\n", 10);
     }
+
+  // Reset
+  } else if (strcmp(cmd, "reset") == 0) {
+      control_mode = MotorControlMode::MOTOR_STOP;
+      system_status.is_vvvf_running = false;
+      system_status.is_sixstep_running = false;
+      system_status.is_foc_running = false;
+      motorPWM.stop();
+      led_red.write(0);
+      foc_reset(&foc_state);
+      relay.write(0);
+      CDC_Transmit_HS((uint8_t*)"Resetting\r\n", 11);
 
   // FOC: "foc <rpm>" — align encoder, start FOC at target RPM
   } else if (strncmp(cmd, "foc ", 4) == 0) {
@@ -1541,13 +1573,28 @@ static bool read_line_from_ring(char* line, int max_len) {
 static void foc_isr_tick(void)
 {
     /* Guard: fault latched — stop inverter and return to STOP mode */
+    static uint32_t tick_counter = 0;
     if (foc_state.fault) {
-        motorPWM.stop();
-        relay.write(0);
-        led_red.write(1);
-        control_mode = MotorControlMode::MOTOR_STOP;
-        system_status.is_foc_running = false;
-        return;
+      // Prints out the current FOC state for debugging before stopping
+      usb_printf("\r\n------------------------\r\nFOC fault at tick %u\r\nRPM=%.1f  Ia=%.3fA  Ib=%.3fA  Ic=%.3fA\r\nId=%.3fA  Iq=%.3fA  Vd=%.2fV  Vq=%.2fV  Vdc=%.2fV  |u|=%.2fV  fault=%d\r\n------------------------\r\n",
+              tick_counter,
+              foc_state.rpm,
+              foc_state.Ia,  foc_state.Ib,  foc_state.Ic,
+              foc_state.Id,  foc_state.Iq,
+              foc_state.Vd_cmd, foc_state.Vq_cmd,
+              foc_state.Vdc, foc_state.u_mag,
+              (int)foc_state.fault);
+      // Stop all 3 phases PWM output
+      motorPWM.stop();
+      // De-energize relay
+      relay.write(0);
+      // Turn on fault LED
+      led_red.write(1);
+      // Set control mode to STOP and clear FOC running flag
+      control_mode = MotorControlMode::MOTOR_STOP;
+      system_status.is_foc_running = false;
+      tick_counter = 0;
+      return;
     }
 
     /* -----------------------------------------------------------------------
@@ -1599,11 +1646,11 @@ static void foc_isr_tick(void)
     //float Ic = adcToCurrent(adc3_raw[0], 3.3f,  4096, 1.0f,
     //                        1.65f + adc_gain.ic_offset, adc_gain.ic_shunt);
 
-    float Ia = adcToCurrent(fastAverage(ia_sample, FOC_OVERSAMPLING_SIZE), 3.3f, 65536, 1.0f,
+    float Ia = adcToCurrent(fastAverage(ia_sample, FOC_OVERSAMPLING_SIZE), 3.3f, 65536, 50.0f,
                             1.65f + adc_gain.ia_offset, adc_gain.ia_shunt);
-    float Ib = adcToCurrent(fastAverage(ib_sample, FOC_OVERSAMPLING_SIZE), 3.3f, 65536, 1.0f,
+    float Ib = adcToCurrent(fastAverage(ib_sample, FOC_OVERSAMPLING_SIZE), 3.3f, 65536, 50.0f,
                             1.65f + adc_gain.ib_offset, adc_gain.ib_shunt);
-    float Ic = adcToCurrent(fastAverage(ic_sample, FOC_OVERSAMPLING_SIZE), 3.3f,  4096, 1.0f,
+    float Ic = adcToCurrent(fastAverage(ic_sample, FOC_OVERSAMPLING_SIZE), 3.3f,  4096, 50.0f,
                             1.65f + adc_gain.ic_offset, adc_gain.ic_shunt);
 
     /* DC bus voltage */
@@ -1644,6 +1691,8 @@ static void foc_isr_tick(void)
      * 4. Apply to inverter
      * --------------------------------------------------------------------- */
     motorPWM.setDuty(dutyA, dutyB, dutyC);
+
+    tick_counter++;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

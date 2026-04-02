@@ -10,9 +10,9 @@
 #define ADC2_NUM_CHANNELS   2U
 #define ADC3_NUM_CHANNELS   2U
 
-#define ADC_IA_SHUNT        0.004f // Ia channel gain (shunt resistor)
-#define ADC_IB_SHUNT        0.0026f // Ib channel gain (shunt resistor)
-#define ADC_IC_SHUNT        0.003f // Ic channel gain (shunt resistor)
+#define ADC_IA_SHUNT        0.0062f // Ia channel gain (shunt resistor)
+#define ADC_IB_SHUNT        0.004f // Ib channel gain (shunt resistor)
+#define ADC_IC_SHUNT        0.0033f // Ic channel gain (shunt resistor)
 #define ADC_IA_OFFSET       0.006f // Ia channel offset
 #define ADC_IB_OFFSET       0.006f // Ib channel offset
 #define ADC_IC_OFFSET       0.005f // Ic channel offset
@@ -35,9 +35,10 @@
 
 #define VVVF_RAMP_UP_SPEED          60U // 60 RPM/s
 #define VVVF_MAX_RPM                3000U // Max RPM for VVVF mod
-#define VVVF_THRESHOLD_RPM          3000U // Minimum RPM to maintain after ramp-up
+#define VVVF_THRESHOLD_RPM          1500U // Minimum RPM to maintain after ramp-up
 
-#define FOC_ALLOWED                 false // Allow FOC mode in the system (set to false to disable FOC-related code and save flash/RAM)
+#define FOC_ALLOWED                 true // Allow FOC mode in the system (set to false to disable FOC-related code and save flash/RAM)
+#define FOC_INITIAL_RPM             1500U // Target RPM for FOC mode (used when FOC is enabled and selected)
 #define FOC_OVERSAMPLING_SIZE       16U // Number of samples to average for oversampling (must be a power of 2 for efficient averaging)
 
 #define ENCODER_PPR                 2048U // Pulses per revolution for the encoder
