@@ -45,8 +45,6 @@ float adcToVoltage(uint32_t raw, float vref, uint32_t resolution, float gain, fl
 float adcToCurrent(uint32_t raw, float vref, uint32_t resolution, float gain, float offset, float shunt);
 uint16_t fastAverage(uint16_t* data_ptr, uint16_t size);
 
-static void process_command(const char* cmd);
-
 /* Declare ADC buffers */
 alignas(32) volatile uint16_t adc1_buffer[ADC1_BUF_LEN] __attribute__((section(".sram_d1")));
 alignas(32) volatile uint16_t adc2_buffer[ADC2_BUF_LEN] __attribute__((section(".sram_d1")));
@@ -249,6 +247,9 @@ int main(void)
     usb_printf("Polling Val: %lu\r\n", val); */
     char cmd_line[CMD_MAX_LEN];
     if (read_line_from_ring(&rx_ring, cmd_line, CMD_MAX_LEN)) {
+      CDC_Transmit_HS((uint8_t*)"Received: ", 10);
+      CDC_Transmit_HS((uint8_t*)cmd_line, strlen(cmd_line));
+      // Debugging print, remove above lines after validation
       process_command(cmd_line);
     }
     /* USER CODE BEGIN 3 */
@@ -975,7 +976,7 @@ uint16_t fastAverage(uint16_t* data_ptr, uint16_t size) {
 // ─────────────────────────────────────────────────────────────────────────────
 //  USB Command Processing
 // ─────────────────────────────────────────────────────────────────────────────
-static void cmd_start(const char* cmd) {
+void cmd_start(int argc, char** argv) {
     control_mode = MotorControlMode::MOTOR_STARTUP;
     system_status.is_vvvf_running = false;
     system_status.is_sixstep_running = false;
@@ -985,8 +986,364 @@ static void cmd_start(const char* cmd) {
     CDC_Transmit_HS((uint8_t*)"Starting\r\n", 10);
 }
 
+void cmd_stop(int argc, char** argv) {
+    if (control_mode == MotorControlMode::MOTOR_VVVF && system_status.is_vvvf_ramp_up) {
+        system_status.is_vvvf_ramp_up = false; // Start ramp down
+        CDC_Transmit_HS((uint8_t*)"VVVF ramping down\r\n", 21);
+    } else {
+        control_mode = MotorControlMode::MOTOR_STOP;
+        system_status.is_vvvf_running = false;
+        system_status.is_sixstep_running = false;
+        system_status.is_foc_running = false;
+        motorPWM.stop();
+        foc_reset(&foc_state);
+        relay.write(0);
+        CDC_Transmit_HS((uint8_t*)"Stopping\r\n", 10);
+    }
+}
 
-static void process_command(const char* cmd) {
+void cmd_reset(int argc, char** argv) {
+    control_mode = MotorControlMode::MOTOR_STOP;
+    system_status.is_vvvf_running = false;
+    system_status.is_sixstep_running = false;
+    system_status.is_foc_running = false;
+    motorPWM.stop();
+    led_red.write(0);
+    foc_reset(&foc_state);
+    relay.write(0);
+    CDC_Transmit_HS((uint8_t*)"Resetting\r\n", 11);
+}
+
+void cmd_foc(int argc, char** argv) {
+    // argv[1] contains the string of the target RPM
+    int rpm_cmd = atoi(argv[1]);
+    
+    foc_reset(&foc_state);
+    foc_state.target_rpm = (float)rpm_cmd;
+    system_status.is_foc_running = true;
+    relay.write(1);
+    motorPWM.start();
+    control_mode = MotorControlMode::MOTOR_FOC_LINEAR;
+    usb_printf("FOC started  target=%d RPM\r\n", rpm_cmd);
+}
+
+void cmd_rpm(int argc, char** argv) {
+    int rpm_cmd = atoi(argv[1]);
+    foc_state.target_rpm = (float)rpm_cmd;
+    usb_printf("Target RPM set to %d\r\n", rpm_cmd);
+}
+
+void cmd_foc_status(int argc, char** argv) {
+    usb_printf("RPM=%.1f  Id=%.3fA  Iq=%.3fA  Vd=%.2fV  Vq=%.2fV  Vdc=%.2fV  |u|=%.2fV  fault=%d\r\n",
+               foc_state.rpm,
+               foc_state.Id, foc_state.Iq,
+               foc_state.Vd_cmd, foc_state.Vq_cmd,
+               foc_state.Vdc, foc_state.u_mag,
+               (int)foc_state.fault);
+}
+
+void cmd_sixstep(int argc, char** argv) {
+    control_mode = MotorControlMode::MOTOR_SIX_STEP;
+    system_status.is_vvvf_running = false;
+    system_status.is_foc_running = false;
+    relay.write(1);
+    sixStepCommutation();
+    CDC_Transmit_HS((uint8_t*)"Six-step running\r\n", 31);
+}
+
+void cmd_speed(int argc, char** argv) {
+    float speed = atof(argv[1]);
+    if (speed >= -5000.0f && speed <= 5000.0f) {
+        relay.write(1);
+        target.speed = speed;
+        foc_state.target_rpm = speed;
+        CDC_Transmit_HS((uint8_t*)"Speed set\r\n", 11);
+    } else {
+        const char* err = "Invalid speed\r\n";
+        CDC_Transmit_HS((uint8_t*)err, strlen(err));
+    }
+}
+
+void cmd_duty(int argc, char** argv) {
+    // argv[1] lands as "0.3,0.3,0.3" from the universal space tokenizer.
+    // We split it via commas using strtok in-place.
+    float values[3] = {0};
+    int count = 0;
+    
+    char* token = strtok(argv[1], ",");
+    while (token != NULL && count < 3) {
+        while (*token == ' ') token++; // Remove leading spaces if any
+        values[count++] = atof(token);
+        token = strtok(NULL, ",");
+    }
+
+    if (count == 3) {
+        if (values[0] >= -1.0f && values[0] <= 1.0f &&
+            values[1] >= -1.0f && values[1] <= 1.0f &&
+            values[2] >= -1.0f && values[2] <= 1.0f) {
+            
+            relay.write(1);
+            motorPWM.setDuty(values[0], values[1], values[2]);
+            control_mode = MotorControlMode::MOTOR_MANUAL;
+            system_status.is_vvvf_running = false;
+            system_status.is_sixstep_running = false;
+            system_status.is_foc_running = false;
+            CDC_Transmit_HS((uint8_t*)"Duty set\r\n", 10);
+        } else {
+            CDC_Transmit_HS((uint8_t*)"Duty values out of range [-1,1]\r\n", 34);
+        }
+    } else {
+        CDC_Transmit_HS((uint8_t*)"Invalid duty format. Usage: duty 0.3,0.3,0.3\r\n", 48);
+    }
+}
+
+void cmd_vec(int argc, char** argv) {
+    relay.write(1);
+    int vec_num = atoi(argv[1]);
+    
+    if (vec_num >= 0 && vec_num <= 5) {
+        const int8_t vector_states[6][3] = {
+            { 1,  0, -1},  // 0: A+B-
+            { 1, -1,  0},  // 1: A+C-
+            {-1,  1,  0},  // 2: B+C-
+            { 0,  1, -1},  // 3: B+A-
+            { 0, -1,  1},  // 4: C+A-
+            {-1,  0,  1}   // 5: C+B-
+        };
+      
+        int8_t a_state = vector_states[vec_num][0];
+        int8_t b_state = vector_states[vec_num][1];
+        int8_t c_state = vector_states[vec_num][2];
+      
+        float dutyA = (a_state == 1) ? SIXSTEP_DUTYCYCLE : (a_state == 0) ? (1.0f - SIXSTEP_DUTYCYCLE) : -1.0f;
+        float dutyB = (b_state == 1) ? SIXSTEP_DUTYCYCLE : (b_state == 0) ? (1.0f - SIXSTEP_DUTYCYCLE) : -1.0f;
+        float dutyC = (c_state == 1) ? SIXSTEP_DUTYCYCLE : (c_state == 0) ? (1.0f - SIXSTEP_DUTYCYCLE) : -1.0f;
+      
+        motorPWM.setDuty(dutyA, dutyB, dutyC);
+        control_mode = MotorControlMode::MOTOR_MANUAL;
+        system_status.is_vvvf_running = false;
+        system_status.is_sixstep_running = false;
+        system_status.is_foc_running = false;
+
+        uint8_t hall_state = hallsensor.getState();
+        char resp[64];
+        int len = snprintf(resp, sizeof(resp), "Vector %d applied, Hall=%d\r\n", vec_num, hall_state);
+        CDC_Transmit_HS((uint8_t*)resp, len);
+    } else {
+        CDC_Transmit_HS((uint8_t*)"Invalid vector. Use 0-5.\r\n", 26);
+    }
+}
+
+void cmd_tune(int argc, char** argv) {
+    // "tune speed p 0.1" -> argv[1]="speed", argv[2]="p", argv[3]="0.1"
+    char* subsys = argv[1];
+    char* param = argv[2];
+    float value = atof(argv[3]);
+
+    bool success = false;
+    char resp[64];
+    float original = 0.0f;
+
+    if (strcmp(subsys, "speed") == 0) {
+        if (strcmp(param, "p") == 0) {
+            original = foc_state.pi_speed.kp;
+            foc_state.pi_speed.kp = value;
+            success = true;
+        }
+        else if (strcmp(param, "i") == 0) {
+            original = foc_state.pi_speed.ki;
+            foc_state.pi_speed.ki = value;
+            success = true;
+        }
+    } 
+    else if (strcmp(subsys, "id") == 0) {
+        if (strcmp(param, "p") == 0) {
+            original = foc_state.pi_d.kp;
+            foc_state.pi_d.kp = value;
+            success = true;
+        }
+        else if (strcmp(param, "i") == 0) {
+            original = foc_state.pi_d.ki;
+            foc_state.pi_d.ki = value;
+            success = true;
+        }
+    } 
+    else if (strcmp(subsys, "iq") == 0) {
+        if (strcmp(param, "p") == 0) {
+            original = foc_state.pi_q.kp;
+            foc_state.pi_q.kp = value;
+            success = true;
+        }
+        else if (strcmp(param, "i") == 0) {
+            original = foc_state.pi_q.ki;
+            foc_state.pi_q.ki = value;
+            success = true;
+        }
+    } 
+    else if (strcmp(subsys, "fw") == 0) {
+        if (strcmp(param, "p") == 0) {
+            original = foc_state.pi_fw.kp;
+            foc_state.pi_fw.kp = value;
+            success = true;
+        }
+        else if (strcmp(param, "i") == 0) {
+            original = foc_state.pi_fw.ki;
+            foc_state.pi_fw.ki = value;
+            success = true;
+        }
+    } 
+    else if (strcmp(subsys, "flux") == 0) {
+        if (strcmp(param, "p") == 0) { 
+            snprintf(resp, sizeof(resp), "Flux gain set to %.3f\r\n", value); 
+            CDC_Transmit_HS((uint8_t*)resp, strlen(resp));
+            return; 
+        }
+    } 
+    else if (strcmp(subsys, "gain") == 0) {
+        if (strcmp(param, "ia") == 0) {
+            original = adc_gain.ia_shunt;
+            adc_gain.ia_shunt = value;
+            success = true;
+        } else if (strcmp(param, "ib") == 0) {
+            original = adc_gain.ib_shunt;
+            adc_gain.ib_shunt = value;
+            success = true;
+        } else if (strcmp(param, "ic") == 0) {
+            original = adc_gain.ic_shunt;
+            adc_gain.ic_shunt = value;
+            success = true;
+        } else if (strcmp(param, "va") == 0) {
+            original = adc_gain.va_gain;
+            adc_gain.va_gain = value;
+            success = true;
+        } else if (strcmp(param, "vb") == 0) {
+            original = adc_gain.vb_gain;
+            adc_gain.vb_gain = value;
+            success = true;
+        } else if (strcmp(param, "ibatt") == 0) {
+            original = adc_gain.ibatt_shunt;
+            adc_gain.ibatt_shunt = value;
+            success = true;
+        } else if (strcmp(param, "vbatt") == 0) {
+            original = adc_gain.vbatt_gain;
+            adc_gain.vbatt_gain = value;
+            success = true;
+        }
+    } 
+    else if (strcmp(subsys, "offset") == 0) {
+        if (strcmp(param, "ia") == 0) {
+            original = adc_gain.ia_offset;
+            adc_gain.ia_offset = value;
+            success = true;
+        } else if (strcmp(param, "ib") == 0) {
+            original = adc_gain.ib_offset;
+            adc_gain.ib_offset = value;
+            success = true;
+        } else if (strcmp(param, "ic") == 0) {
+            original = adc_gain.ic_offset;
+            adc_gain.ic_offset = value;
+            success = true;
+        } else if (strcmp(param, "va") == 0) {
+            original = adc_gain.va_offset;
+            adc_gain.va_offset = value;
+            success = true;
+        } else if (strcmp(param, "vb") == 0) {
+            original = adc_gain.vb_offset;
+            adc_gain.vb_offset = value;
+            success = true;
+        } else if (strcmp(param, "ibatt") == 0) {
+            original = adc_gain.ibatt_offset;
+            adc_gain.ibatt_offset = value;
+            success = true;
+        } else if (strcmp(param, "vbatt") == 0) {
+            original = adc_gain.vbatt_offset;
+            adc_gain.vbatt_offset = value;
+            success = true;
+        }
+    }
+
+    if (success) {
+        int len = snprintf(resp, sizeof(resp), "%s %s set to %.4f (was %.4f)\r\n", subsys, param, value, original);
+        CDC_Transmit_HS((uint8_t*)resp, len);
+    } else {
+        int len = snprintf(resp, sizeof(resp), "Unknown parameter '%s' or subsystem '%s'\r\n", param, subsys);
+        CDC_Transmit_HS((uint8_t*)resp, len);
+    }
+}
+
+void cmd_log(int argc, char** argv) {
+    char* action = argv[1];
+
+    if (strcmp(action, "add") == 0 || strcmp(action, "rm") == 0) {
+        if (argc < 3) {
+            CDC_Transmit_HS((uint8_t*)"Missing variable name\r\n", 23);
+            return;
+        }
+        char* token = argv[2];
+        uint32_t flag = 0;
+        
+        if (strcmp(token, "hall") == 0) flag = PRINT_HALLBIN;
+        else if (strcmp(token, "hall_dec") == 0) flag = PRINT_HALLDEC;
+        else if (strcmp(token, "rpm") == 0) flag = PRINT_RPM;
+        else if (strcmp(token, "pos") == 0) flag = PRINT_POS;
+        else if (strcmp(token, "duty_a") == 0) flag = PRINT_DUTY_A;
+        else if (strcmp(token, "duty_b") == 0) flag = PRINT_DUTY_B;
+        else if (strcmp(token, "duty_c") == 0) flag = PRINT_DUTY_C;
+        else if (strcmp(token, "ia") == 0) flag = PRINT_IA;
+        else if (strcmp(token, "ib") == 0) flag = PRINT_IB;
+        else if (strcmp(token, "ic") == 0) flag = PRINT_IC;
+        else if (strcmp(token, "va") == 0) flag = PRINT_VA;
+        else if (strcmp(token, "vb") == 0) flag = PRINT_VB;
+        else if (strcmp(token, "vbatt") == 0) flag = PRINT_VBATT;
+        else if (strcmp(token, "ibatt") == 0) flag = PRINT_IBATT;
+        else if (strcmp(token, "ia_raw") == 0) flag = PRINT_IA_RAW;
+        else if (strcmp(token, "ib_raw") == 0) flag = PRINT_IB_RAW;
+        else if (strcmp(token, "ic_raw") == 0) flag = PRINT_IC_RAW;
+        else if (strcmp(token, "va_raw") == 0) flag = PRINT_VA_RAW;
+        else if (strcmp(token, "vb_raw") == 0) flag = PRINT_VB_RAW;
+        else if (strcmp(token, "vbatt_raw") == 0) flag = PRINT_VBATT_RAW;
+        else if (strcmp(token, "ibatt_raw") == 0) flag = PRINT_IBATT_RAW;
+        else if (strcmp(token, "all") == 0 && strcmp(action, "rm") == 0) {
+            print_mask = 0;
+            CDC_Transmit_HS((uint8_t*)"All variables removed\r\n", 23);
+            return;
+        } else {
+            CDC_Transmit_HS((uint8_t*)"Unknown variable\r\n", 18);
+            return;
+        }
+
+        if (strcmp(action, "add") == 0) {
+            print_mask |= flag;
+            CDC_Transmit_HS((uint8_t*)"Variable added\r\n", 16);
+        } else {
+            print_mask &= ~flag;
+            CDC_Transmit_HS((uint8_t*)"Variable removed\r\n", 18);
+        }
+    } 
+    else if (strcmp(action, "utf8") == 0) {
+        print_format = PrintFormat::PRINT_UTF8;
+        CDC_Transmit_HS((uint8_t*)"Print format set to UTF8\r\n", 27);
+    } 
+    else if (strcmp(action, "bin") == 0) {
+        print_format = PrintFormat::PRINT_BINARY;
+        CDC_Transmit_HS((uint8_t*)"Print format set to BINARY\r\n", 28);
+    } 
+    else {
+        CDC_Transmit_HS((uint8_t*)"Invalid log action\r\n", 20);
+    }
+}
+
+void cmd_audible(int argc, char** argv) {
+    if (system_status.is_audible) {
+        system_status.is_audible = false;
+        CDC_Transmit_HS((uint8_t*)"Audible frequency disabled\r\n", 28);
+    } else {
+        system_status.is_audible = true;
+        CDC_Transmit_HS((uint8_t*)"Audible frequency enabled\r\n", 27);
+    }
+}
+
+/* static void process_command(const char* cmd) {
 
   // Start
   if (strcmp(cmd, "start") == 0) {
@@ -1499,7 +1856,7 @@ static void process_command(const char* cmd) {
       const char* err = "Unknown command\r\n";
       CDC_Transmit_HS((uint8_t*)err, strlen(err));
   }
-}
+} */
 
 
 // ─────────────────────────────────────────────────────────────────────────────

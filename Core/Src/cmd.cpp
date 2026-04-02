@@ -5,10 +5,38 @@
 #include <stdio.h>
 #include <stdarg.h>
 
-/**
- * @brief A simple printf-like function that formats a string and sends it over USB using the CDC interface. This function uses a fixed-size buffer to hold the formatted string and supports variable arguments like printf.
- * @param format The format string, similar to printf.
- */
+extern void cmd_start(int argc, char** argv);
+extern void cmd_stop(int argc, char** argv);
+extern void cmd_reset(int argc, char** argv);
+extern void cmd_foc(int argc, char** argv);
+extern void cmd_rpm(int argc, char** argv);
+extern void cmd_foc_status(int argc, char** argv);
+extern void cmd_sixstep(int argc, char** argv);
+extern void cmd_speed(int argc, char** argv);
+extern void cmd_duty(int argc, char** argv);
+extern void cmd_vec(int argc, char** argv);
+extern void cmd_tune(int argc, char** argv);
+extern void cmd_log(int argc, char** argv);
+extern void cmd_audible(int argc, char** argv);
+
+static const cmd_entry_t cmd_table[] = {
+    { "start",       cmd_start,       1 }, // 1 means just the command itself
+    { "stop",        cmd_stop,        1 },
+    { "reset",       cmd_reset,       1 },
+    { "foc",         cmd_foc,         2 }, // e.g., "foc 1000" = 2 tokens
+    { "rpm",         cmd_rpm,         2 },
+    { "foc_status",  cmd_foc_status,  1 },
+    { "sixstep",     cmd_sixstep,     1 },
+    { "speed",       cmd_speed,       2 },
+    { "duty",        cmd_duty,        2 }, // Arguments can be kept comma-separated internally
+    { "vec",         cmd_vec,         2 },
+    { "tune",        cmd_tune,        4 }, // e.g., "tune speed p 0.1" = 4 tokens
+    { "log",         cmd_log,         2 },
+    { "audible",     cmd_audible,     1 }
+};
+
+const int num_commands = sizeof(cmd_table) / sizeof(cmd_entry_t);
+
 void usb_printf(const char *format, ...) {
     char buffer[256];
     va_list args;
@@ -54,4 +82,43 @@ bool read_line_from_ring(ring_buffer_t* rx_ring, char* line, int max_len) {
         }
     }
     return false;
+}
+
+void process_command(const char* cmd_str) {
+    char cmd_copy[CMD_MAX_LEN]; // Temporary buffer for parsing
+    strncpy(cmd_copy, cmd_str, sizeof(cmd_copy) - 1);
+    cmd_copy[sizeof(cmd_copy) - 1] = '\0';
+
+    char* argv[MAX_ARGC];
+    int argc = 0;
+
+    // 1. Universal parsing / Tokenization via space delimiter
+    char* token = strtok(cmd_copy, " ");
+    while (token != NULL && argc < MAX_ARGC) {
+        argv[argc++] = token;
+        token = strtok(NULL, " ");
+    }
+
+    // Ignore empty commands
+    if (argc == 0) return;
+
+    // 2. Command Lookup
+    for (int i = 0; i < num_commands; i++) {
+        if (strcmp(argv[0], cmd_table[i].cmd) == 0) {
+            // Validate arguments
+            if (argc < cmd_table[i].min_args) {
+                char err[64];
+                int len = snprintf(err, sizeof(err), "Error: '%s' requires more arguments\r\n", argv[0]);
+                CDC_Transmit_HS((uint8_t*)err, len);
+                return;
+            }
+            // Execute the mapped handler
+            cmd_table[i].handler(argc, argv);
+            return;
+        }
+    }
+
+    // 3. Command not found
+    const char* err = "Unknown command\r\n";
+    CDC_Transmit_HS((uint8_t*)err, strlen(err));
 }

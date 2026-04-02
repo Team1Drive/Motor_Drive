@@ -4,6 +4,8 @@
 #include <cstdint>
 
 #define RX_RING_SIZE 256
+#define CMD_MAX_LEN 64
+#define MAX_ARGC 8
 
 typedef struct {
     uint8_t buffer[RX_RING_SIZE];
@@ -11,32 +13,22 @@ typedef struct {
     volatile uint16_t tail;
 } ring_buffer_t;
 
-/* typedef void (*cmd_handler_t)(const char* cmd);
+typedef void (*cmd_handler_t)(int argc, char** argv);
 
 typedef struct {
-    const char* cmd;          // 命令字符串（完整匹配或前缀）
-    cmd_handler_t handler;    // 处理函数
-    uint8_t prefix:1;         // 1: 前缀匹配（如 "foc "），0: 完全匹配
+    const char* cmd;        // Command string (full match or prefix)
+    cmd_handler_t handler;  // Corresponding handler function
+    int min_args;           // Minimum number of arguments required (including command itself)
 } cmd_entry_t;
 
-static const cmd_entry_t cmd_table[] = {
-    { "start",      cmd_start,      0 },
-    { "stop",       cmd_stop,       0 },
-    { "reset",      cmd_reset,      0 },
-    { "foc ",       cmd_foc,        1 },   // 前缀匹配，注意空格
-    { "rpm ",       cmd_rpm,        1 },
-    { "foc_status", cmd_foc_status, 0 },
-    { "sixstep",    cmd_sixstep,    0 },
-    { "speed ",     cmd_speed,      1 },
-    { "duty ",      cmd_duty,       1 },
-    { "vec ",       cmd_vec,        1 },
-    { "tune ",      cmd_tune,       1 },
-    { "log ",       cmd_log,        1 },
-    { "audible",    cmd_audible,    0 },
-}; */
-
+/**
+ * @brief A simple printf-like function that formats a string and sends it over USB using the CDC interface. This function uses a fixed-size buffer to hold the formatted string and supports variable arguments like printf.
+ * @param format The format string, similar to printf.
+ */
 void usb_printf(const char *format, ...);
 
 bool ring_buffer_write(ring_buffer_t* rx_ring, uint8_t data);
 
 bool read_line_from_ring(ring_buffer_t* rx_ring, char* line, int max_len);
+
+void process_command(const char* cmd_str);
