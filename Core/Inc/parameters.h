@@ -3,7 +3,6 @@
 #define M_PI 3.14159265358979323846264338327950288f
 #define SQRT3 1.73205080756887729352744634150587236f
 
-#define RX_RING_SIZE 256
 #define CMD_MAX_LEN 64
 
 #define ADC1_NUM_CHANNELS   3U
@@ -60,12 +59,6 @@ enum class MotorControlMode : uint8_t {
     MOTOR_FOC_LINEAR,
     MOTOR_FOC_DPWM
 };
-
-typedef struct {
-    uint8_t buffer[RX_RING_SIZE];
-    volatile uint16_t head;
-    volatile uint16_t tail;
-} ring_buffer_t;
 
 typedef struct {
     bool    is_vvvf_running;

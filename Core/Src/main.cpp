@@ -9,6 +9,7 @@
 #include "adc_sampler.h"
 #include "timer.h"
 #include "foc.h"
+#include "cmd.h"
 #include <cstdint>
 
 #include "usbd_cdc_if.h"
@@ -45,9 +46,6 @@ float adcToCurrent(uint32_t raw, float vref, uint32_t resolution, float gain, fl
 uint16_t fastAverage(uint16_t* data_ptr, uint16_t size);
 
 static void process_command(const char* cmd);
-void usb_printf(const char *format, ...);
-static bool ring_buffer_write(uint8_t data);
-static bool read_line_from_ring(char* line, int max_len);
 
 /* Declare ADC buffers */
 alignas(32) volatile uint16_t adc1_buffer[ADC1_BUF_LEN] __attribute__((section(".sram_d1")));
@@ -116,7 +114,7 @@ volatile Target_t target = { .speed = 0.0f, .torque = 0.0f };
 volatile uint32_t print_mask = 0;
 volatile PrintFormat print_format = PrintFormat::PRINT_UTF8;
 
-static ring_buffer_t rx_ring = { .head = 0, .tail = 0 };
+ring_buffer_t rx_ring = { .head = 0, .tail = 0 };
 
 /* FOC state — single global instance */
 FOC_State_t foc_state;
@@ -250,7 +248,7 @@ int main(void)
     uint32_t val = HAL_ADC_GetValue(&hadc1);
     usb_printf("Polling Val: %lu\r\n", val); */
     char cmd_line[CMD_MAX_LEN];
-    if (read_line_from_ring(cmd_line, CMD_MAX_LEN)) {
+    if (read_line_from_ring(&rx_ring, cmd_line, CMD_MAX_LEN)) {
       process_command(cmd_line);
     }
     /* USER CODE BEGIN 3 */
@@ -348,7 +346,7 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
 /* USB CDC Receive Handler */
 void USB_CDC_RxHandler(uint8_t* Buf, uint32_t Len) {
   for (uint32_t i = 0; i < Len; i++) {
-    ring_buffer_write(Buf[i]);
+    ring_buffer_write(&rx_ring, Buf[i]);
   }
 }
 
@@ -977,6 +975,16 @@ uint16_t fastAverage(uint16_t* data_ptr, uint16_t size) {
 // ─────────────────────────────────────────────────────────────────────────────
 //  USB Command Processing
 // ─────────────────────────────────────────────────────────────────────────────
+static void cmd_start(const char* cmd) {
+    control_mode = MotorControlMode::MOTOR_STARTUP;
+    system_status.is_vvvf_running = false;
+    system_status.is_sixstep_running = false;
+    system_status.is_foc_running = false;
+    relay.write(1);
+    startUpSequence();
+    CDC_Transmit_HS((uint8_t*)"Starting\r\n", 10);
+}
+
 
 static void process_command(const char* cmd) {
 
@@ -1493,60 +1501,6 @@ static void process_command(const char* cmd) {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  USB Communication and Command Processing
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * @brief A simple printf-like function that formats a string and sends it over USB using the CDC interface. This function uses a fixed-size buffer to hold the formatted string and supports variable arguments like printf.
- * @param format The format string, similar to printf.
- */
-void usb_printf(const char *format, ...) {
-    char buffer[256];
-    va_list args;
-    va_start(args, format);
-
-    int len = vsnprintf(buffer, sizeof(buffer), format, args);
-    va_end(args);
-
-    if (len > 0) {
-        CDC_Transmit_HS((uint8_t*)buffer, len);
-    }
-}
-
-static bool ring_buffer_write(uint8_t data) {
-    uint16_t next_head = (rx_ring.head + 1) % RX_RING_SIZE;
-    if (next_head != rx_ring.tail) {
-        rx_ring.buffer[rx_ring.head] = data;
-        rx_ring.head = next_head;
-        return true;
-    }
-    return false;
-}
-
-static bool read_line_from_ring(char* line, int max_len) {
-    static char line_buffer[CMD_MAX_LEN];
-    static int idx = 0;
-
-    while (rx_ring.tail != rx_ring.head) {
-        uint8_t c = rx_ring.buffer[rx_ring.tail];
-        rx_ring.tail = (rx_ring.tail + 1) % RX_RING_SIZE;
-
-        if (c == '\n' || c == '\r') {
-            if (idx > 0) {
-                line_buffer[idx] = '\0';
-                strncpy(line, line_buffer, max_len);
-                idx = 0;
-                return true;
-            }
-        } else if (idx < max_len - 1) {
-            line_buffer[idx++] = c;
-        } else {
-            idx = 0;
-        }
-    }
-    return false;
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  FOC ISR tick — called from TIM8 update interrupt at 20 kHz
