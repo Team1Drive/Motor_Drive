@@ -25,7 +25,6 @@ static const cmd_entry_t cmd_table[] = {
     { "reset",       cmd_reset,       1,    "Usage: reset\r\n"                          },
     { "foc",         cmd_foc,         2,    "Usage: foc <rpm> or foc status\r\n"        }, // e.g., "foc 1000" = 2 tokens
     { "rpm",         cmd_rpm,         2,    "Usage: rpm <value>\r\n"                    },
-    { "foc_status",  cmd_foc_status,  1,    "Usage: foc_status\r\n"                     },
     { "sixstep",     cmd_sixstep,     1,    "Usage: sixstep\r\n"                        },
     { "speed",       cmd_speed,       2,    "Usage: speed <value>\r\n"                  },
     { "duty",        cmd_duty,        2,    "Usage: duty <v1>,<v2>,<v3>\r\n"            }, // Arguments can be kept comma-separated internally

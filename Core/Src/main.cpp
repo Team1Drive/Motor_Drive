@@ -1015,31 +1015,32 @@ void cmd_reset(int argc, char** argv) {
 }
 
 void cmd_foc(int argc, char** argv) {
+    if (strcmp(argv[1], "status") == 0 || strcmp(argv[1], "stat") == 0) {
+        usb_printf("RPM=%.1f  Id=%.3fA  Iq=%.3fA  Vd=%.2fV  Vq=%.2fV  Vdc=%.2fV  |u|=%.2fV  fault=%d\r\n",
+                  foc_state.rpm,
+                  foc_state.Id, foc_state.Iq,
+                  foc_state.Vd_cmd, foc_state.Vq_cmd,
+                  foc_state.Vdc, foc_state.u_mag,
+                  (int)foc_state.fault);
+    }
     // argv[1] contains the string of the target RPM
-    int rpm_cmd = atoi(argv[1]);
-    
-    foc_reset(&foc_state);
-    foc_state.target_rpm = (float)rpm_cmd;
-    system_status.is_foc_running = true;
-    relay.write(1);
-    motorPWM.start();
-    control_mode = MotorControlMode::MOTOR_FOC_LINEAR;
-    usb_printf("FOC started  target=%d RPM\r\n", rpm_cmd);
+    else {
+        int rpm_cmd = atoi(argv[1]);
+        
+        foc_reset(&foc_state);
+        foc_state.target_rpm = (float)rpm_cmd;
+        system_status.is_foc_running = true;
+        relay.write(1);
+        motorPWM.start();
+        control_mode = MotorControlMode::MOTOR_FOC_LINEAR;
+        usb_printf("FOC started  target=%d RPM\r\n", rpm_cmd);
+    }
 }
 
 void cmd_rpm(int argc, char** argv) {
     int rpm_cmd = atoi(argv[1]);
     foc_state.target_rpm = (float)rpm_cmd;
     usb_printf("Target RPM set to %d\r\n", rpm_cmd);
-}
-
-void cmd_foc_status(int argc, char** argv) {
-    usb_printf("RPM=%.1f  Id=%.3fA  Iq=%.3fA  Vd=%.2fV  Vq=%.2fV  Vdc=%.2fV  |u|=%.2fV  fault=%d\r\n",
-               foc_state.rpm,
-               foc_state.Id, foc_state.Iq,
-               foc_state.Vd_cmd, foc_state.Vq_cmd,
-               foc_state.Vdc, foc_state.u_mag,
-               (int)foc_state.fault);
 }
 
 void cmd_sixstep(int argc, char** argv) {
