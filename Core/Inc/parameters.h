@@ -49,6 +49,7 @@
 
 
 enum class MotorControlMode : uint8_t {
+    MOTOR_PROTECTION,
     MOTOR_STOP,
     MOTOR_MANUAL,
     MOTOR_STARTUP,
@@ -58,14 +59,24 @@ enum class MotorControlMode : uint8_t {
     MOTOR_FOC_DPWM
 };
 
-typedef struct {
-    bool    is_vvvf_running;
-    bool    is_vvvf_ramp_up;
-    bool    is_sixstep_running;
-    bool    is_foc_running;
-    bool    is_audible;
-    uint8_t led_increment_counter;
-} SystemStatus_t;
+enum SystemFlag : uint32_t {
+    FLAG_VVVF_RUNNING       = 1 << 0,
+    FLAG_VVVF_RAMP_UP       = 1 << 1,
+    FLAG_AUDIBLE            = 1 << 2,
+    FLAG_SIXSTEP_RUNNING    = 1 << 3,
+    FLAG_FOC_RUNNING        = 1 << 4,
+    FLAG_FOC_ALLOWED        = 1 << 5
+};
+
+enum ErrorFlag : uint32_t {
+    ERROR_PWM_CONFIG        = 1 << 0,
+    ERROR_ADC_CONFIG        = 1 << 1,
+    ERROR_DMA_CONFIG        = 1 << 2,
+    ERROR_TIM_CONFIG        = 1 << 3,
+    ERROR_ENCODER_CONFIG    = 1 << 4,
+    ERROR_FOC_CONFIG        = 1 << 5,
+    ERROR_OVERCURRENT       = 1 << 6
+};
 
 typedef struct {
     float ia_shunt;

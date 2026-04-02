@@ -90,7 +90,9 @@ alignas(32) uint16_t adc3_proc_buffer[ADC3_BUF_LEN];
 
 volatile MotorControlMode control_mode = MotorControlMode::MOTOR_STOP;
 
-volatile SystemStatus_t system_status = { .is_vvvf_running = false, .is_vvvf_ramp_up = false, .is_sixstep_running = false, .is_foc_running = false, .is_audible = false, .led_increment_counter = 0};
+volatile uint32_t system_flag = 0;
+volatile uint32_t error_flag = 0;
+
 volatile ADCGain_t adc_gain = {
     .ia_shunt = ADC_IA_SHUNT,
     .ib_shunt = ADC_IB_SHUNT,
@@ -172,41 +174,40 @@ int main(void)
   /* USER CODE BEGIN 2 */
   led_red.write(1);
 
-  bool error_flag = false;
   /* Enable USB regulator */
   HAL_PWREx_EnableUSBReg();
   
   /* Start ADC */
-  while (HAL_ADCEx_Calibration_Start(&hadc1, ADC_CALIB_OFFSET, ADC_SINGLE_ENDED) != HAL_OK) usb_printf("Failed to calibrate ADC1 Error code: 0x%lx\r\n", HAL_ADC_GetError(&hadc1));
-  while (HAL_ADCEx_Calibration_Start(&hadc1, ADC_CALIB_OFFSET_LINEARITY, ADC_SINGLE_ENDED) != HAL_OK) usb_printf("Failed to calibrate ADC1 linearity Error code: 0x%lx\r\n", HAL_ADC_GetError(&hadc1));
-  while (HAL_ADCEx_Calibration_Start(&hadc1, ADC_CALIB_OFFSET_LINEARITY, ADC_DIFFERENTIAL_ENDED) != HAL_OK) usb_printf("Failed to calibrate ADC1 linearity Error code: 0x%lx\r\n", HAL_ADC_GetError(&hadc1));
-  while (HAL_ADCEx_Calibration_Start(&hadc2, ADC_CALIB_OFFSET, ADC_SINGLE_ENDED) != HAL_OK) usb_printf("Failed to calibrate ADC2 Error code: 0x%lx\r\n", HAL_ADC_GetError(&hadc2));
-  while (HAL_ADCEx_Calibration_Start(&hadc2, ADC_CALIB_OFFSET_LINEARITY, ADC_SINGLE_ENDED) != HAL_OK) usb_printf("Failed to calibrate ADC2 linearity Error code: 0x%lx\r\n", HAL_ADC_GetError(&hadc2));
-  while (HAL_ADCEx_Calibration_Start(&hadc2, ADC_CALIB_OFFSET_LINEARITY, ADC_DIFFERENTIAL_ENDED) != HAL_OK) usb_printf("Failed to calibrate ADC2 linearity Error code: 0x%lx\r\n", HAL_ADC_GetError(&hadc2));
-  while (HAL_ADCEx_Calibration_Start(&hadc3, ADC_CALIB_OFFSET, ADC_SINGLE_ENDED) != HAL_OK) usb_printf("Failed to calibrate ADC3 Error code: 0x%lx\r\n", HAL_ADC_GetError(&hadc3));
-  while (HAL_ADCEx_Calibration_Start(&hadc3, ADC_CALIB_OFFSET_LINEARITY, ADC_SINGLE_ENDED) != HAL_OK) usb_printf("Failed to calibrate ADC3 linearity Error code: 0x%lx\r\n", HAL_ADC_GetError(&hadc3));
+  if (HAL_ADCEx_Calibration_Start(&hadc1, ADC_CALIB_OFFSET, ADC_SINGLE_ENDED) != HAL_OK) error_flag |= ERROR_ADC_CONFIG;
+  if (HAL_ADCEx_Calibration_Start(&hadc1, ADC_CALIB_OFFSET_LINEARITY, ADC_SINGLE_ENDED) != HAL_OK) error_flag |= ERROR_ADC_CONFIG;
+  if (HAL_ADCEx_Calibration_Start(&hadc1, ADC_CALIB_OFFSET_LINEARITY, ADC_DIFFERENTIAL_ENDED) != HAL_OK) error_flag |= ERROR_ADC_CONFIG;
+  if (HAL_ADCEx_Calibration_Start(&hadc2, ADC_CALIB_OFFSET, ADC_SINGLE_ENDED) != HAL_OK) error_flag |= ERROR_ADC_CONFIG;
+  if (HAL_ADCEx_Calibration_Start(&hadc2, ADC_CALIB_OFFSET_LINEARITY, ADC_SINGLE_ENDED) != HAL_OK) error_flag |= ERROR_ADC_CONFIG;
+  if (HAL_ADCEx_Calibration_Start(&hadc2, ADC_CALIB_OFFSET_LINEARITY, ADC_DIFFERENTIAL_ENDED) != HAL_OK) error_flag |= ERROR_ADC_CONFIG;
+  if (HAL_ADCEx_Calibration_Start(&hadc3, ADC_CALIB_OFFSET, ADC_SINGLE_ENDED) != HAL_OK) error_flag |= ERROR_ADC_CONFIG;
+  if (HAL_ADCEx_Calibration_Start(&hadc3, ADC_CALIB_OFFSET_LINEARITY, ADC_SINGLE_ENDED) != HAL_OK) error_flag |= ERROR_ADC_CONFIG;
 
-  while (adc1.startDMA() != HAL_OK) usb_printf("Failed to start ADC1 DMA Error code: 0x%lx\r\n", HAL_DMA_GetError(&hdma_adc1));
-  while (adc2.startDMA() != HAL_OK) usb_printf("Failed to start ADC2 DMA Error code: 0x%lx\r\n", HAL_DMA_GetError(&hdma_adc2));
-  while (adc3.startDMA() != HAL_OK) usb_printf("Failed to start ADC3 DMA Error code: 0x%lx\r\n", HAL_DMA_GetError(&hdma_adc3));
+  if (adc1.startDMA() != HAL_OK) error_flag |= ERROR_DMA_CONFIG;
+  if (adc2.startDMA() != HAL_OK) error_flag |= ERROR_DMA_CONFIG;
+  if (adc3.startDMA() != HAL_OK) error_flag |= ERROR_DMA_CONFIG;
   
   //while (adc1.startADC() != HAL_OK) usb_printf("Failed to start ADC1 Error code: 0x%lx\r\n", HAL_ADC_GetError(&hadc1));
   //while (adc2.startADC() != HAL_OK) usb_printf("Failed to start ADC2 Error code: 0x%lx\r\n", HAL_ADC_GetError(&hadc2));
   //while (adc3.startADC() != HAL_OK) usb_printf("Failed to start ADC3 Error code: 0x%lx\r\n", HAL_ADC_GetError(&hadc3));
   
   /* Start timers */
-  if (adcTimer.start() != HAL_OK) error_flag = true;
-  if (printTimer.startIT() != HAL_OK) error_flag = true;
-  if (ledTimer.startIT() != HAL_OK) error_flag = true;
-  if (encoderTimer.startIT() != HAL_OK) error_flag = true;
-  if (speedControlTimer.startIT() != HAL_OK) error_flag = true;
+  if (adcTimer.start() != HAL_OK) error_flag |= ERROR_TIM_CONFIG;
+  if (printTimer.startIT() != HAL_OK) error_flag |= ERROR_TIM_CONFIG;
+  if (ledTimer.startIT() != HAL_OK) error_flag |= ERROR_TIM_CONFIG;
+  if (encoderTimer.startIT() != HAL_OK) error_flag |= ERROR_TIM_CONFIG;
+  if (speedControlTimer.startIT() != HAL_OK) error_flag |= ERROR_TIM_CONFIG;
 
-  if (usTimer.init() != HAL_OK) error_flag = true;
+  if (usTimer.init() != HAL_OK) error_flag |= ERROR_TIM_CONFIG;
 
-  if (encoder.start() != HAL_OK) error_flag = true;
+  if (encoder.start() != HAL_OK) error_flag |= ERROR_ENCODER_CONFIG;
 
   /* Start PWM */
-  if (motorPWM.init() != HAL_OK) error_flag = true;
+  if (motorPWM.init() != HAL_OK) error_flag |= ERROR_PWM_CONFIG;
 
   /* Enable Caches */
   SCB_EnableICache();
@@ -215,8 +216,8 @@ int main(void)
   /* USER CODE END 2 */
   usb_printf("HAL Initialized\n");
 
-  motorPWM.setFrequency(20000);
-  motorPWM.setDeadTime(1000);
+  if (motorPWM.setFrequency(20000) != HAL_OK) error_flag |= ERROR_PWM_CONFIG;
+  if (motorPWM.setDeadTime(1000) != HAL_OK) error_flag |= ERROR_PWM_CONFIG;
 
   /* Initialise FOC controller */
   foc_init(&foc_state);
@@ -226,7 +227,7 @@ int main(void)
   adc2.setProcessingBuffer(adc2_proc_buffer, ADC2_BUF_LEN);
   adc3.setProcessingBuffer(adc3_proc_buffer, ADC3_BUF_LEN);
 
-  if (!error_flag) led_red.write(0);
+  if (error_flag) led_red.write(0);
   led_green.write(0);
   led_yellow_1.write(0);
   led_yellow_2.write(0);
@@ -393,6 +394,7 @@ void timer2IRQ(void) {
  * @note Mainly used for status indicators under different control modes.
  */
 void timer3IRQ(void) {
+  static uint8_t led_increment_counter = 0;
   switch (control_mode) {
     case MotorControlMode::MOTOR_STOP:
       led_green.write(0);
@@ -404,7 +406,7 @@ void timer3IRQ(void) {
       led_yellow_2.write(1);
       break;
     case MotorControlMode::MOTOR_VVVF:
-      if (system_status.led_increment_counter >> 1 & 1) {
+      if (led_increment_counter >> 1 & 1) {
         led_green.write(1);
       }
       else {
@@ -413,7 +415,7 @@ void timer3IRQ(void) {
       break;
     case MotorControlMode::MOTOR_SIX_STEP:
       led_green.toggle();
-      if (system_status.led_increment_counter >> 1 & 1) {
+      if (led_increment_counter >> 1 & 1) {
         led_yellow_1.write(1);
         led_yellow_2.write(0);
       }
@@ -428,7 +430,7 @@ void timer3IRQ(void) {
     case MotorControlMode::MOTOR_FOC_DPWM:
       led_green.write(1);
       led_yellow_2.write(0);
-      if (system_status.led_increment_counter >> 2 & 1) {
+      if (led_increment_counter >> 2 & 1) {
         led_yellow_1.write(1);
       }
       else {
@@ -438,9 +440,18 @@ void timer3IRQ(void) {
     default:
       break;
   }
+
+  if (error_flag & ERROR_OVERCURRENT) {
+    if (led_increment_counter & 1) {
+      led_red.write(1);
+    }
+    else {
+      led_red.write(0);
+    }
+  }
   
-  if (system_status.led_increment_counter++ >= 7) {
-    system_status.led_increment_counter = 0;
+  if (led_increment_counter++ >= 7) {
+    led_increment_counter = 0;
   }
 }
 
@@ -785,7 +796,7 @@ void startUpSequence(void) {
   if (control_mode != MotorControlMode::MOTOR_STARTUP) return;
   hallsensor.read();
   motorPWM.setDuty(1.0f, 0.0f, -1.0f);
-  system_status.is_vvvf_ramp_up = true;
+  system_flag |= FLAG_VVVF_RAMP_UP;
   control_mode = MotorControlMode::MOTOR_VVVF;
 }
 
@@ -801,15 +812,15 @@ void vvvfRampUp(void) {
   static bool accelerating;
 
   // Initialize on zero speed starting
-  if (!system_status.is_vvvf_running) {
+  if ((system_flag & FLAG_VVVF_RUNNING) == 0) {
     rpm = 0.0f;
     angle = 0.0f;
     accelerating = true;
-    system_status.is_vvvf_running = true;
+    system_flag |= FLAG_VVVF_RUNNING;
   }
 
   // Audible frequency adjustment
-  if (system_status.is_audible) {
+  if (system_flag & FLAG_AUDIBLE) {
     if (rpm < 500.0f) {
       motorPWM.setFrequency(450);
     }
@@ -829,7 +840,7 @@ void vvvfRampUp(void) {
   float step_increment = (float)ramp_up / frequency;
 
   // Ramp up or down the speed
-  if (system_status.is_vvvf_ramp_up) {
+  if (system_flag & FLAG_VVVF_RAMP_UP) {
     if (accelerating) {
       rpm += step_increment;
       if (rpm >= VVVF_MAX_RPM >> 1) {
@@ -843,7 +854,7 @@ void vvvfRampUp(void) {
       rpm -= 2 * step_increment;
       if (rpm <= 0.0f) {
         rpm = 0.0f;
-        system_status.is_vvvf_running = false;
+        system_flag &= ~FLAG_VVVF_RUNNING;
         control_mode = MotorControlMode::MOTOR_STOP;
         motorPWM.setDuty(-1.0f, -1.0f, -1.0f);
         relay.write(0);
@@ -881,8 +892,8 @@ void vvvfRampUp(void) {
   motorPWM.setDuty(dutyA, dutyB, dutyC);
 
   if (FOC_ALLOWED && encoder.is_synchronized_ && rpm >= VVVF_THRESHOLD_RPM >> 1) {
-    system_status.is_vvvf_running = false;
-    system_status.is_foc_running = true;
+    system_flag &= ~FLAG_VVVF_RUNNING;
+    system_flag |= FLAG_FOC_RUNNING;
     control_mode = MotorControlMode::MOTOR_FOC_LINEAR;
     CDC_Transmit_HS((uint8_t*)"Entering FOC mode\r\n", 19);
   }
@@ -917,9 +928,9 @@ const int8_t commutation_acw[8][3] = {
     { -1, -1, -1 }  // 7 (Invalid)
 };
 
-  if (!system_status.is_sixstep_running) {
+  if ((system_flag & FLAG_SIXSTEP_RUNNING) == 0) {
     hallsensor.read();
-    system_status.is_sixstep_running = true;
+    system_flag |= FLAG_SIXSTEP_RUNNING;
   }
 
   uint8_t hall_state = hallsensor.getState();
@@ -1431,24 +1442,24 @@ void cmd_audible(int argc, char** argv) {
   // Start
   if (strcmp(cmd, "start") == 0) {
     control_mode = MotorControlMode::MOTOR_STARTUP;
-    system_status.is_vvvf_running = false;
-    system_status.is_sixstep_running = false;
-    system_status.is_foc_running = false;
+    system_flag &= ~FLAG_VVVF_RUNNING;
+    system_flag &= ~FLAG_SIXSTEP_RUNNING;
+    system_flag &= ~FLAG_FOC_RUNNING;
     relay.write(1);
     startUpSequence();
     CDC_Transmit_HS((uint8_t*)"Starting\r\n", 10);
 
   // Stop
   } else if (strcmp(cmd, "stop") == 0) {
-    if (control_mode == MotorControlMode::MOTOR_VVVF && system_status.is_vvvf_ramp_up) {
-      system_status.is_vvvf_ramp_up = false; // Start ramp down
+    if (control_mode == MotorControlMode::MOTOR_VVVF && system_flag & FLAG_VVVF_RAMP_UP) {
+      system_flag &= ~FLAG_VVVF_RAMP_UP; // Start ramp down
       CDC_Transmit_HS((uint8_t*)"VVVF ramping down\r\n", 21);
     }
     else {
       control_mode = MotorControlMode::MOTOR_STOP;
-      system_status.is_vvvf_running = false;
-      system_status.is_sixstep_running = false;
-      system_status.is_foc_running = false;
+      system_flag &= ~FLAG_VVVF_RUNNING;
+      system_flag &= ~FLAG_SIXSTEP_RUNNING;
+      system_flag &= ~FLAG_FOC_RUNNING;
       motorPWM.stop();
       foc_reset(&foc_state);
       relay.write(0);
@@ -1458,9 +1469,9 @@ void cmd_audible(int argc, char** argv) {
   // Reset
   } else if (strcmp(cmd, "reset") == 0) {
       control_mode = MotorControlMode::MOTOR_STOP;
-      system_status.is_vvvf_running = false;
-      system_status.is_sixstep_running = false;
-      system_status.is_foc_running = false;
+      system_flag &= ~FLAG_VVVF_RUNNING;
+      system_flag &= ~FLAG_SIXSTEP_RUNNING;
+      system_flag &= ~FLAG_FOC_RUNNING;
       motorPWM.stop();
       led_red.write(0);
       foc_reset(&foc_state);
@@ -1473,7 +1484,9 @@ void cmd_audible(int argc, char** argv) {
     if (sscanf(cmd + 4, "%d", &rpm_cmd) == 1) {
       foc_reset(&foc_state);
       foc_state.target_rpm = (float)rpm_cmd;
-      system_status.is_foc_running = true;
+      system_flag &= ~FLAG_VVVF_RUNNING;
+      system_flag &= ~FLAG_SIXSTEP_RUNNING;
+      system_flag |= FLAG_FOC_RUNNING;
       relay.write(1);
       motorPWM.start();
       control_mode = MotorControlMode::MOTOR_FOC_LINEAR;
@@ -1504,8 +1517,8 @@ void cmd_audible(int argc, char** argv) {
   // Six-step commutation
   } else if (strcmp(cmd, "sixstep") == 0) {
     control_mode = MotorControlMode::MOTOR_SIX_STEP;
-    system_status.is_vvvf_running = false;
-    system_status.is_foc_running = false;
+    system_flag &= ~FLAG_VVVF_RUNNING;
+    system_flag &= ~FLAG_FOC_RUNNING;
     relay.write(1);
     sixStepCommutation();
     CDC_Transmit_HS((uint8_t*)"Six-step running\r\n", 31);
@@ -1558,9 +1571,9 @@ void cmd_audible(int argc, char** argv) {
             relay.write(1);
             motorPWM.setDuty(values[0], values[1], values[2]);
             control_mode = MotorControlMode::MOTOR_MANUAL;
-            system_status.is_vvvf_running = false;
-            system_status.is_sixstep_running = false;
-            system_status.is_foc_running = false;
+            system_flag &= ~FLAG_VVVF_RUNNING;
+            system_flag &= ~FLAG_SIXSTEP_RUNNING;
+            system_flag &= ~FLAG_FOC_RUNNING;
             CDC_Transmit_HS((uint8_t*)"Duty set\r\n", 4);
       } else {
         CDC_Transmit_HS((uint8_t*)"Duty values out of range [-1,1]\r\n", 34);
@@ -1598,9 +1611,9 @@ void cmd_audible(int argc, char** argv) {
       
       motorPWM.setDuty(dutyA, dutyB, dutyC);
       control_mode = MotorControlMode::MOTOR_MANUAL;
-      system_status.is_vvvf_running = false;
-      system_status.is_sixstep_running = false;
-      system_status.is_foc_running = false;
+      system_flag &= ~FLAG_VVVF_RUNNING;
+      system_flag &= ~FLAG_SIXSTEP_RUNNING;
+      system_flag &= ~FLAG_FOC_RUNNING;
 
       // Read current Hall sensor state for debugging
       uint8_t hall_state = hallsensor.getState();  // Ensure this function exists
@@ -1925,11 +1938,11 @@ void cmd_audible(int argc, char** argv) {
 
   // Toggle audible frequency
   } else if (strcmp(cmd, "audible") == 0) {
-    if (system_status.is_audible) {
-      system_status.is_audible = false;
+    if (system_flag & FLAG_AUDIBLE) {
+      system_flag &= ~FLAG_AUDIBLE;
       CDC_Transmit_HS((uint8_t*)"Audible frequency disabled\r\n", 28);
     } else {
-      system_status.is_audible = true;
+      system_flag |= FLAG_AUDIBLE;
       CDC_Transmit_HS((uint8_t*)"Audible frequency enabled\r\n", 27);
     }
     
@@ -1982,11 +1995,11 @@ static void foc_isr_tick(void)
       motorPWM.stop();
       // De-energize relay
       relay.write(0);
-      // Turn on fault LED
-      led_red.write(1);
-      // Set control mode to STOP and clear FOC running flag
-      control_mode = MotorControlMode::MOTOR_STOP;
-      system_status.is_foc_running = false;
+      // Set fault flag
+      error_flag |= ERROR_OVERCURRENT;
+      // Set control mode to PROTECTION and clear FOC running flag
+      control_mode = MotorControlMode::MOTOR_PROTECTION;
+      system_flag &= ~FLAG_FOC_RUNNING;
       tick_counter = 0;
       return;
     }
