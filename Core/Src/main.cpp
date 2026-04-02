@@ -803,7 +803,7 @@ void vvvfRampUp(void) {
   static bool accelerating;
 
   // Initialize on zero speed starting
-  if (system_flag & FLAG_VVVF_RUNNING == 0) {
+  if ((system_flag & FLAG_VVVF_RUNNING) == 0) {
     rpm = 0.0f;
     angle = 0.0f;
     accelerating = true;
@@ -919,7 +919,7 @@ const int8_t commutation_acw[8][3] = {
     { -1, -1, -1 }  // 7 (Invalid)
 };
 
-  if (system_flag & FLAG_SIXSTEP_RUNNING == 0) {
+  if ((system_flag & FLAG_SIXSTEP_RUNNING) == 0) {
     hallsensor.read();
     system_flag |= FLAG_SIXSTEP_RUNNING;
   }
