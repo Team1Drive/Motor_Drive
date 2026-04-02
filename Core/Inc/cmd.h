@@ -19,6 +19,7 @@ typedef struct {
     const char* cmd;        // Command string (full match or prefix)
     cmd_handler_t handler;  // Corresponding handler function
     int min_args;           // Minimum number of arguments required (including command itself)
+    const char* usage;      // Usage string for help (e.g., "start", "foc <rpm>", "tune speed p 0.1")
 } cmd_entry_t;
 
 /**

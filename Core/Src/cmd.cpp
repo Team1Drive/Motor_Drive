@@ -20,19 +20,19 @@ extern void cmd_log(int argc, char** argv);
 extern void cmd_audible(int argc, char** argv);
 
 static const cmd_entry_t cmd_table[] = {
-    { "start",       cmd_start,       1 }, // 1 means just the command itself
-    { "stop",        cmd_stop,        1 },
-    { "reset",       cmd_reset,       1 },
-    { "foc",         cmd_foc,         2 }, // e.g., "foc 1000" = 2 tokens
-    { "rpm",         cmd_rpm,         2 },
-    { "foc_status",  cmd_foc_status,  1 },
-    { "sixstep",     cmd_sixstep,     1 },
-    { "speed",       cmd_speed,       2 },
-    { "duty",        cmd_duty,        2 }, // Arguments can be kept comma-separated internally
-    { "vec",         cmd_vec,         2 },
-    { "tune",        cmd_tune,        4 }, // e.g., "tune speed p 0.1" = 4 tokens
-    { "log",         cmd_log,         2 },
-    { "audible",     cmd_audible,     1 }
+    { "start",       cmd_start,       1,    "Usage: start\r\n"                          }, // 1 means just the command itself
+    { "stop",        cmd_stop,        1,    "Usage: stop\r\n"                           },
+    { "reset",       cmd_reset,       1,    "Usage: reset\r\n"                          },
+    { "foc",         cmd_foc,         2,    "Usage: foc <rpm> or foc status\r\n"        }, // e.g., "foc 1000" = 2 tokens
+    { "rpm",         cmd_rpm,         2,    "Usage: rpm <value>\r\n"                    },
+    { "foc_status",  cmd_foc_status,  1,    "Usage: foc_status\r\n"                     },
+    { "sixstep",     cmd_sixstep,     1,    "Usage: sixstep\r\n"                        },
+    { "speed",       cmd_speed,       2,    "Usage: speed <value>\r\n"                  },
+    { "duty",        cmd_duty,        2,    "Usage: duty <v1>,<v2>,<v3>\r\n"            }, // Arguments can be kept comma-separated internally
+    { "vec",         cmd_vec,         2,    "Usage: vec <0-5>\r\n"                      },
+    { "tune",        cmd_tune,        4,    "Usage: tune <subsys> <param> <value>\r\n"  }, // e.g., "tune speed p 0.1" = 4 tokens
+    { "log",         cmd_log,         2,    "Usage: log <add|rm|utf8|bin> [var]\r\n"    },
+    { "audible",     cmd_audible,     1,    "Usage: audible\r\n"                        }
 };
 
 const int num_commands = sizeof(cmd_table) / sizeof(cmd_entry_t);
@@ -107,9 +107,7 @@ void process_command(const char* cmd_str) {
         if (strcmp(argv[0], cmd_table[i].cmd) == 0) {
             // Validate arguments
             if (argc < cmd_table[i].min_args) {
-                char err[64];
-                int len = snprintf(err, sizeof(err), "Error: '%s' requires more arguments\r\n", argv[0]);
-                CDC_Transmit_HS((uint8_t*)err, len);
+                CDC_Transmit_HS((uint8_t*)cmd_table[i].usage, strlen(cmd_table[i].usage));
                 return;
             }
             // Execute the mapped handler
