@@ -3,6 +3,7 @@
 #include <cstdint>
 
 extern uint16_t fastAverage(uint16_t* data_ptr, uint16_t size);
+extern bool isPowerOfTwo(uint16_t x);
 
 ADCSampler* ADCSampler::instance_[3] = {nullptr, nullptr, nullptr};
 
@@ -89,13 +90,13 @@ HAL_StatusTypeDef ADCSampler::startDMA(void) {
     return HAL_OK;
 }
 
-void ADCSampler::getLatestData(uint16_t* data_ptr) {
+uint32_t ADCSampler::getLatestData(uint16_t* data_ptr) {
     // Return zeros before the first half full DMA interrupt to prevent processing invalid data
     if (!data_ready_) {
         for (uint32_t i = 0; i < num_channels_; i++) {
             data_ptr[i] = 0;
         }
-        return;
+        return 0;
     }
 
     // Calculate how many samples have been written by checking the DMA NDTR register
@@ -111,18 +112,21 @@ void ADCSampler::getLatestData(uint16_t* data_ptr) {
     uint32_t group_start = written_groups * num_channels_;
 
     // Copy the latest group of samples for each channel
+    uint32_t data_retrieved = 0;
     for (uint32_t i = 0; i < num_channels_; i++) {
         data_ptr[i] = buffer_[group_start + i];
+        data_retrieved++;
     }
+    return data_retrieved;
 }
 
-void ADCSampler::getLatestData(uint16_t* data_ptr, uint32_t set_length) {
+uint32_t ADCSampler::getLatestData(uint16_t* data_ptr, uint32_t set_length) {
     // Return zeros before the first half full DMA interrupt to prevent processing invalid data
-    if (!data_ready_) {
+    if (!data_ready_ || set_length > (half_len_ / num_channels_)) {
         for (uint32_t i = 0; i < set_length * num_channels_; i++) {
             data_ptr[i] = 0;
         }
-        return;
+        return 0;
     }
 
     // Calculate how many samples have been written by checking the DMA NDTR register
@@ -138,43 +142,71 @@ void ADCSampler::getLatestData(uint16_t* data_ptr, uint32_t set_length) {
     uint32_t group_start = written_groups * num_channels_;
 
     // Copy the latest group of samples for each channel
+    uint32_t data_retrieved = 0;
     int32_t buffer_index = group_start;
     for (uint32_t i = 0; i < set_length; i++) {
         for (uint32_t j = 0; j < num_channels_; j++) {
                 data_ptr[i * num_channels_ + j] = buffer_[buffer_index + j];
+                data_retrieved++;
         }
         buffer_index -= num_channels_;
         if (buffer_index < 0) buffer_index += length_;
     }
+    return data_retrieved;
 }
 
-void ADCSampler::getLatestDataMean(uint16_t* data_ptr, uint32_t set_length) {
+uint32_t ADCSampler::getLatestDataMean(uint16_t* data_ptr, uint32_t set_length) {
+    if (!isPowerOfTwo(set_length) || set_length > (half_len_ / num_channels_)) {
+        // Return zeros if set_length is not a power of 2
+        for (uint32_t i = 0; i < num_channels_; i++) {
+            data_ptr[i] = 0;
+        }
+        return 0;
+    }
     uint16_t data[set_length * num_channels_];
     getLatestData(data, set_length);
+
+    // Calculate the average for each channel
+    uint32_t data_retrieved = 0;
     for (uint32_t i = 0; i < num_channels_; i++) {
         uint16_t channel_data[set_length];
         for (uint32_t j = 0; j < set_length; j++) {
             channel_data[j] = data[i + j * num_channels_];
         }
         data_ptr[i] = fastAverage(channel_data, set_length);
+        data_retrieved++;
     }
+    return data_retrieved;
 }
 
 uint16_t ADCSampler::getLatestChannel(uint8_t channel) {
     if (channel >= num_channels_) return 0; // Invalid channel index
-    uint16_t data[num_channels_];
-    getLatestData(data);
-    return data[channel];
+    // Return zeros before the first half full DMA interrupt to prevent processing invalid data
+    if (!data_ready_) return 0;
+
+    // Calculate how many samples have been written by checking the DMA NDTR register
+    __disable_irq();
+    uint32_t ndtr = __HAL_DMA_GET_COUNTER(hdma_);
+    __enable_irq();
+
+    // Calculate the index of the latest complete group of samples
+    uint32_t written = length_ - ndtr;
+    uint32_t written_groups = written / num_channels_;
+    if (written_groups == 0) written_groups = length_ / num_channels_;
+    written_groups--;
+    uint32_t group_start = written_groups * num_channels_;
+
+    // Return the latest sample for the channel
+    return buffer_[group_start + channel];
 }
 
-void ADCSampler::getLatestChannel(uint8_t channel, uint16_t* data_ptr, uint32_t set_length) {
-    if (channel >= num_channels_) return; // Invalid channel index
+uint32_t ADCSampler::getLatestChannel(uint8_t channel, uint16_t* data_ptr, uint32_t set_length) {
     // Return zeros before the first half full DMA interrupt to prevent processing invalid data
-    if (!data_ready_) {
+    if (!data_ready_ || set_length > (half_len_ / num_channels_) || channel >= num_channels_) {
         for (uint32_t i = 0; i < set_length; i++) {
             data_ptr[i] = 0;
         }
-        return;
+        return 0;
     }
 
     // Calculate how many samples have been written by checking the DMA NDTR register
@@ -190,16 +222,19 @@ void ADCSampler::getLatestChannel(uint8_t channel, uint16_t* data_ptr, uint32_t 
     uint32_t group_start = written_groups * num_channels_;
 
     // Copy the latest group of samples for each channel
+    uint32_t data_retrieved = 0;
     int32_t buffer_index = group_start + channel;
     for (uint32_t i = 0; i < set_length; i++) {
         data_ptr[i] = buffer_[buffer_index];
         buffer_index -= num_channels_;
         if (buffer_index < 0) buffer_index += length_;
+        data_retrieved++;
     }
+    return data_retrieved;
 }
 
 uint16_t ADCSampler::getLatestChannelMean(uint8_t channel, uint32_t set_length) {
-    if (channel >= num_channels_) return 0; // Invalid channel index
+    if (channel >= num_channels_ || set_length > (half_len_ / num_channels_)) return 0; // Invalid channel index
     uint16_t data[set_length];
     getLatestChannel(channel, data, set_length);
     return fastAverage(data, set_length);

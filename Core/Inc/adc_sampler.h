@@ -9,8 +9,8 @@ class ADCSampler {
         ADC_HandleTypeDef* hadc_;
         DMA_HandleTypeDef* hdma_;
         volatile uint16_t* buffer_;
-        uint32_t length_;
-        uint32_t half_len_;
+        const uint32_t length_;
+        const uint32_t half_len_;
         uint32_t num_channels_;
         static ADCSampler* instance_[3];
         volatile uint32_t latest_group_;
@@ -75,14 +75,30 @@ class ADCSampler {
         void setProcessingBuffer(uint16_t* proc_buf, uint32_t proc_len);
 
         /**
-         * Get the latest ADC data for each channel. The channel_data array should have enough space to hold the number of channels configured in the ADC. The function copies the latest ADC values for each channel into the provided array.
-         * @param channel_data Pointer to an array where the latest ADC values for each channel will be copied. The caller is responsible for ensuring that this array has enough space to hold the number of channels configured in the ADC.
+         * Get the latest ADC data for each channel. The function copies the latest ADC values for each channel into the provided array.
+         * @param channel_data Pointer to an array where the latest ADC values for each channel will be copied.
+         * @return The number of channels for which data was retrieved and copied into the `data_ptr` array.
+         * @attention The caller is responsible for ensuring that `data_ptr` has enough space to hold the number of channels configured in the ADC.
          */
-        void getLatestData(uint16_t* data_ptr);
+        uint32_t getLatestData(uint16_t* data_ptr);
 
-        void getLatestData(uint16_t* data_ptr, uint32_t set_length);
+        /**
+         * Get the latest ADC data for each channel over multiple samples. The function copies the latest ADC values for each channel into the provided array in reversed chronological order.
+         * @param channel_data Pointer to an array where the latest ADC values for each channel will be copied.
+         * @param set_length The number of the most recent samples to copy for each channel. This should not exceed half of the DMA buffer length divided by the number of channels.
+         * @return The number of channels for which data was retrieved and copied into the `data_ptr` array.
+         * @attention The caller is responsible for ensuring that `data_ptr` has enough space to hold the number of channels configured in the ADC multiplied by the `set_length`.
+         */
+        uint32_t getLatestData(uint16_t* data_ptr, uint32_t set_length);
 
-        void getLatestDataMean(uint16_t* data_ptr, uint32_t set_length);
+        /**
+         * Get the average of the latest ADC data for each channel over multiple samples. The function retrieves the latest ADC values for each channel and computes their average. The length parameter specifies how many of the most recent samples to include in the average.
+         * @param channel_data Pointer to an array where the average ADC values for each channel will be copied.
+         * @param set_length The number of the most recent samples to include in the average. This must be a power of 2.
+         * @return The number of channels for which data was retrieved and averaged into the channel_data array.
+         * @attention The `set_length` parameter must be a power of 2 otherwise will return 0.
+         */
+        uint32_t getLatestDataMean(uint16_t* data_ptr, uint32_t set_length);
 
         /**
          * Get the latest ADC value for a specific channel. The channel index should be zero-based and less than the number of channels configured in the ADC. The function returns the latest ADC value for the specified channel.
@@ -92,20 +108,20 @@ class ADCSampler {
         uint16_t getLatestChannel(uint8_t channel);
 
         /**
-         * Get the latest ADC values for a specific channel over multiple samples. The channel index should be zero-based and less than the number of channels configured in the ADC. The function copies the latest ADC values for the specified channel into the provided array. The set_length parameter specifies how many of the most recent samples to copy, and should not exceed the length of the DMA buffer divided by the number of channels.
+         * Get the latest ADC values for a specific channel over multiple samples. The channel index should be zero-based and less than the number of channels configured in the ADC. The function copies the latest ADC values for the specified channel into the provided array in reversed chronological order. The set_length parameter specifies how many of the most recent samples to copy.
          * @param channel The zero-based index of the channel for which to retrieve the latest ADC values. This index should be less than the number of channels configured in the ADC.
          * @param data_ptr Pointer to an array where the latest ADC values for the specified channel will be copied. The caller is responsible for ensuring that this array has enough space to hold the number of samples specified by set_length.
          * @param set_length The number of the most recent samples to copy for the specified channel.
          * @attention The caller is responsible for ensuring that `data_ptr` has enough space to hold the number of samples specified by `set_length`.
          */
-        void getLatestChannel(uint8_t channel, uint16_t* data_ptr, uint32_t set_length);
+        uint32_t getLatestChannel(uint8_t channel, uint16_t* data_ptr, uint32_t set_length);
 
         /**
-         * Get the average of the latest ADC values for a specific channel over multiple samples. The channel index should be zero-based and less than the number of channels configured in the ADC. The function retrieves the latest ADC values for the specified channel and computes their average using a fast method that avoids overflow. The length parameter specifies how many of the most recent samples to include in the average, and should be a power of 2 for the averaging method to work correctly.
+         * Get the average of the latest ADC values for a specific channel over multiple samples. The channel index should be zero-based and less than the number of channels configured in the ADC. The function retrieves the latest ADC values for the specified channel and computes their average. The length parameter specifies how many of the most recent samples to include in the average.
          * @param channel The zero-based index of the channel for which to retrieve the average ADC value. This index should be less than the number of channels configured in the ADC.
          * @param length The number of the most recent samples to include in the average.
          * @return The average of the latest ADC values for the specified channel over the specified number of samples.
-         * @attention The `length` parameter should be a power of 2 for the averaging method to work correctly. The function will return 0 if `length` is not a power of 2 or if the channel index is invalid.
+         * @attention The `length` parameter must be a power of 2 otherwise will return 0.
          */
         uint16_t getLatestChannelMean(uint8_t channel, uint32_t set_length);
 };
