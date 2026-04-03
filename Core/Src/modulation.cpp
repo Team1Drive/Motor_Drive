@@ -1,4 +1,5 @@
 #include "modulation.h"
+#include "cordic_math.h"
 #include <cmath>
 #include <algorithm>
 

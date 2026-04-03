@@ -9,6 +9,7 @@
 #include "adc_sampler.h"
 #include "timer.h"
 #include "foc.h"
+#include "cordic_math.h"
 #include <cstdint>
 
 #include "usbd_cdc_if.h"
