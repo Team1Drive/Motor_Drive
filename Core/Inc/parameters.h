@@ -139,17 +139,6 @@ enum class PrintFormat : uint8_t {
     PRINT_BINARY
 };
 
-#pragma pack(1)
-typedef struct {
-    uint16_t ia;
-    uint16_t ib;
-    uint16_t ic;
-    float speed;
-    uint16_t pos;
-} LogData_t;
-#pragma pack()
-
-
 /*
 Timer allocation
 

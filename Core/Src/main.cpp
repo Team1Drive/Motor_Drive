@@ -363,31 +363,7 @@ void USB_CDC_RxHandler(uint8_t* Buf, uint32_t Len) {
  * @note Currently not used.
  */
 void timer2IRQ(void) {
-  /* uint16_t adc1_raw[3];
-  uint16_t adc2_raw[2];
-  uint16_t adc3_raw[2];
-
-  adc1.getLatestData(adc1_raw);
-  adc2.getLatestData(adc2_raw);
-  adc3.getLatestData(adc3_raw);
-
-  //usb_printf("RAW: %u\t%u\t%u\t%.1f\n", adc1_raw[0], adc2_raw[0], adc3_raw[0], encoder.getRPM());
-
-  float ia = adcToCurrent(adc1_raw[0], 3.3f, 65536, 50.0f, 1.65f, adc_gain.ia_shunt);
-  float ib = adcToCurrent(adc2_raw[0], 3.3f, 65536, 50.0f, 1.65f, adc_gain.ib_shunt);
-  float ic = adcToCurrent(adc3_raw[0], 3.3f, 4096, 50.0f, 1.65f, adc_gain.ic_shunt);
-
-  float vab = adcToVoltage(adc2_raw[1], 3.3f, 65536, adc_gain.va_gain, 1.65f);
-  float vbc = adcToVoltage(adc1_raw[1], 3.3f, 65536, adc_gain.vb_gain, 1.65f);
-
-  float vbatt = adcToVoltage(adc1_raw[2], 3.3f, 65536, adc_gain.vbatt_gain, 0.0f);
-  float ibatt = adcToCurrent(adc3_raw[1], 3.3f, 4096, 50.0f, 1.65f, adc_gain.ibatt_shunt);
-
-  //usb_printf("i a/b/c (A):\t%.2f\t%.2f\t%.2f\n", ia, ib, ic);
-  //usb_printf("v ab/bc (V):\t%.2f\t%.2f\n", vab, vbc);
-  //usb_printf("v batt (V): %.2f\t, i batt (A): %.2f\n", vbatt, ibatt);
-
-  //usb_printf("RPM: %.2f\t, Direction: %d\n", encoder.getRPM(), encoder.getDirection()); */
+  
 }
 
 /**
@@ -461,32 +437,7 @@ void timer3IRQ(void) {
  * @note Currently not used.
  */
 void timer6IRQ(void) {
-  /* uint16_t adc1_raw[3];
-  uint16_t adc2_raw[2];
-  uint16_t adc3_raw[2];
 
-  adc1.getLatestData(adc1_raw);
-  adc2.getLatestData(adc2_raw);
-  adc3.getLatestData(adc3_raw);
-
-  float ia = adcToCurrent(adc1_raw[0], 3.3f, 65536, 50.0f, 1.65f, adc_gain.ia_shunt);
-  float ib = adcToCurrent(adc2_raw[0], 3.3f, 65536, 50.0f, 1.65f, adc_gain.ib_shunt);
-  float ic = adcToCurrent(adc3_raw[0], 3.3f, 4096, 50.0f, 1.65f, adc_gain.ic_shunt);
-
-  float vab = adcToVoltage(adc2_raw[1], 3.3f, 65536, adc_gain.va_gain, 1.65f);
-  float vbc = adcToVoltage(adc1_raw[1], 3.3f, 65536, adc_gain.vb_gain, 1.65f);
-
-  float vbatt = adcToVoltage(adc1_raw[2], 3.3f, 65536, adc_gain.vbatt_gain, 0.0f);
-  float ibatt = adcToCurrent(adc3_raw[1], 3.3f, 4096, 50.0f, 1.65f, adc_gain.ibatt_shunt);
-
-  LogData_t data;
-  data.ia    = adc1_raw[0];
-  data.ib    = adc2_raw[0];
-  data.ic    = adc3_raw[0];
-  data.speed = encoder.getRPM();
-  data.pos   = encoder.getPos();
-
-  CDC_Transmit_HS((uint8_t*)&data, sizeof(LogData_t)); */
 }
 
 /**
