@@ -961,7 +961,7 @@ float adcToCurrent(uint32_t raw, float vref, uint32_t resolution, float gain, fl
  * @param data_ptr Pointer to the array of uint16_t values.
  * @param size The number of elements in the array (must be a power of 2).
  * @return The average value as a uint16_t.
- * @note `size` must be a power of 2.
+ * @attention `size` must be a power of 2, otherwise 0 will be returned.
  */
 uint16_t fastAverage(uint16_t* data_ptr, uint16_t size) {
   if (size == 0) return 0; // Avoid division by zero
@@ -977,6 +977,11 @@ uint16_t fastAverage(uint16_t* data_ptr, uint16_t size) {
   return (uint16_t)(sum >> shift);
 }
 
+/**
+ * @brief Checks if a given uint16_t value is a power of 2.
+ * @param x The value to check.
+ * @return true if x is a power of 2, false otherwise.
+ */
 bool isPowerOfTwo(uint16_t x) {
   return (x != 0) && ((x & (x - 1)) == 0);
 }
