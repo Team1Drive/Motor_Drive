@@ -217,45 +217,41 @@ int main(void)
   SCB_EnableICache();
   SCB_EnableDCache();
 
-  /* USER CODE END 2 */
   usb_printf("HAL Initialized\n");
-
+  
   if (motorPWM.setFrequency(20000) != HAL_OK) error_flag |= ERROR_PWM_CONFIG;
   if (motorPWM.setDeadTime(1000) != HAL_OK) error_flag |= ERROR_PWM_CONFIG;
-
+  
   /* Initialise FOC controller */
   foc_init(&foc_state);
   foc_state.target_rpm = FOC_INITIAL_RPM;
-
+  
   adc1.setProcessingBuffer(adc1_proc_buffer, ADC1_BUF_LEN);
   adc2.setProcessingBuffer(adc2_proc_buffer, ADC2_BUF_LEN);
   adc3.setProcessingBuffer(adc3_proc_buffer, ADC3_BUF_LEN);
-
+  
   if (error_flag) led_red.write(0);
   led_green.write(0);
   led_yellow_1.write(0);
   led_yellow_2.write(0);
-
+  
   control_mode = MotorControlMode::MOTOR_STOP;
-
+  
   usb_printf("System Initialized\n");
-
+  /* USER CODE END 2 */
+  
   /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
   while (1)
   {
-    //usb_printf("Hello from STM32! Counter: %lu\r\n", counter++);
-    /* USER CODE END WHILE */
-    /* HAL_ADC_Start(&hadc1);
-    HAL_ADC_PollForConversion(&hadc1, 10);
-    uint32_t val = HAL_ADC_GetValue(&hadc1);
-    usb_printf("Polling Val: %lu\r\n", val); */
+    /* USER CODE BEGIN WHILE */
     char cmd_line[CMD_MAX_LEN];
     if (read_line_from_ring(cmd_line, CMD_MAX_LEN)) {
       process_command(cmd_line);
     }
-    /* USER CODE BEGIN 3 */
+    /* USER CODE END WHILE */
   }
+  /* USER CODE BEGIN 3 */
+
   /* USER CODE END 3 */
 }
 
