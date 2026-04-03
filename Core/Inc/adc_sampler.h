@@ -83,4 +83,6 @@ class ADCSampler {
         uint16_t getLatestChannel(uint8_t channel);
 
         void getLatestChannel(uint8_t channel, uint16_t* data_ptr, uint32_t length);
+
+        uint16_t getLatestChannel(uint8_t channel, uint32_t length);
 };

@@ -2,6 +2,8 @@
 //#include <cmath>
 #include <cstdint>
 
+extern uint16_t fastAverage(uint16_t* data_ptr, uint16_t size);
+
 ADCSampler* ADCSampler::instance_[3] = {nullptr, nullptr, nullptr};
 
 uint32_t ADCSampler::getInstanceIndex(ADC_HandleTypeDef* hadc) {
@@ -148,4 +150,10 @@ void ADCSampler::getLatestChannel(uint8_t channel, uint16_t* data_ptr, uint32_t 
         buffer_index -= num_channels_;
         if (buffer_index < 0) buffer_index += length_;
     }
+}
+
+uint16_t ADCSampler::getLatestChannel(uint8_t channel, uint32_t length) {
+    uint16_t data[length];
+    getLatestChannel(channel, data, length);
+    return fastAverage(data, length);
 }
