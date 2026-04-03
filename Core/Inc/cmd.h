@@ -33,3 +33,7 @@ bool ring_buffer_write(ring_buffer_t* rx_ring, uint8_t data);
 bool read_line_from_ring(ring_buffer_t* rx_ring, char* line, int max_len);
 
 void process_command(const char* cmd_str);
+
+void protectionModePrint(void);
+
+void batteryProtectionPrint(void);

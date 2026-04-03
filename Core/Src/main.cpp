@@ -993,7 +993,7 @@ uint16_t fastAverage(uint16_t* data_ptr, uint16_t size) {
  * @note Initializes the motor control system and starts the VVVF ramp-up sequence.
  */
 void cmd_start(int argc, char** argv) {
-    if (control_mode == MotorControlMode::MOTOR_PROTECTION) {CDC_Transmit_HS((uint8_t*)"Motor in protection mode, reset error to start\r\n", 34); return;}
+    if (control_mode == MotorControlMode::MOTOR_PROTECTION) {protectionModePrint(); return;}
     control_mode = MotorControlMode::MOTOR_STARTUP;
     system_flag &= ~FLAG_VVVF_RUNNING;
     system_flag &= ~FLAG_SIXSTEP_RUNNING;
@@ -1056,7 +1056,7 @@ void cmd_foc(int argc, char** argv) {
     }
     // argv[1] contains the string of the target RPM
     else {
-        if (control_mode == MotorControlMode::MOTOR_PROTECTION) {CDC_Transmit_HS((uint8_t*)"Motor in protection mode, reset error to start\r\n", 34); return;}
+        if (control_mode == MotorControlMode::MOTOR_PROTECTION) {protectionModePrint(); return;}
         int rpm_cmd = atoi(argv[1]);
         
         foc_reset(&foc_state);
@@ -1086,7 +1086,7 @@ void cmd_rpm(int argc, char** argv) {
  * @note Starts six-step commutation control mode.
  */
 void cmd_sixstep(int argc, char** argv) {
-    if (control_mode == MotorControlMode::MOTOR_PROTECTION) {CDC_Transmit_HS((uint8_t*)"Motor in protection mode, reset error to start\r\n", 34); return;}
+    if (control_mode == MotorControlMode::MOTOR_PROTECTION) {protectionModePrint(); return;}
     control_mode = MotorControlMode::MOTOR_SIX_STEP;
     system_flag &= ~FLAG_VVVF_RUNNING;
     system_flag &= ~FLAG_FOC_RUNNING;
@@ -1119,7 +1119,8 @@ void cmd_speed(int argc, char** argv) {
  * @attention This command overrides all control modes and should be used with caution.
  */
 void cmd_duty(int argc, char** argv) {
-    if (control_mode == MotorControlMode::MOTOR_PROTECTION) {CDC_Transmit_HS((uint8_t*)"Motor in protection mode, reset error to start\r\n", 34); return;}
+  if (BATTERY_PROTECTION) {batteryProtectionPrint(); return;}
+    if (control_mode == MotorControlMode::MOTOR_PROTECTION) {protectionModePrint(); return;}
     // argv[1] lands as "0.3,0.3,0.3" from the universal space tokenizer.
     // We split it via commas using strtok in-place.
     float values[3] = {0};
@@ -1159,7 +1160,8 @@ void cmd_duty(int argc, char** argv) {
  * @attention This command overrides all control modes and should be used with caution.
  */
 void cmd_vec(int argc, char** argv) {
-    if (control_mode == MotorControlMode::MOTOR_PROTECTION) {CDC_Transmit_HS((uint8_t*)"Motor in protection mode, reset error to start\r\n", 34); return;}
+    if (BATTERY_PROTECTION) {batteryProtectionPrint(); return;}
+    if (control_mode == MotorControlMode::MOTOR_PROTECTION) {protectionModePrint(); return;}
     relay.write(1);
     int vec_num = atoi(argv[1]);
     

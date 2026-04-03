@@ -119,3 +119,13 @@ void process_command(const char* cmd_str) {
     const char* err = "Unknown command\r\n";
     CDC_Transmit_HS((uint8_t*)err, strlen(err));
 }
+
+void protectionModePrint(void) {
+    const char* msg = "\r\nSystem tripped by overcurrent: Motor in protection mode, reset error to start\r\n\r\n";
+    CDC_Transmit_HS((uint8_t*)msg, strlen(msg));
+}
+
+void batteryProtectionPrint(void) {
+    const char* msg = "\r\nSystem operating under battery protection, this function is disabled\r\nIf supplied with a current-limited source, set BATTERY_PROTECTION to false\r\n\r\n";
+    CDC_Transmit_HS((uint8_t*)msg, strlen(msg));
+}

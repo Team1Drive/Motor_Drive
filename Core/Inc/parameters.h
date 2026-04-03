@@ -38,6 +38,9 @@
 #define FOC_INITIAL_RPM             1500U // Target RPM for FOC mode (used when FOC is enabled and selected)
 #define FOC_OVERSAMPLING_SIZE       16U // Number of samples to average for oversampling (must be a power of 2 for efficient averaging)
 
+#define MASTER_MODE                 true // Set master or slave mode in load testing
+#define BATTERY_PROTECTION          false // Set to true when powered with supply without current limit
+
 #define ENCODER_PPR                 2048U // Pulses per revolution for the encoder
 #define ENCODER_MT_THRESHOLD        500U // Threshold in RPM for switching between M and T methods
 #define ENCODER_ONEPULSE_THRESHOLD  1000U // Threshold in RPM for using one pulse counting
