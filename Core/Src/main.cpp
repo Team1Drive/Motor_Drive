@@ -44,6 +44,7 @@ void test_PWM_sweep(void);
 float adcToVoltage(uint32_t raw, float vref, uint32_t resolution, float gain, float offset);
 float adcToCurrent(uint32_t raw, float vref, uint32_t resolution, float gain, float offset, float shunt);
 uint16_t fastAverage(uint16_t* data_ptr, uint16_t size);
+bool isPowerOfTwo(uint16_t x);
 
 /* Declare ADC buffers */
 alignas(32) volatile uint16_t adc1_buffer[ADC1_BUF_LEN] __attribute__((section(".sram_d1")));
@@ -963,6 +964,9 @@ float adcToCurrent(uint32_t raw, float vref, uint32_t resolution, float gain, fl
  * @note `size` must be a power of 2.
  */
 uint16_t fastAverage(uint16_t* data_ptr, uint16_t size) {
+  if (size == 0) return 0; // Avoid division by zero
+  if (!isPowerOfTwo(size)) return 0; // Size must be a power of 2 for this method to work correctly
+
   uint32_t sum = 0;
   for (uint16_t i = 0; i < size; i++) {
     sum += data_ptr[i];
@@ -971,6 +975,10 @@ uint16_t fastAverage(uint16_t* data_ptr, uint16_t size) {
   uint32_t shift = 31 - __builtin_clz(size);
 
   return (uint16_t)(sum >> shift);
+}
+
+bool isPowerOfTwo(uint16_t x) {
+  return (x != 0) && ((x & (x - 1)) == 0);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

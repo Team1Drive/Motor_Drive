@@ -117,12 +117,14 @@ void ADCSampler::getLatestData(uint16_t* data_ptr) {
 }
 
 uint16_t ADCSampler::getLatestChannel(uint8_t channel) {
+    if (channel >= num_channels_) return 0; // Invalid channel index
     uint16_t data[num_channels_];
     getLatestData(data);
     return data[channel];
 }
 
 void ADCSampler::getLatestChannel(uint8_t channel, uint16_t* data_ptr, uint32_t set_length) {
+    if (channel >= num_channels_) return; // Invalid channel index
     // Return zeros before the first half full DMA interrupt to prevent processing invalid date
     if (!data_ready_) {
         for (uint32_t i = 0; i < set_length; i++) {
@@ -153,6 +155,7 @@ void ADCSampler::getLatestChannel(uint8_t channel, uint16_t* data_ptr, uint32_t 
 }
 
 uint16_t ADCSampler::getLatestChannel(uint8_t channel, uint32_t length) {
+    if (channel >= num_channels_) return 0; // Invalid channel index
     uint16_t data[length];
     getLatestChannel(channel, data, length);
     return fastAverage(data, length);
