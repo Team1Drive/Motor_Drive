@@ -43,7 +43,15 @@ void MX_CORDIC_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN CORDIC_Init 2 */
-
+  CORDIC_ConfigTypeDef cordic_cfg;
+  cordic_cfg.Function    = CORDIC_FUNCTION_COSINE;
+  cordic_cfg.Precision   = 14;   // 0 to 15
+  cordic_cfg.Scale       = CORDIC_SCALE_0;
+  cordic_cfg.NbWrite     = CORDIC_NBWRITE_1;
+  cordic_cfg.NbRead      = CORDIC_NBREAD_2;
+  cordic_cfg.InSize      = CORDIC_INSIZE_32BITS;
+  cordic_cfg.OutSize     = CORDIC_OUTSIZE_32BITS;
+  HAL_CORDIC_Configure(&hcordic, &cordic_cfg);
   /* USER CODE END CORDIC_Init 2 */
 
 }

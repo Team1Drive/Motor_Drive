@@ -83,6 +83,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Core/Src/adc_sampler.cpp
     Core/Src/timer.cpp
     Core/Src/foc.cpp
+    Core/Src/cordic_math.cpp
 )
 
 # Add include paths
