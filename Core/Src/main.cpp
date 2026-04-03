@@ -627,9 +627,9 @@ void printTelemetryBinary(void) {
     //ia = adcToCurrent(adc1_raw[0], 3.3f, 65536, 50.0f, 1.65f + adc_gain.ia_offset, adc_gain.ia_shunt);
     //vb = adcToVoltage(adc1_raw[1], 3.3f, 65536, adc_gain.vb_gain, 1.65f + adc_gain.vb_offset);
     //vbatt = adcToVoltage(adc1_raw[2], 3.3f, 65536, adc_gain.vbatt_gain, 0.0f + adc_gain.vbatt_offset);
-    ia = adcToCurrent(adc1.getLatestChannel(0, FOC_OVERSAMPLING_SIZE), 3.3f, 65536, 50.0f, 1.65f + adc_gain.ia_offset, adc_gain.ia_shunt);
-    vb = adcToVoltage(adc1.getLatestChannel(1, FOC_OVERSAMPLING_SIZE), 3.3f, 65536, adc_gain.vb_gain, 1.65f + adc_gain.vb_offset);
-    vbatt = adcToVoltage(adc1.getLatestChannel(2, FOC_OVERSAMPLING_SIZE), 3.3f, 65536, adc_gain.vbatt_gain, 0.0f + adc_gain.vbatt_offset);
+    ia = adcToCurrent(adc1.getLatestChannelMean(0, FOC_OVERSAMPLING_SIZE), 3.3f, 65536, 50.0f, 1.65f + adc_gain.ia_offset, adc_gain.ia_shunt);
+    vb = adcToVoltage(adc1.getLatestChannelMean(1, FOC_OVERSAMPLING_SIZE), 3.3f, 65536, adc_gain.vb_gain, 1.65f + adc_gain.vb_offset);
+    vbatt = adcToVoltage(adc1.getLatestChannelMean(2, FOC_OVERSAMPLING_SIZE), 3.3f, 65536, adc_gain.vbatt_gain, 0.0f + adc_gain.vbatt_offset);
   }
   if ((print_mask & (PRINT_IB
                    | PRINT_VA
@@ -639,8 +639,8 @@ void printTelemetryBinary(void) {
 
     //ib = adcToCurrent(adc2_raw[0], 3.3f, 65536, 50.0f, 1.65f + adc_gain.ib_offset, adc_gain.ib_shunt);
     //va = adcToVoltage(adc2_raw[1], 3.3f, 65536, adc_gain.va_gain, 1.65f + adc_gain.va_offset);
-    ib = adcToCurrent(adc2.getLatestChannel(0, FOC_OVERSAMPLING_SIZE), 3.3f, 65536, 50.0f, 1.65f + adc_gain.ib_offset, adc_gain.ib_shunt);
-    va = adcToVoltage(adc2.getLatestChannel(1, FOC_OVERSAMPLING_SIZE), 3.3f, 65536, adc_gain.va_gain, 1.65f + adc_gain.va_offset);
+    ib = adcToCurrent(adc2.getLatestChannelMean(0, FOC_OVERSAMPLING_SIZE), 3.3f, 65536, 50.0f, 1.65f + adc_gain.ib_offset, adc_gain.ib_shunt);
+    va = adcToVoltage(adc2.getLatestChannelMean(1, FOC_OVERSAMPLING_SIZE), 3.3f, 65536, adc_gain.va_gain, 1.65f + adc_gain.va_offset);
   }
   if ((print_mask & (PRINT_IC
                    | PRINT_IBATT
@@ -650,8 +650,8 @@ void printTelemetryBinary(void) {
 
     //ic = adcToCurrent(adc3_raw[0], 3.3f, 4096, 50.0f, 1.65f + adc_gain.ic_offset, adc_gain.ic_shunt);
     //ibatt = adcToCurrent(adc3_raw[1], 3.3f, 4096, 50.0f, 1.65f + adc_gain.ibatt_offset, adc_gain.ibatt_shunt);
-    ic = adcToCurrent(adc3.getLatestChannel(0, FOC_OVERSAMPLING_SIZE), 3.3f, 4096, 50.0f, 1.65f + adc_gain.ic_offset, adc_gain.ic_shunt);
-    ibatt = adcToCurrent(adc3.getLatestChannel(1, FOC_OVERSAMPLING_SIZE), 3.3f, 4096, 50.0f, 1.65f + adc_gain.ibatt_offset, adc_gain.ibatt_shunt);
+    ic = adcToCurrent(adc3.getLatestChannelMean(0, FOC_OVERSAMPLING_SIZE), 3.3f, 4096, 50.0f, 1.65f + adc_gain.ic_offset, adc_gain.ic_shunt);
+    ibatt = adcToCurrent(adc3.getLatestChannelMean(1, FOC_OVERSAMPLING_SIZE), 3.3f, 4096, 50.0f, 1.65f + adc_gain.ibatt_offset, adc_gain.ibatt_shunt);
   }
 
   // Construct a binary packet
@@ -2054,18 +2054,18 @@ static void foc_isr_tick(void)
     //float Ic = adcToCurrent(adc3_raw[0], 3.3f,  4096, 1.0f,
     //                        1.65f + adc_gain.ic_offset, adc_gain.ic_shunt);
 
-    float Ia = adcToCurrent(adc1.getLatestChannel(0, FOC_OVERSAMPLING_SIZE), 3.3f, 65536, 50.0f,
+    float Ia = adcToCurrent(adc1.getLatestChannelMean(0, FOC_OVERSAMPLING_SIZE), 3.3f, 65536, 50.0f,
                             1.65f + adc_gain.ia_offset, adc_gain.ia_shunt);
-    float Ib = adcToCurrent(adc2.getLatestChannel(0, FOC_OVERSAMPLING_SIZE), 3.3f, 65536, 50.0f,
+    float Ib = adcToCurrent(adc2.getLatestChannelMean(0, FOC_OVERSAMPLING_SIZE), 3.3f, 65536, 50.0f,
                             1.65f + adc_gain.ib_offset, adc_gain.ib_shunt);
-    float Ic = adcToCurrent(adc3.getLatestChannel(0, FOC_OVERSAMPLING_SIZE), 3.3f,  4096, 50.0f,
+    float Ic = adcToCurrent(adc3.getLatestChannelMean(0, FOC_OVERSAMPLING_SIZE), 3.3f,  4096, 50.0f,
                             1.65f + adc_gain.ic_offset, adc_gain.ic_shunt);
 
     /* DC bus voltage */
     //float Vdc = adcToVoltage(adc1_raw[2], 3.3f, 65536,
     //                         adc_gain.vbatt_gain, adc_gain.vbatt_offset);
                              
-    float Vdc = adcToVoltage(adc1.getLatestChannel(2, FOC_OVERSAMPLING_SIZE), 3.3f, 65536,
+    float Vdc = adcToVoltage(adc1.getLatestChannelMean(2, FOC_OVERSAMPLING_SIZE), 3.3f, 65536,
                              adc_gain.vbatt_gain, adc_gain.vbatt_offset);
 
     /* Guard: Vdc too low — SVPWM would divide by zero */

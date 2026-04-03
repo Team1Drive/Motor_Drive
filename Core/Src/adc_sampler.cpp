@@ -90,7 +90,7 @@ HAL_StatusTypeDef ADCSampler::startDMA(void) {
 }
 
 void ADCSampler::getLatestData(uint16_t* data_ptr) {
-    // Return zeros before the first half full DMA interrupt to prevent processing invalid date
+    // Return zeros before the first half full DMA interrupt to prevent processing invalid data
     if (!data_ready_) {
         for (uint32_t i = 0; i < num_channels_; i++) {
             data_ptr[i] = 0;
@@ -116,6 +116,50 @@ void ADCSampler::getLatestData(uint16_t* data_ptr) {
     }
 }
 
+void ADCSampler::getLatestData(uint16_t* data_ptr, uint32_t set_length) {
+    // Return zeros before the first half full DMA interrupt to prevent processing invalid data
+    if (!data_ready_) {
+        for (uint32_t i = 0; i < set_length * num_channels_; i++) {
+            data_ptr[i] = 0;
+        }
+        return;
+    }
+
+    // Calculate how many samples have been written by checking the DMA NDTR register
+    __disable_irq();
+    uint32_t ndtr = __HAL_DMA_GET_COUNTER(hdma_);
+    __enable_irq();
+
+    // Calculate the index of the latest complete group of samples
+    uint32_t written = length_ - ndtr;
+    uint32_t written_groups = written / num_channels_;
+    if (written_groups == 0) written_groups = length_ / num_channels_;
+    written_groups--;
+    uint32_t group_start = written_groups * num_channels_;
+
+    // Copy the latest group of samples for each channel
+    int32_t buffer_index = group_start;
+    for (uint32_t i = 0; i < set_length; i++) {
+        for (uint32_t j = 0; j < num_channels_; j++) {
+                data_ptr[i * num_channels_ + j] = buffer_[buffer_index + j];
+        }
+        buffer_index -= num_channels_;
+        if (buffer_index < 0) buffer_index += length_;
+    }
+}
+
+void ADCSampler::getLatestDataMean(uint16_t* data_ptr, uint32_t set_length) {
+    uint16_t data[set_length * num_channels_];
+    getLatestData(data, set_length);
+    for (uint32_t i = 0; i < num_channels_; i++) {
+        uint16_t channel_data[set_length];
+        for (uint32_t j = 0; j < set_length; j++) {
+            channel_data[j] = data[i + j * num_channels_];
+        }
+        data_ptr[i] = fastAverage(channel_data, set_length);
+    }
+}
+
 uint16_t ADCSampler::getLatestChannel(uint8_t channel) {
     if (channel >= num_channels_) return 0; // Invalid channel index
     uint16_t data[num_channels_];
@@ -125,7 +169,7 @@ uint16_t ADCSampler::getLatestChannel(uint8_t channel) {
 
 void ADCSampler::getLatestChannel(uint8_t channel, uint16_t* data_ptr, uint32_t set_length) {
     if (channel >= num_channels_) return; // Invalid channel index
-    // Return zeros before the first half full DMA interrupt to prevent processing invalid date
+    // Return zeros before the first half full DMA interrupt to prevent processing invalid data
     if (!data_ready_) {
         for (uint32_t i = 0; i < set_length; i++) {
             data_ptr[i] = 0;
@@ -154,9 +198,9 @@ void ADCSampler::getLatestChannel(uint8_t channel, uint16_t* data_ptr, uint32_t 
     }
 }
 
-uint16_t ADCSampler::getLatestChannel(uint8_t channel, uint32_t length) {
+uint16_t ADCSampler::getLatestChannelMean(uint8_t channel, uint32_t set_length) {
     if (channel >= num_channels_) return 0; // Invalid channel index
-    uint16_t data[length];
-    getLatestChannel(channel, data, length);
-    return fastAverage(data, length);
+    uint16_t data[set_length];
+    getLatestChannel(channel, data, set_length);
+    return fastAverage(data, set_length);
 }

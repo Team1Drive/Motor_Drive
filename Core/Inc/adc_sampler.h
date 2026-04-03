@@ -80,6 +80,10 @@ class ADCSampler {
          */
         void getLatestData(uint16_t* data_ptr);
 
+        void getLatestData(uint16_t* data_ptr, uint32_t set_length);
+
+        void getLatestDataMean(uint16_t* data_ptr, uint32_t set_length);
+
         /**
          * Get the latest ADC value for a specific channel. The channel index should be zero-based and less than the number of channels configured in the ADC. The function returns the latest ADC value for the specified channel.
          * @param channel The zero-based index of the channel for which to retrieve the latest ADC value. This index should be less than the number of channels configured in the ADC.
@@ -94,7 +98,7 @@ class ADCSampler {
          * @param set_length The number of the most recent samples to copy for the specified channel.
          * @attention The caller is responsible for ensuring that `data_ptr` has enough space to hold the number of samples specified by `set_length`.
          */
-        void getLatestChannel(uint8_t channel, uint16_t* data_ptr, uint32_t length);
+        void getLatestChannel(uint8_t channel, uint16_t* data_ptr, uint32_t set_length);
 
         /**
          * Get the average of the latest ADC values for a specific channel over multiple samples. The channel index should be zero-based and less than the number of channels configured in the ADC. The function retrieves the latest ADC values for the specified channel and computes their average using a fast method that avoids overflow. The length parameter specifies how many of the most recent samples to include in the average, and should be a power of 2 for the averaging method to work correctly.
@@ -103,5 +107,5 @@ class ADCSampler {
          * @return The average of the latest ADC values for the specified channel over the specified number of samples.
          * @attention The `length` parameter should be a power of 2 for the averaging method to work correctly. The function will return 0 if `length` is not a power of 2 or if the channel index is invalid.
          */
-        uint16_t getLatestChannel(uint8_t channel, uint32_t length);
+        uint16_t getLatestChannelMean(uint8_t channel, uint32_t set_length);
 };
