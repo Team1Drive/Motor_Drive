@@ -19,6 +19,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "adc.h"
+#include "cordic.h"
 #include "dma.h"
 #include "tim.h"
 #include "usb_device.h"
