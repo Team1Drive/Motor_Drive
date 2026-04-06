@@ -9,15 +9,16 @@ class Encoder {
     private:
         static Encoder* instance_;
         TIM_HandleTypeDef* htim_;
+        MicrosecondTimer timer_;
         uint16_t indexPin_;
         const uint32_t counts_per_rev_;
         const float speedloop_period;
+        float mt_threshold_;
         uint8_t stall_threshold_;
         int32_t overflow_count_;
 
         uint16_t index_offset_;
         uint16_t last_hw_cnt_;
-        bool is_synchronized_;
 
         float rpm;
         float filtered_rpm_;
@@ -43,8 +44,10 @@ class Encoder {
         void counterOverflow(void);
 
     public:
-        Encoder(TIM_HandleTypeDef* htim, uint16_t index_pin, uint32_t pulses_per_rev, uint32_t speedloop_freq, uint8_t stall_threshold);
+        Encoder(TIM_HandleTypeDef* htim, MicrosecondTimer timer, uint16_t index_pin, uint32_t pulses_per_rev, uint32_t speedloop_freq, uint8_t stall_threshold);
 
+        bool is_synchronized_;
+        
         void init(void);
 
         HAL_StatusTypeDef start(void);

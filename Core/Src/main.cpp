@@ -974,13 +974,17 @@ static void process_command(const char* cmd) {
 
   // Start — relay on, go directly into FOC startup
   if (strcmp(cmd, "start") == 0) {
+    control_mode = MotorControlMode::MOTOR_STARTUP;
+    system_flag &= ~FLAG_VVVF_RUNNING;
+    system_flag &= ~FLAG_SIXSTEP_RUNNING;
+    system_flag &= ~FLAG_FOC_RUNNING;
     relay.write(1);
     control_mode = MotorControlMode::MOTOR_STARTUP;
     system_flag &= ~FLAG_VVVF_RUNNING;
     system_flag &= ~FLAG_SIXSTEP_RUNNING;
     system_flag &= ~FLAG_FOC_RUNNING;
     startUpSequence();
-    CDC_Transmit_HS((uint8_t*)"Starting FOC\r\n", 14);
+    CDC_Transmit_HS((uint8_t*)"Starting\r\n", 10);
 
   // Stop
   } else if (strcmp(cmd, "stop") == 0) {
