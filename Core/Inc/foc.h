@@ -163,7 +163,7 @@ typedef struct {
     float omega_ref;    /* ramped speed reference (mechanical rad/s)     */
     float Id_ref;       /* d-axis current reference (A)                  */
     float Iq_ref;       /* q-axis current reference (A)                  */
--
+
     /* --- Observables — written each tick, read by main loop / telemetry --- */
     volatile float Id;
     volatile float Iq;
