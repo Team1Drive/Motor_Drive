@@ -17,7 +17,7 @@ void ADCSampler::processBuffer(void) {
         // Invalidate data cache to ensure latest date is read
         SCB_InvalidateDCache_by_Addr((uint32_t *)(buffer_ + half_len_), half_len_ * sizeof(uint16_t));
         // Copy the second half of the buffer to the processing buffer
-        memcpy(proc_buffer_ + half_len_, buffer_ + half_len_, half_len_ * sizeof(uint16_t));
+        memcpy(proc_buffer_ + half_len_, (uint16_t*)buffer_ + half_len_, half_len_ * sizeof(uint16_t));
     }
     full_ready_ = true;
 }
@@ -28,12 +28,16 @@ void ADCSampler::processHalfBuffer(void) {
         // Invalidate data cache to ensure latest date is read
         SCB_InvalidateDCache_by_Addr((uint32_t *)buffer_, half_len_ * sizeof(uint16_t));
         // Copy the first half of the buffer to the processing buffer
-        memcpy(proc_buffer_, buffer_, half_len_ * sizeof(uint16_t));
+        memcpy(proc_buffer_, (uint16_t*)buffer_, half_len_ * sizeof(uint16_t));
     }
     half_ready_ = true;
+
+    if (!data_ready_) {
+        data_ready_ = true;
+    }
 }
 
-ADCSampler::ADCSampler(ADC_HandleTypeDef* hadc, DMA_HandleTypeDef* hdma, uint16_t* buffer, uint32_t length):
+ADCSampler::ADCSampler(ADC_HandleTypeDef* hadc, DMA_HandleTypeDef* hdma, volatile uint16_t* buffer, uint32_t length):
     hadc_(hadc),
     hdma_(hdma),
     buffer_(buffer),
@@ -42,10 +46,7 @@ ADCSampler::ADCSampler(ADC_HandleTypeDef* hadc, DMA_HandleTypeDef* hdma, uint16_
     latest_group_(0),
     half_ready_(false),
     full_ready_(false) {
-        num_channels_ = hadc_->Init.NbrOfConversion;
-        if (num_channels_ == 0) num_channels_ = 1;
-        uint32_t i = getInstanceIndex(hadc_);
-        instance_[i] = this;
+        data_ready_ = false;
     }
 
 void ADCSampler::setProcessingBuffer(uint16_t* proc_buf, uint32_t proc_len) {
@@ -69,14 +70,32 @@ void ADCSampler::irqConvHalfCplt(ADC_HandleTypeDef* hadc) {
 }
 
 HAL_StatusTypeDef ADCSampler::startADC(void) {
-    return HAL_ADC_Start(hadc_);
+    uint32_t i = getInstanceIndex(hadc_);
+    if (i != (uint32_t)-1) instance_[i] = this;
+    if (HAL_ADC_Start_IT(hadc_) != HAL_OK) return HAL_ERROR;
+    num_channels_ = hadc_->Init.NbrOfConversion;
+    if (num_channels_ == 0) num_channels_ = 1;
+    return HAL_OK;
 }
 
 HAL_StatusTypeDef ADCSampler::startDMA(void) {
-    return HAL_ADC_Start_DMA(hadc_, (uint32_t*)buffer_, length_);
+    uint32_t i = getInstanceIndex(hadc_);
+    if (i != (uint32_t)-1) instance_[i] = this;
+    if (HAL_ADC_Start_DMA(hadc_, (uint32_t*)buffer_, length_) != HAL_OK) return HAL_ERROR;
+    num_channels_ = hadc_->Init.NbrOfConversion;
+    if (num_channels_ == 0) num_channels_ = 1;
+    return HAL_OK;
 }
 
-void ADCSampler::getLatestData(uint16_t* channel_data) {
+void ADCSampler::getLatestData(uint16_t* data_ptr) {
+    // Return zeros before the first half full DMA interrupt to prevent processing invalid date
+    if (!data_ready_) {
+        for (uint32_t i = 0; i < num_channels_; i++) {
+            data_ptr[i] = 0;
+        }
+        return;
+    }
+
     // Calculate how many samples have been written by checking the DMA NDTR register
     __disable_irq();
     uint32_t ndtr = __HAL_DMA_GET_COUNTER(hdma_);
@@ -84,12 +103,49 @@ void ADCSampler::getLatestData(uint16_t* channel_data) {
 
     // Calculate the index of the latest complete group of samples
     uint32_t written = length_ - ndtr;
-    if (written == 0) written = length_;
-    uint32_t latest_index = written - 1;
-    uint32_t group_start = (latest_index / num_channels_) * num_channels_;
+    uint32_t written_groups = written / num_channels_;
+    if (written_groups == 0) written_groups = length_ / num_channels_;
+    written_groups--;
+    uint32_t group_start = written_groups * num_channels_;
 
     // Copy the latest group of samples for each channel
     for (uint32_t i = 0; i < num_channels_; i++) {
-        channel_data[i] = buffer_[group_start + i];
+        data_ptr[i] = buffer_[group_start + i];
+    }
+}
+
+uint16_t ADCSampler::getLatestChannel(uint8_t channel) {
+    uint16_t data[num_channels_];
+    getLatestData(data);
+    return data[channel];
+}
+
+void ADCSampler::getLatestChannel(uint8_t channel, uint16_t* data_ptr, uint32_t set_length) {
+    // Return zeros before the first half full DMA interrupt to prevent processing invalid date
+    if (!data_ready_) {
+        for (uint32_t i = 0; i < set_length; i++) {
+            data_ptr[i] = 0;
+        }
+        return;
+    }
+
+    // Calculate how many samples have been written by checking the DMA NDTR register
+    __disable_irq();
+    uint32_t ndtr = __HAL_DMA_GET_COUNTER(hdma_);
+    __enable_irq();
+
+    // Calculate the index of the latest complete group of samples
+    uint32_t written = length_ - ndtr;
+    uint32_t written_groups = written / num_channels_;
+    if (written_groups == 0) written_groups = length_ / num_channels_;
+    written_groups--;
+    uint32_t group_start = written_groups * num_channels_;
+
+    // Copy the latest group of samples for each channel
+    int32_t buffer_index = group_start + channel;
+    for (uint32_t i = 0; i < set_length; i++) {
+        data_ptr[i] = buffer_[buffer_index];
+        buffer_index -= num_channels_;
+        if (buffer_index < 0) buffer_index += length_;
     }
 }

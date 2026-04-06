@@ -112,6 +112,20 @@ void foc_run(FOC_State_t* foc,
     
 
     /* ------------------------------------------------------------------
+     * 1. Overcurrent protection
+     *    Compare against Imax². All three phases checked.
+     *    On trip: output 0.5 duty (mid-rail, no net current), latch fault.
+     * ------------------------------------------------------------------ */
+    const float Imax_sq = FOC_IMAX * FOC_IMAX;
+    if (foc->Ia*foc->Ia > Imax_sq || foc->Ib*foc->Ib > Imax_sq || foc->Ic*foc->Ic > Imax_sq) {
+        foc->fault = true;
+        *dutyA = 0.5f;
+        *dutyB = 0.5f;
+        *dutyC = 0.5f;
+        return;
+    }
+
+    /* ------------------------------------------------------------------
      * 2. Clarke transform: Ia,Ib,Ic → Iα,Iβ  (stationary frame)
      *
      *   Iα = (2·Ia − Ib − Ic) / 3

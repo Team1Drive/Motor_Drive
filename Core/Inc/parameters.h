@@ -10,18 +10,18 @@
 #define ADC2_NUM_CHANNELS   2U
 #define ADC3_NUM_CHANNELS   2U
 
-#define ADC_IA_SHUNT        0.005f // Ia channel gain (shunt resistor)
-#define ADC_IB_SHUNT        -0.007f // Ib channel gain (shunt resistor)
-#define ADC_IC_SHUNT        0.003f // Ic channel gain (shunt resistor)
-#define ADC_IA_OFFSET       0.10f // Ia channel offset
-#define ADC_IB_OFFSET       -0.012f // Ib channel offset
-#define ADC_IC_OFFSET       0.009f // Ic channel offset
-#define ADC_VA_GAIN         11.0f // Va channel gain (voltage divider)
-#define ADC_VB_GAIN         11.0f // Vb channel gain (voltage divider)
+#define ADC_IA_SHUNT        0.0062f // Ia channel gain (shunt resistor)
+#define ADC_IB_SHUNT        0.004f // Ib channel gain (shunt resistor)
+#define ADC_IC_SHUNT        0.0033f // Ic channel gain (shunt resistor)
+#define ADC_IA_OFFSET       0.006f // Ia channel offset
+#define ADC_IB_OFFSET       0.006f // Ib channel offset
+#define ADC_IC_OFFSET       0.005f // Ic channel offset
+#define ADC_VA_GAIN         0.0316f // Va channel gain (voltage divider)
+#define ADC_VB_GAIN         0.0316f // Vb channel gain (voltage divider)
 #define ADC_VA_OFFSET       0.0f // Va channel offset
 #define ADC_VB_OFFSET       0.0f // Vb channel offset
-#define ADC_IBATT_SHUNT     0.013f // Battery current channel gain (shunt resistor)
-#define ADC_IBATT_OFFSET    0.0f // Battery current channel offset
+#define ADC_IBATT_SHUNT     0.0028f // Battery current channel gain (shunt resistor)
+#define ADC_IBATT_OFFSET    0.004f // Battery current channel offset
 #define ADC_VBATT_GAIN      0.130435f // Battery voltage channel gain (voltage divider)
 #define ADC_VBATT_OFFSET    0.0f // Battery voltage channel offset
 
@@ -29,14 +29,21 @@
 
 #define MOTOR_POLE_PAIRS            4U
 
-#define MOTOR_ROTATION_DIRECTION    1 // 1 for clockwise, -1 for counterclockwise
+#define MOTOR_ROTATION_DIRECTION    1 // 1 for anticlockwise, -1 for clockwise
 
 #define SIXSTEP_DUTYCYCLE           1.0f // Range 1.0 to 0.5
 
 #define VVVF_RAMP_UP_SPEED          60U // 60 RPM/s
-#define VVVF_THRESHOLD_RPM          1800U // Minimum RPM to maintain after ramp-up
+#define VVVF_MAX_RPM                3000U // Max RPM for VVVF mod
+#define VVVF_THRESHOLD_RPM          1500U // Minimum RPM to maintain after ramp-up
+
+#define FOC_ALLOWED                 true // Allow FOC mode in the system (set to false to disable FOC-related code and save flash/RAM)
+#define FOC_INITIAL_RPM             1500U // Target RPM for FOC mode (used when FOC is enabled and selected)
+#define FOC_OVERSAMPLING_SIZE       16U // Number of samples to average for oversampling (must be a power of 2 for efficient averaging)
 
 #define ENCODER_PPR                 2048U // Pulses per revolution for the encoder
+#define ENCODER_MT_THRESHOLD        500U // Threshold in RPM for switching between M and T methods
+#define ENCODER_ONEPULSE_THRESHOLD  1000U // Threshold in RPM for using one pulse counting
 #define ENCODER_STALL_THRESHOLD     10U // Threshold for detecting stall
 
 #define USTIMER_ENCODER_PULSE_ID  0U // Identifier for encoder pulse timing in the microsecond timer
@@ -45,6 +52,7 @@
 
 
 enum class MotorControlMode : uint8_t {
+    MOTOR_PROTECTION,
     MOTOR_STOP,
     MOTOR_MANUAL,
     MOTOR_STARTUP,
@@ -60,14 +68,24 @@ typedef struct {
     volatile uint16_t tail;
 } ring_buffer_t;
 
-typedef struct {
-    bool    is_vvvf_running;
-    bool    is_vvvf_ramp_up;
-    bool    is_sixstep_running;
-    bool    is_foc_running;
-    bool    is_audible;
-    uint8_t led_increment_counter;
-} SystemStatus_t;
+enum SystemFlag : uint32_t {
+    FLAG_VVVF_RUNNING       = 1 << 0,
+    FLAG_VVVF_RAMP_UP       = 1 << 1,
+    FLAG_AUDIBLE            = 1 << 2,
+    FLAG_SIXSTEP_RUNNING    = 1 << 3,
+    FLAG_FOC_RUNNING        = 1 << 4,
+    FLAG_FOC_ALLOWED        = 1 << 5
+};
+
+enum ErrorFlag : uint32_t {
+    ERROR_PWM_CONFIG        = 1 << 0,
+    ERROR_ADC_CONFIG        = 1 << 1,
+    ERROR_DMA_CONFIG        = 1 << 2,
+    ERROR_TIM_CONFIG        = 1 << 3,
+    ERROR_ENCODER_CONFIG    = 1 << 4,
+    ERROR_FOC_CONFIG        = 1 << 5,
+    ERROR_OVERCURRENT       = 1 << 6
+};
 
 typedef struct {
     float ia_shunt;
@@ -120,17 +138,6 @@ enum class PrintFormat : uint8_t {
     PRINT_UTF8,
     PRINT_BINARY
 };
-
-#pragma pack(1)
-typedef struct {
-    uint16_t ia;
-    uint16_t ib;
-    uint16_t ic;
-    float speed;
-    uint16_t pos;
-} LogData_t;
-#pragma pack()
-
 
 /*
 Timer allocation

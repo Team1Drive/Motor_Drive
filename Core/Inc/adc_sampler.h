@@ -8,7 +8,7 @@ class ADCSampler {
     private:
         ADC_HandleTypeDef* hadc_;
         DMA_HandleTypeDef* hdma_;
-        uint16_t* buffer_;
+        volatile uint16_t* buffer_;
         uint32_t length_;
         uint32_t half_len_;
         uint32_t num_channels_;
@@ -18,6 +18,7 @@ class ADCSampler {
         uint16_t* proc_buffer_;
         uint32_t  proc_len_;
         bool      use_proc_buffer_;
+        bool      data_ready_;
 
         /**
          * Helper function to determine the instance index based on the ADC handle. This is used to route the correct ADC handle to the corresponding ADCSampler instance in the static callback functions.
@@ -39,7 +40,7 @@ class ADCSampler {
         volatile bool half_ready_;
         volatile bool full_ready_;
 
-        ADCSampler(ADC_HandleTypeDef* hadc, DMA_HandleTypeDef* hdma, uint16_t* buffer, uint32_t length);
+        ADCSampler(ADC_HandleTypeDef* hadc, DMA_HandleTypeDef* hdma, volatile uint16_t* buffer, uint32_t length);
 
         /**
          * Static callback function to be called from the ADC conversion complete interrupt handler. This function identifies which ADC instance triggered the interrupt and calls the corresponding instance's processBuffer method to handle the new data.
@@ -77,5 +78,9 @@ class ADCSampler {
          * Get the latest ADC data for each channel. This function should be called after the half_ready_ or full_ready_ flag is set to true, indicating that new data is available. The channel_data array should have enough space to hold the number of channels configured in the ADC. The function copies the latest ADC values for each channel into the provided array.
          * @param channel_data Pointer to an array where the latest ADC values for each channel will be copied. The caller is responsible for ensuring that this array has enough space to hold the number of channels configured in the ADC.
          */
-        void getLatestData(uint16_t* channel_data);
+        void getLatestData(uint16_t* data_ptr);
+
+        uint16_t getLatestChannel(uint8_t channel);
+
+        void getLatestChannel(uint8_t channel, uint16_t* data_ptr, uint32_t length);
 };
