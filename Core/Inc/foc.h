@@ -88,7 +88,7 @@
 #define FOC_SPEED_DIV       20U
 
 /** Speed ramp rate (mechanical rad/s²). From MATLAB: 5000 RPM/s */
-#define FOC_RAMP_RATE       (5000.0f * 2.0f * M_PI / 60.0f)
+#define FOC_RAMP_RATE       (1000.0f * 2.0f * M_PI / 60.0f)
 
 /* =========================================================================
  * PI GAINS
@@ -163,7 +163,7 @@ typedef struct {
     float omega_ref;    /* ramped speed reference (mechanical rad/s)     */
     float Id_ref;       /* d-axis current reference (A)                  */
     float Iq_ref;       /* q-axis current reference (A)                  */
-
+-
     /* --- Observables — written each tick, read by main loop / telemetry --- */
     volatile float Id;
     volatile float Iq;
