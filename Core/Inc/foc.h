@@ -103,7 +103,7 @@
 #define FOC_KI_I            50.0f
 
 /** Current PI integrator clamp (V). Symmetric ±clamp. */
-#define FOC_INT_I_CLAMP     0.1f
+#define FOC_INT_I_CLAMP     6.0f
 
 /** Speed PI proportional gain. Start: 0.05, MATLAB ref: 0.15 */
 #define FOC_KP_SP           0.05f
