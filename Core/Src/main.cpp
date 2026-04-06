@@ -31,6 +31,7 @@ void printTelemetryBinary(void);
 void speedControl(void);
 
 void startUpSequence(void);
+void alignRotor(void);
 void vvvfRampUp(void);
 void sixStepCommutation(void);
 
@@ -305,6 +306,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
     }
     else if (control_mode == MotorControlMode::MOTOR_VVVF) {
       vvvfRampUp();
+    }
+    else if (control_mode == MotorControlMode::MOTOR_ALIGN) {
+      alignRotor();
     }
   }
   else if (htim->Instance == TIM6) {
@@ -737,6 +741,54 @@ void speedControl(void) {
   uint32_t rpm = encoder.getRPM();
 }
 
+void alignRotor(void) {
+  if (control_mode != MotorControlMode::MOTOR_ALIGN) return;
+
+  static uint16_t pos_buffer[MOTOR_ALIGNMENT_POS_WINDOW] = {0};
+  static uint8_t buffer_idx = 0;
+
+  if ((system_flag & FLAG_ROTOR_ALIGNING) == 0) {
+    uint16_t vdc_sample[FOC_OVERSAMPLING_SIZE];
+    adc1.getLatestChannel(2, vdc_sample, FOC_OVERSAMPLING_SIZE);
+    float Vdc = adcToVoltage(fastAverage(vdc_sample, FOC_OVERSAMPLING_SIZE), 3.3f, 65536,
+                             adc_gain.vbatt_gain, adc_gain.vbatt_offset);
+
+    float dutyA, dutyB, dutyC;
+    foc_align_zero(&foc_state, MOTOR_ALIGNMENT_VOLTAGE, Vdc, &dutyA, &dutyB, &dutyC);
+    motorPWM.setDuty(dutyA, dutyB, dutyC);
+
+    system_flag |= FLAG_ROTOR_ALIGNING;
+  }
+
+  pos_buffer[buffer_idx] = encoder.getPos();
+  
+  uint16_t min_pos = pos_buffer[0], max_pos = pos_buffer[0];
+  for (uint8_t i = 1; i < MOTOR_ALIGNMENT_POS_WINDOW; i++) {
+    uint16_t p = pos_buffer[i];
+      if (p < min_pos) min_pos = p;
+      if (p > max_pos) max_pos = p;
+    }
+  uint16_t pos_delta = max_pos - min_pos;
+
+  if (pos_delta < MOTOR_ALIGNMENT_THRESHOLD) {
+    uint16_t aligned_pos = pos_buffer[buffer_idx];
+    const uint16_t elec_pos_range = ENCODER_PPR * 4U / MOTOR_POLE_PAIRS;
+    while (aligned_pos >= elec_pos_range) {
+      aligned_pos -= elec_pos_range;
+    }
+    foc_state.elec_zero_encoder_pos = aligned_pos;
+
+    control_mode = MotorControlMode::MOTOR_STOP;
+    system_flag &= ~FLAG_ROTOR_ALIGNING;
+    system_flag |= FLAG_ELEC_ZERO_ALIGNED;
+
+    return;
+  }
+
+  buffer_idx++;
+  if (buffer_idx >= MOTOR_ALIGNMENT_POS_WINDOW) buffer_idx = 0;
+}
+
 /**
  * @brief Simple startup sequence — resets FOC state and goes directly into
  *        FOC_LINEAR mode at the configured initial RPM target.
@@ -751,7 +803,6 @@ void startUpSequence(void) {
   if (control_mode != MotorControlMode::MOTOR_STARTUP) return;
 
   foc_reset(&foc_state);
-  foc_state.target_rpm = FOC_INITIAL_RPM;
 
   system_flag &= ~FLAG_VVVF_RUNNING;
   system_flag &= ~FLAG_SIXSTEP_RUNNING;
@@ -857,6 +908,7 @@ void vvvfRampUp(void) {
   if (FOC_ALLOWED && encoder.is_synchronized_ && rpm >= VVVF_THRESHOLD_RPM >> 1) {
     system_flag &= ~FLAG_VVVF_RUNNING;
     system_flag |= FLAG_FOC_RUNNING;
+    foc_state.target_rpm = FOC_INITIAL_RPM;
     control_mode = MotorControlMode::MOTOR_FOC_LINEAR;
     CDC_Transmit_HS((uint8_t*)"Entering FOC mode\r\n", 19);
   }

@@ -164,6 +164,9 @@ typedef struct {
     float Id_ref;       /* d-axis current reference (A)                  */
     float Iq_ref;       /* q-axis current reference (A)                  */
 
+    /* --- Alignment state --- */
+    uint16_t elec_zero_encoder_pos; /* Encoder position at which electrical angle is zero (set during alignment) */
+
     /* --- Observables — written each tick, read by main loop / telemetry --- */
     volatile float Id;
     volatile float Iq;
@@ -222,3 +225,9 @@ void foc_run(FOC_State_t* foc,
  *        Call on MOTOR_STOP or when re-arming after a fault.
  */
 void foc_reset(FOC_State_t* foc);
+
+/**
+ * @brief Apply a voltage vector along the d-axis to align the encoder zero.
+ *        Call before enabling FOC to ensure correct angle tracking.
+ */
+void foc_align_zero(FOC_State_t* foc, float Vmag, float Vdc, float* dutyA, float* dutyB, float* dutyC);

@@ -31,6 +31,10 @@
 
 #define MOTOR_ROTATION_DIRECTION    1 // 1 for anticlockwise, -1 for clockwise
 
+#define MOTOR_ALIGNMENT_POS_WINDOW  16 // Counts of the encoder position within which alignment is considered successful (tuned experimentally)
+#define MOTOR_ALIGNMENT_THRESHOLD   2 // Encoder position delta window for successful alignment
+#define MOTOR_ALIGNMENT_VOLTAGE     5 // Volts to apply during encoder alignment
+
 #define SIXSTEP_DUTYCYCLE           1.0f // Range 1.0 to 0.5
 
 #define VVVF_RAMP_UP_SPEED          60U // 60 RPM/s
@@ -55,6 +59,7 @@ enum class MotorControlMode : uint8_t {
     MOTOR_PROTECTION,
     MOTOR_STOP,
     MOTOR_MANUAL,
+    MOTOR_ALIGN,
     MOTOR_STARTUP,
     MOTOR_VVVF,
     MOTOR_SIX_STEP,
@@ -74,7 +79,9 @@ enum SystemFlag : uint32_t {
     FLAG_AUDIBLE            = 1 << 2,
     FLAG_SIXSTEP_RUNNING    = 1 << 3,
     FLAG_FOC_RUNNING        = 1 << 4,
-    FLAG_FOC_ALLOWED        = 1 << 5
+    FLAG_FOC_ALLOWED        = 1 << 5,
+    FLAG_ROTOR_ALIGNING     = 1 << 6,
+    FLAG_ELEC_ZERO_ALIGNED  = 1 << 7
 };
 
 enum ErrorFlag : uint32_t {

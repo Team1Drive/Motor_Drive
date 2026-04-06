@@ -259,3 +259,14 @@ void foc_run(FOC_State_t* foc,
              FOC_TS,
              dutyA, dutyB, dutyC);
 }
+
+void foc_align_zero(FOC_State_t* foc, float Vmag, float Vdc, float* dutyA, float* dutyB, float* dutyC)
+{
+    /* Apply voltage vector along alpha axis (d-axis) to align encoder zero.
+     * Use SVPWM_COMP for accurate timing at high speed. */
+    Modulate(ModulationType::SVPWM,
+             Vmag, 0.0f,
+             Vdc,
+             FOC_TS,
+             dutyA, dutyB, dutyC);
+}
