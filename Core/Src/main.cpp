@@ -32,6 +32,7 @@ void printTelemetryBinary(void);
 void speedControl(void);
 
 void startUpSequence(void);
+void alignRotor(void);
 void vvvfRampUp(void);
 void sixStepCommutation(void);
 
@@ -301,6 +302,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
     else if (control_mode == MotorControlMode::MOTOR_VVVF) {
       vvvfRampUp();
     }
+    else if (control_mode == MotorControlMode::MOTOR_ALIGN) {
+      alignRotor();
+    }
   }
   else if (htim->Instance == TIM6) {
     // 1 kHz control loop interrupt
@@ -373,6 +377,18 @@ void timer3IRQ(void) {
       led_yellow_1.write(1);
       led_yellow_2.write(1);
       break;
+    case MotorControlMode::MOTOR_ALIGN:
+       if ((led_increment_counter & 0b010) == 0) {
+        led_green.write(1);
+        led_yellow_1.write(0);
+        led_yellow_2.write(0);
+      }
+      else {
+        led_green.write(0);
+        if (led_increment_counter & 0b001) {led_yellow_1.write(0); led_yellow_2.write(1);}
+        else {led_yellow_1.write(1); led_yellow_2.write(0);}
+      }
+      break;
     case MotorControlMode::MOTOR_VVVF:
       if (led_increment_counter >> 1 & 1) {
         led_green.write(1);
@@ -405,17 +421,20 @@ void timer3IRQ(void) {
         led_yellow_1.write(0);
       }
       break;
+    case MotorControlMode::MOTOR_PROTECTION:
+        led_green.write(0);
+        led_yellow_1.write(0);
+        led_yellow_2.write(0);
+        if (error_flag & ERROR_OVERCURRENT) {
+          led_red.toggle();
+        }
+       break;
     default:
       break;
   }
 
-  if (error_flag & ERROR_OVERCURRENT) {
-    if (led_increment_counter & 1) {
-      led_red.write(1);
-    }
-    else {
-      led_red.write(0);
-    }
+  if ((error_flag & ERROR_OVERCURRENT) == 0) {
+    led_red.write(0);
   }
   
   if (led_increment_counter++ >= 7) {
@@ -714,15 +733,80 @@ void speedControl(void) {
   uint32_t rpm = encoder.getRPM();
 }
 
+void alignRotor(void) {
+  if (control_mode != MotorControlMode::MOTOR_ALIGN) return;
+
+  static uint16_t p_pos = 0;
+  static uint16_t settlement_counter = 0;
+
+  if ((system_flag & FLAG_ROTOR_ALIGNING) == 0) {
+    uint16_t vdc_sample[FOC_OVERSAMPLING_SIZE];
+    adc1.getLatestChannel(2, vdc_sample, FOC_OVERSAMPLING_SIZE);
+    float Vdc = adcToVoltage(fastAverage(vdc_sample, FOC_OVERSAMPLING_SIZE), 3.3f, 65536,
+                             adc_gain.vbatt_gain, adc_gain.vbatt_offset);
+
+    float dutyA, dutyB, dutyC;
+    foc_state.ts = 1.0f / (float)motorPWM.getFrequency();
+    foc_align_zero(&foc_state, MOTOR_ALIGNMENT_VOLTAGE, Vdc, &dutyA, &dutyB, &dutyC);
+    motorPWM.setDuty(dutyA, dutyB, dutyC);
+
+    system_flag |= FLAG_ROTOR_ALIGNING;
+  }
+
+  uint16_t pos = encoder.getPosBypass();
+  
+  int16_t delta_pos = (int16_t)(pos - p_pos);
+  p_pos = pos;
+  if (abs(delta_pos) <= MOTOR_ALIGNMENT_THRESHOLD) {
+    settlement_counter++;
+  }
+  else {
+    settlement_counter = 0;
+  }
+
+  //char buffer[64];
+  //snprintf(buffer, sizeof(buffer), "Aligning... Pos: %u, Delta: %d, Counter: %d\n", pos, delta_pos, settlement_counter);
+  //CDC_Transmit_HS((uint8_t*)buffer, strlen(buffer));
+
+  if (settlement_counter > MOTOR_ALIGNMENT_POS_WINDOW) {
+    encoder.elecZeroAlign();
+
+    control_mode = MotorControlMode::MOTOR_STOP;
+    motorPWM.stop();
+    relay.write(0);
+    system_flag &= ~FLAG_ROTOR_ALIGNING;
+    system_flag |= FLAG_ELEC_ZERO_ALIGNED;
+
+    CDC_Transmit_HS((uint8_t*)"Electrical Zero Angle Aligned\n", 33);
+  }
+}
+
 /**
- * @brief The starting sequency to be called at every zero speed start.
+ * @brief Simple startup sequence — resets FOC state and goes directly into
+ *        FOC_LINEAR mode at the configured initial RPM target.
+ *
+ * VVVF ramp-up has been removed. The motor starts under closed-loop FOC
+ * from rest. Ensure the encoder is homed / synchronised before calling.
+ *
+ * @note The original VVVF ramp-up is preserved in vvvfRampUp() below but is
+ *       no longer called from here.
  */
 void startUpSequence(void) {
   if (control_mode != MotorControlMode::MOTOR_STARTUP) return;
+
+  if ((system_flag & FLAG_ELEC_ZERO_ALIGNED) == 0) {
+    control_mode = MotorControlMode::MOTOR_ALIGN;
+    alignRotor();
+    return;
+  }
+
+  foc_reset(&foc_state);
   hallsensor.read();
-  motorPWM.setDuty(1.0f, 0.0f, -1.0f);
   system_flag |= FLAG_VVVF_RAMP_UP;
   control_mode = MotorControlMode::MOTOR_VVVF;
+  vvvfRampUp();
+
+  //usb_printf("Startup: FOC enabled, target=%u RPM\r\n", (unsigned)FOC_INITIAL_RPM);
 }
 
 /**
@@ -819,6 +903,7 @@ void vvvfRampUp(void) {
   if (FOC_ALLOWED && encoder.is_synchronized_ && rpm >= VVVF_THRESHOLD_RPM >> 1) {
     system_flag &= ~FLAG_VVVF_RUNNING;
     system_flag |= FLAG_FOC_RUNNING;
+    foc_state.target_rpm = FOC_INITIAL_RPM;
     control_mode = MotorControlMode::MOTOR_FOC_LINEAR;
     CDC_Transmit_HS((uint8_t*)"Entering FOC mode\r\n", 19);
   }
@@ -970,6 +1055,7 @@ void cmd_stop(int argc, char** argv) {
         CDC_Transmit_HS((uint8_t*)"VVVF ramping down\r\n", 21);
     } else {
         control_mode = MotorControlMode::MOTOR_STOP;
+        system_flag &= ~FLAG_ROTOR_ALIGNING;
         system_flag &= ~FLAG_VVVF_RUNNING;
         system_flag &= ~FLAG_SIXSTEP_RUNNING;
         system_flag &= ~FLAG_FOC_RUNNING;
@@ -989,6 +1075,7 @@ void cmd_reset(int argc, char** argv) {
     system_flag &= ~FLAG_VVVF_RUNNING;
     system_flag &= ~FLAG_SIXSTEP_RUNNING;
     system_flag &= ~FLAG_FOC_RUNNING;
+    error_flag &= ~ERROR_OVERCURRENT;
     motorPWM.stop();
     led_red.write(0);
     foc_reset(&foc_state);
@@ -1483,11 +1570,11 @@ static void foc_isr_tick(void)
      *       channels — the op-amp gain of 50 is already embedded in the
      *       shunt value (effective sensitivity = 50 × shunt V/A).
      */
-    float Ia = adcToCurrent(adc1_raw[0], 3.3f, 65536, 1.0f,
+    float Ia = adcToCurrent(adc1_raw[0], 3.3f, 65536, 50.0f,
                             1.65f + adc_gain.ia_offset, adc_gain.ia_shunt);
-    float Ib = adcToCurrent(adc2_raw[0], 3.3f, 65536, 1.0f,
+    float Ib = adcToCurrent(adc2_raw[0], 3.3f, 65536, 50.0f,
                             1.65f + adc_gain.ib_offset, adc_gain.ib_shunt);
-    float Ic = adcToCurrent(adc3_raw[0], 3.3f,  4096, 1.0f,
+    float Ic = adcToCurrent(adc3_raw[0], 3.3f,  4096, 50.0f,
                             1.65f + adc_gain.ic_offset, adc_gain.ic_shunt);
 
     /* DC bus voltage */
@@ -1505,9 +1592,10 @@ static void foc_isr_tick(void)
      *    theta_e = theta_mech × pole_pairs, wrapped to [0, 2π)
      *    omega_m = mechanical angular velocity (rad/s)
      * --------------------------------------------------------------------- */
-    float theta_mech = encoder.getPos_rad();
-    float theta_e    = fmodf(theta_mech * (float)MOTOR_POLE_PAIRS, 2.0f * M_PI);
-    if (theta_e < 0.0f) theta_e += 2.0f * M_PI;
+    //float theta_mech = encoder.getPos_rad();
+    //float theta_e    = fmodf(theta_mech * (float)MOTOR_POLE_PAIRS, 2.0f * M_PI);
+    //if (theta_e < 0.0f) theta_e += 2.0f * M_PI;
+    float theta_e    = encoder.getElecPos_rad();
 
     float omega_m = encoder.getRPM() * (2.0f * M_PI / 60.0f);
 
@@ -1515,6 +1603,7 @@ static void foc_isr_tick(void)
      * 3. Run one FOC tick
      * --------------------------------------------------------------------- */
     float dutyA, dutyB, dutyC;
+    foc_state.ts = 1.0f / (float)motorPWM.getFrequency();  // Update FOC state with actual PWM period
     foc_run(&foc_state,
             Ia, Ib, Ic,
             Vdc,

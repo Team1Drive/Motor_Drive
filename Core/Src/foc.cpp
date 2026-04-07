@@ -40,11 +40,11 @@ void foc_init(FOC_State_t* foc)
     foc->pi_speed.integrator = 0.0f;
     foc->pi_speed.clamp      = FOC_IMAX;
 
-    /* Field-weakening PI. Output range [FOC_ID_FW_MIN, 0]. */
-    foc->pi_fw.kp         = FOC_KP_FW;
-    foc->pi_fw.ki         = FOC_KI_FW;
+    /* Field-weakening PI — DISABLED (pi_fw zeroed but not used) */
+    foc->pi_fw.kp         = 0.0f;
+    foc->pi_fw.ki         = 0.0f;
     foc->pi_fw.integrator = 0.0f;
-    foc->pi_fw.clamp      = -FOC_ID_FW_MIN;   /* positive magnitude for ± clamp */
+    foc->pi_fw.clamp      = 0.0f;
 
     /* Setpoints */
     foc->target_rpm  = 0.0f;
@@ -109,6 +109,8 @@ void foc_run(FOC_State_t* foc,
     foc->omega_e = omega_e;
     foc->rpm     = rpm_meas;
 
+    
+
     /* ------------------------------------------------------------------
      * 1. Overcurrent protection
      *    Compare against Imax². All three phases checked.
@@ -157,7 +159,7 @@ void foc_run(FOC_State_t* foc,
     foc->omega_ref += delta;
 
     /* ------------------------------------------------------------------
-     * 5. Speed PI (outer, decimated to FOC_SPEED_DIV ticks = 1 kHz)
+     * 5. Speed PI (outer, FOC_SPEED_DIV ticks = 1 kHz)
      *
      *   err_sp  = omega_ref − omega_m    (mechanical rad/s)
      *   Iq_ref  = Kp_sp · err_sp + Ki_sp · ∫err_sp
@@ -173,31 +175,25 @@ void foc_run(FOC_State_t* foc,
     }
 
     /* ------------------------------------------------------------------
-     * 6. Field-weakening PI
+     * 6. Field-weakening PI — DISABLED
+     *    Id_ref is held at zero (no field weakening).
      *
-     * When |u| > Vdc/√3 the motor is voltage-limited.
-     * FW PI generates a negative Id to reduce the effective back-EMF.
+     * Original field-weakening logic commented out below for reference:
      *
-     *   U_max_fw  = Vdc / √3
-     *   fw_error  = (U_max_fw − |u_prev|) / ωe
-     *   id_fw     ∈ [FOC_ID_FW_MIN, 0]
-     *
-     * Only active above ωe > 10 rad/s to avoid divide-by-zero at standstill.
+     * const float U_max_fw   = Vdc / 1.73205f;
+     * const float u_mag_prev = foc->u_mag;
+     * if (omega_e > 10.0f) {
+     *     float fw_error = (U_max_fw - u_mag_prev) / omega_e;
+     *     float id_fw    = PI_update(&foc->pi_fw, fw_error, FOC_TS);
+     *     if (id_fw >  0.0f)          id_fw = 0.0f;
+     *     if (id_fw <  FOC_ID_FW_MIN) id_fw = FOC_ID_FW_MIN;
+     *     foc->Id_ref = id_fw;
+     * } else {
+     *     foc->Id_ref = 0.0f;
+     *     PI_reset(&foc->pi_fw);
+     * }
      * ------------------------------------------------------------------ */
-    const float U_max_fw   = Vdc / 1.73205f;   /* Vdc / √3 */
-    const float u_mag_prev = foc->u_mag;
-
-    if (omega_e > 10.0f) {
-        float fw_error = (U_max_fw - u_mag_prev) / omega_e;
-        float id_fw    = PI_update(&foc->pi_fw, fw_error, FOC_TS);
-        /* Clamp to [FOC_ID_FW_MIN, 0] — field weakening only, never boosting */
-        if (id_fw >  0.0f)          id_fw = 0.0f;
-        if (id_fw <  FOC_ID_FW_MIN) id_fw = FOC_ID_FW_MIN;
-        foc->Id_ref = id_fw;
-    } else {
-        foc->Id_ref = 0.0f;
-        PI_reset(&foc->pi_fw);
-    }
+    foc->Id_ref = 0.0f;   /* Id = 0: maximum torque per amp, no flux weakening */
 
     /* ------------------------------------------------------------------
      * 7. Current magnitude limit on Iq_ref
@@ -257,9 +253,19 @@ void foc_run(FOC_State_t* foc,
      *     Matches 'svpwm_comp' mode in the MATLAB reference.
      *     Ts passed for compensated timing calculation.
      * ------------------------------------------------------------------ */
-    Modulate(ModulationType::SVPWM_COMP,
+    Modulate(ModulationType::SVPWM,
              V_alpha, V_beta,
              Vdc,
-             FOC_TS,
+             foc->ts,
+             dutyA, dutyB, dutyC);
+}
+
+void foc_align_zero(FOC_State_t* foc, float Vmag, float Vdc, float* dutyA, float* dutyB, float* dutyC)
+{
+    /* Apply voltage vector along alpha axis (d-axis) to align encoder zero. */
+    Modulate(ModulationType::SVPWM,
+             Vmag, 0.0f,
+             Vdc,
+             foc->ts,
              dutyA, dutyB, dutyC);
 }
