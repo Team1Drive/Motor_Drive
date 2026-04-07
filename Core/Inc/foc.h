@@ -68,7 +68,7 @@
  * ========================================================================= */
 
 /** Peak phase current limit (A). Fault trips if any phase exceeds this. */
-#define FOC_IMAX            3.5f
+#define FOC_IMAX            4.0f
 
 /** Most negative Id allowed during field weakening (A). */
 #define FOC_ID_FW_MIN      -3.5f

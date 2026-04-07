@@ -421,17 +421,20 @@ void timer3IRQ(void) {
         led_yellow_1.write(0);
       }
       break;
+    case MotorControlMode::MOTOR_PROTECTION:
+        led_green.write(0);
+        led_yellow_1.write(0);
+        led_yellow_2.write(0);
+        if (error_flag & ERROR_OVERCURRENT) {
+          led_red.toggle();
+        }
+       break;
     default:
       break;
   }
 
-  if (error_flag & ERROR_OVERCURRENT) {
-    if (led_increment_counter & 1) {
-      led_red.write(1);
-    }
-    else {
-      led_red.write(0);
-    }
+  if ((error_flag & ERROR_OVERCURRENT) == 0) {
+    led_red.write(0);
   }
   
   if (led_increment_counter++ >= 7) {
@@ -1072,6 +1075,7 @@ void cmd_reset(int argc, char** argv) {
     system_flag &= ~FLAG_VVVF_RUNNING;
     system_flag &= ~FLAG_SIXSTEP_RUNNING;
     system_flag &= ~FLAG_FOC_RUNNING;
+    error_flag &= ~ERROR_OVERCURRENT;
     motorPWM.stop();
     led_red.write(0);
     foc_reset(&foc_state);
@@ -1566,11 +1570,11 @@ static void foc_isr_tick(void)
      *       channels — the op-amp gain of 50 is already embedded in the
      *       shunt value (effective sensitivity = 50 × shunt V/A).
      */
-    float Ia = adcToCurrent(adc1_raw[0], 3.3f, 65536, 1.0f,
+    float Ia = adcToCurrent(adc1_raw[0], 3.3f, 65536, 50.0f,
                             1.65f + adc_gain.ia_offset, adc_gain.ia_shunt);
-    float Ib = adcToCurrent(adc2_raw[0], 3.3f, 65536, 1.0f,
+    float Ib = adcToCurrent(adc2_raw[0], 3.3f, 65536, 50.0f,
                             1.65f + adc_gain.ib_offset, adc_gain.ib_shunt);
-    float Ic = adcToCurrent(adc3_raw[0], 3.3f,  4096, 1.0f,
+    float Ic = adcToCurrent(adc3_raw[0], 3.3f,  4096, 50.0f,
                             1.65f + adc_gain.ic_offset, adc_gain.ic_shunt);
 
     /* DC bus voltage */

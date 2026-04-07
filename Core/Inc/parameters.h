@@ -7,9 +7,9 @@
 #define ADC2_NUM_CHANNELS   2U
 #define ADC3_NUM_CHANNELS   2U
 
-#define ADC_IA_SHUNT        0.0062f // Ia channel gain (shunt resistor)
-#define ADC_IB_SHUNT        0.004f // Ib channel gain (shunt resistor)
-#define ADC_IC_SHUNT        0.0033f // Ic channel gain (shunt resistor)
+#define ADC_IA_SHUNT        0.00368f // Ia channel gain (shunt resistor)
+#define ADC_IB_SHUNT        0.00214f // Ib channel gain (shunt resistor)
+#define ADC_IC_SHUNT        0.00181f // Ic channel gain (shunt resistor)
 #define ADC_IA_OFFSET       0.006f // Ia channel offset
 #define ADC_IB_OFFSET       0.006f // Ib channel offset
 #define ADC_IC_OFFSET       0.005f // Ic channel offset
@@ -132,7 +132,10 @@ enum PrintData : uint32_t {
     PRINT_VB_RAW    = 1 << 18,
     PRINT_VBATT_RAW = 1 << 19,
     PRINT_IBATT_RAW = 1 << 20,
-    PRINT_COUNT     = 1 << 21
+    PRINT_IA_MAX    = 1 << 21,
+    PRINT_IB_MAX    = 1 << 22,
+    PRINT_IC_MAX    = 1 << 23,
+    PRINT_COUNT     = 1 << 24
 };
 
 enum class PrintFormat : uint8_t {
