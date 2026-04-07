@@ -130,6 +130,11 @@ uint16_t Encoder::getPos(void) const {
     return (uint16_t)(current_hw_cnt - index_offset_) & (counts_per_rev_ - 1);
 }
 
+uint16_t Encoder::getPosBypass(void) const {
+    uint16_t current_hw_cnt = (uint16_t)htim_->Instance->CNT;
+    return (uint16_t)(current_hw_cnt - index_offset_) & (counts_per_rev_ - 1);
+}
+
 uint16_t Encoder::getElecPos(void) const {
     if (!is_synchronized_ || !is_zeroed_) return 0;
     uint16_t current_hw_cnt = (uint16_t)htim_->Instance->CNT;

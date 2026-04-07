@@ -28,8 +28,8 @@
 
 #define MOTOR_ROTATION_DIRECTION    1 // 1 for anticlockwise, -1 for clockwise
 
-#define MOTOR_ALIGNMENT_POS_WINDOW  16 // Counts of the encoder position within which alignment is considered successful (tuned experimentally)
-#define MOTOR_ALIGNMENT_THRESHOLD   2 // Encoder position delta window for successful alignment
+#define MOTOR_ALIGNMENT_POS_WINDOW  2048 // Counts of the encoder position within which alignment is considered successful (tuned experimentally)
+#define MOTOR_ALIGNMENT_THRESHOLD   1 // Encoder position delta window for successful alignment
 #define MOTOR_ALIGNMENT_VOLTAGE     5 // Volts to apply during encoder alignment
 
 #define SIXSTEP_DUTYCYCLE           1.0f // Range 1.0 to 0.5

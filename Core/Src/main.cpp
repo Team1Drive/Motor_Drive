@@ -377,6 +377,18 @@ void timer3IRQ(void) {
       led_yellow_1.write(1);
       led_yellow_2.write(1);
       break;
+    case MotorControlMode::MOTOR_ALIGN:
+       if ((led_increment_counter & 0b010) == 0) {
+        led_green.write(1);
+        led_yellow_1.write(0);
+        led_yellow_2.write(0);
+      }
+      else {
+        led_green.write(0);
+        if (led_increment_counter & 0b001) {led_yellow_1.write(0); led_yellow_2.write(1);}
+        else {led_yellow_1.write(1); led_yellow_2.write(0);}
+      }
+      break;
     case MotorControlMode::MOTOR_VVVF:
       if (led_increment_counter >> 1 & 1) {
         led_green.write(1);
@@ -722,7 +734,7 @@ void alignRotor(void) {
   if (control_mode != MotorControlMode::MOTOR_ALIGN) return;
 
   static uint16_t p_pos = 0;
-  static uint8_t settlement_counter = 0;
+  static uint16_t settlement_counter = 0;
 
   if ((system_flag & FLAG_ROTOR_ALIGNING) == 0) {
     uint16_t vdc_sample[FOC_OVERSAMPLING_SIZE];
@@ -738,22 +750,31 @@ void alignRotor(void) {
     system_flag |= FLAG_ROTOR_ALIGNING;
   }
 
-  uint16_t pos = encoder.getPos();
+  uint16_t pos = encoder.getPosBypass();
   
   int16_t delta_pos = (int16_t)(pos - p_pos);
-  if (abs(delta_pos) < MOTOR_ALIGNMENT_THRESHOLD) {
+  p_pos = pos;
+  if (abs(delta_pos) <= MOTOR_ALIGNMENT_THRESHOLD) {
     settlement_counter++;
   }
   else {
     settlement_counter = 0;
   }
 
+  //char buffer[64];
+  //snprintf(buffer, sizeof(buffer), "Aligning... Pos: %u, Delta: %d, Counter: %d\n", pos, delta_pos, settlement_counter);
+  //CDC_Transmit_HS((uint8_t*)buffer, strlen(buffer));
+
   if (settlement_counter > MOTOR_ALIGNMENT_POS_WINDOW) {
     encoder.elecZeroAlign();
 
     control_mode = MotorControlMode::MOTOR_STOP;
+    motorPWM.stop();
+    relay.write(0);
     system_flag &= ~FLAG_ROTOR_ALIGNING;
     system_flag |= FLAG_ELEC_ZERO_ALIGNED;
+
+    CDC_Transmit_HS((uint8_t*)"Electrical Zero Angle Aligned\n", 33);
   }
 }
 
@@ -770,8 +791,9 @@ void alignRotor(void) {
 void startUpSequence(void) {
   if (control_mode != MotorControlMode::MOTOR_STARTUP) return;
 
-  if (!encoder.is_zeroed_) {
+  if ((system_flag & FLAG_ELEC_ZERO_ALIGNED) == 0) {
     control_mode = MotorControlMode::MOTOR_ALIGN;
+    alignRotor();
     return;
   }
 
@@ -779,6 +801,7 @@ void startUpSequence(void) {
   hallsensor.read();
   system_flag |= FLAG_VVVF_RAMP_UP;
   control_mode = MotorControlMode::MOTOR_VVVF;
+  vvvfRampUp();
 
   //usb_printf("Startup: FOC enabled, target=%u RPM\r\n", (unsigned)FOC_INITIAL_RPM);
 }
@@ -1029,6 +1052,7 @@ void cmd_stop(int argc, char** argv) {
         CDC_Transmit_HS((uint8_t*)"VVVF ramping down\r\n", 21);
     } else {
         control_mode = MotorControlMode::MOTOR_STOP;
+        system_flag &= ~FLAG_ROTOR_ALIGNING;
         system_flag &= ~FLAG_VVVF_RUNNING;
         system_flag &= ~FLAG_SIXSTEP_RUNNING;
         system_flag &= ~FLAG_FOC_RUNNING;

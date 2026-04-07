@@ -75,6 +75,8 @@ class Encoder {
          */
         uint16_t getPos(void) const;
 
+        uint16_t getPosBypass(void) const;
+
         /**
          * @brief Gets the current electrical angle of the motor in encoder counts.
          * @return The current electrical angle of the motor in encoder counts.
