@@ -18,6 +18,10 @@ extern void cmd_vec(int argc, char** argv);
 extern void cmd_tune(int argc, char** argv);
 extern void cmd_log(int argc, char** argv);
 extern void cmd_audible(int argc, char** argv);
+extern void cmd_sin(int argc, char** argv);
+extern void cmd_cos(int argc, char** argv);
+extern void cmd_arctan(int argc, char** argv);
+extern void cmd_hypot(int argc, char** argv);
 
 static const cmd_entry_t cmd_table[] = {
     { "start",       cmd_start,       1,    1,  "Usage: start\r\n"                              }, // 1 means just the command itself
@@ -31,7 +35,11 @@ static const cmd_entry_t cmd_table[] = {
     { "vec",         cmd_vec,         2,    2,  "Usage: vec <0-5>\r\n"                          },
     { "tune",        cmd_tune,        4,    4,  "Usage: tune <subsys> <param> <value>\r\n"      }, // e.g., "tune speed p 0.1" = 4 tokens
     { "log",         cmd_log,         2,    3,  "Usage: log <add|rm|preset|utf8|bin> [var]\r\n" },
-    { "audible",     cmd_audible,     1,    1,  "Usage: audible\r\n"                            }
+    { "audible",     cmd_audible,     1,    1,  "Usage: audible\r\n"                            },
+    { "sin",         cmd_sin,         2,    2,  "Usage: sin <angle_rad>\r\n"                    },
+    { "cos",         cmd_cos,         2,    2,  "Usage: cos <angle_rad>\r\n"                    },
+    { "arctan",      cmd_arctan,      3,    3,  "Usage: arctan <y> <x>\r\n"                     },
+    { "hypot",       cmd_hypot,       3,    3,  "Usage: hypot <x> <y>\r\n"                      },
 };
 
 const int num_commands = sizeof(cmd_table) / sizeof(cmd_entry_t);
