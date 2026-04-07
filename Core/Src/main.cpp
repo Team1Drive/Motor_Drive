@@ -227,7 +227,7 @@ int main(void)
   adc2.setProcessingBuffer(adc2_proc_buffer, ADC2_BUF_LEN);
   adc3.setProcessingBuffer(adc3_proc_buffer, ADC3_BUF_LEN);
 
-  if (error_flag) led_red.write(0);
+  if (!error_flag) led_red.write(0);
   led_green.write(0);
   led_yellow_1.write(0);
   led_yellow_2.write(0);
@@ -247,12 +247,7 @@ int main(void)
     uint32_t val = HAL_ADC_GetValue(&hadc1);
     usb_printf("Polling Val: %lu\r\n", val); */
     char cmd_line[CMD_MAX_LEN];
-    if (read_line_from_ring(&rx_ring, cmd_line, CMD_MAX_LEN)) {
-      CDC_Transmit_HS((uint8_t*)"Received: ", 10);
-      CDC_Transmit_HS((uint8_t*)cmd_line, strlen(cmd_line));
-      // Debugging print, remove above lines after validation
-      process_command(cmd_line);
-    }
+    if (read_line_from_ring(&rx_ring, cmd_line, CMD_MAX_LEN)) process_command(cmd_line);
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
