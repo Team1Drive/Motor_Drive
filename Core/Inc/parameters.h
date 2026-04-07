@@ -3,16 +3,13 @@
 #define M_PI 3.14159265358979323846264338327950288f
 #define SQRT3 1.73205080756887729352744634150587236f
 
-#define RX_RING_SIZE 256
-#define CMD_MAX_LEN 64
-
 #define ADC1_NUM_CHANNELS   3U
 #define ADC2_NUM_CHANNELS   2U
 #define ADC3_NUM_CHANNELS   2U
 
-#define ADC_IA_SHUNT        0.0062f // Ia channel gain (shunt resistor)
-#define ADC_IB_SHUNT        0.004f // Ib channel gain (shunt resistor)
-#define ADC_IC_SHUNT        0.0033f // Ic channel gain (shunt resistor)
+#define ADC_IA_SHUNT        0.00368f // Ia channel gain (shunt resistor)
+#define ADC_IB_SHUNT        0.00214f // Ib channel gain (shunt resistor)
+#define ADC_IC_SHUNT        0.00181f // Ic channel gain (shunt resistor)
 #define ADC_IA_OFFSET       0.006f // Ia channel offset
 #define ADC_IB_OFFSET       0.006f // Ib channel offset
 #define ADC_IC_OFFSET       0.005f // Ic channel offset
@@ -31,6 +28,10 @@
 
 #define MOTOR_ROTATION_DIRECTION    1 // 1 for anticlockwise, -1 for clockwise
 
+#define MOTOR_ALIGNMENT_POS_WINDOW  2048 // Counts of the encoder position within which alignment is considered successful (tuned experimentally)
+#define MOTOR_ALIGNMENT_THRESHOLD   1 // Encoder position delta window for successful alignment
+#define MOTOR_ALIGNMENT_VOLTAGE     5 // Volts to apply during encoder alignment
+
 #define SIXSTEP_DUTYCYCLE           1.0f // Range 1.0 to 0.5
 
 #define VVVF_RAMP_UP_SPEED          60U // 60 RPM/s
@@ -40,6 +41,9 @@
 #define FOC_ALLOWED                 true // Allow FOC mode in the system (set to false to disable FOC-related code and save flash/RAM)
 #define FOC_INITIAL_RPM             1500U // Target RPM for FOC mode (used when FOC is enabled and selected)
 #define FOC_OVERSAMPLING_SIZE       16U // Number of samples to average for oversampling (must be a power of 2 for efficient averaging)
+
+#define MASTER_MODE                 true // Set master or slave mode in load testing
+#define BATTERY_PROTECTION          false // Set to true when powered with supply without current limit
 
 #define ENCODER_PPR                 2048U // Pulses per revolution for the encoder
 #define ENCODER_MT_THRESHOLD        500U // Threshold in RPM for switching between M and T methods
@@ -55,6 +59,7 @@ enum class MotorControlMode : uint8_t {
     MOTOR_PROTECTION,
     MOTOR_STOP,
     MOTOR_MANUAL,
+    MOTOR_ALIGN,
     MOTOR_STARTUP,
     MOTOR_VVVF,
     MOTOR_SIX_STEP,
@@ -62,19 +67,15 @@ enum class MotorControlMode : uint8_t {
     MOTOR_FOC_DPWM
 };
 
-typedef struct {
-    uint8_t buffer[RX_RING_SIZE];
-    volatile uint16_t head;
-    volatile uint16_t tail;
-} ring_buffer_t;
-
 enum SystemFlag : uint32_t {
     FLAG_VVVF_RUNNING       = 1 << 0,
     FLAG_VVVF_RAMP_UP       = 1 << 1,
     FLAG_AUDIBLE            = 1 << 2,
     FLAG_SIXSTEP_RUNNING    = 1 << 3,
     FLAG_FOC_RUNNING        = 1 << 4,
-    FLAG_FOC_ALLOWED        = 1 << 5
+    FLAG_FOC_ALLOWED        = 1 << 5,
+    FLAG_ROTOR_ALIGNING     = 1 << 6,
+    FLAG_ELEC_ZERO_ALIGNED  = 1 << 7
 };
 
 enum ErrorFlag : uint32_t {
@@ -131,7 +132,10 @@ enum PrintData : uint32_t {
     PRINT_VB_RAW    = 1 << 18,
     PRINT_VBATT_RAW = 1 << 19,
     PRINT_IBATT_RAW = 1 << 20,
-    PRINT_COUNT     = 1 << 21
+    PRINT_IA_MAX    = 1 << 21,
+    PRINT_IB_MAX    = 1 << 22,
+    PRINT_IC_MAX    = 1 << 23,
+    PRINT_COUNT     = 1 << 24
 };
 
 enum class PrintFormat : uint8_t {

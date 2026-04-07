@@ -10,64 +10,26 @@ Encoder::Encoder(TIM_HandleTypeDef* htim, MicrosecondTimer timer, uint16_t index
     indexPin_(index_pin),
     counts_per_rev_(pulses_per_rev * 4),
     speedloop_period(1.0f / (float)speedloop_freq),
+    elec_pos_range_(counts_per_rev_ / MOTOR_POLE_PAIRS),
     stall_threshold_(stall_threshold) {
         instance_ = this;
         init();
     }
 
-//int8_t Encoder::direction_decode(void) {
-//    // ACW
-//    if (
-//        (p_state == 0b00 && state == 0b01) || 
-//        (p_state == 0b01 && state == 0b11) || 
-//        (p_state == 0b11 && state == 0b10) || 
-//        (p_state == 0b10 && state == 0b00)
-//    ) return -1;
-//    // CW
-//    if (
-//        (p_state == 0b00 && state == 0b10) || 
-//        (p_state == 0b10 && state == 0b11) || 
-//        (p_state == 0b11 && state == 0b01) || 
-//        (p_state == 0b01 && state == 0b00)
-//    ) return 1;
-//    return 0;
-//}
-
-//void Encoder::chA_rise(void) {
-//    count++;
-//    p_state = state;
-//    state |= 0b01;
-//    p_pulse_interval = pulse_interval;
-//    pulse_interval = timer_.reset(USTIMER_ENCODER_PULSE_ID);
-//}
-//
-//void Encoder::chA_fall(void) {
-//    count++;
-//    p_state = state;
-//    state &= 0b10;
-//    p_pulse_interval = pulse_interval;
-//    pulse_interval = timer_.reset(USTIMER_ENCODER_PULSE_ID);
-//}
-//
-//void Encoder::chB_rise(void) {
-//    count++;
-//    p_state = state;
-//    state |= 0b10;
-//    p_pulse_interval = pulse_interval;
-//    pulse_interval = timer_.reset(USTIMER_ENCODER_PULSE_ID);
-//}
-//
-//void Encoder::chB_fall(void) {
-//    count++;
-//    p_state = state;
-//    state &= 0b01;
-//    p_pulse_interval = pulse_interval;
-//    pulse_interval = timer_.reset(USTIMER_ENCODER_PULSE_ID);
-//}
-
 void Encoder::index_rise(void) {
     index_offset_ = (uint16_t)htim_->Instance->CNT;
-    is_synchronized_ = true;
+    if (!is_synchronized_) is_synchronized_ = true;
+    if (zero_aligned_ && !is_zeroed_) {
+        elec_zero_offset_ = calcElecOffset(elec_zero_pos_, index_offset_);
+        is_zeroed_ = true;
+    }
+}
+
+uint16_t Encoder::calcElecOffset(uint16_t elec_zero_pos, uint16_t index_offset) {
+    int32_t diff =  (int32_t)elec_zero_pos - (int32_t)index_offset;
+    diff %= elec_pos_range_;
+    if (diff < 0) diff += elec_pos_range_;
+    return (uint16_t)diff;
 }
 
 void Encoder::updateSpeed(void) {
@@ -114,13 +76,24 @@ void Encoder::init(void) {
     overflow_count_ = 0;
     index_offset_ = 0;
     last_hw_cnt_ = 0;
+    zero_aligned_ = false;
     is_synchronized_ = false;
+    is_zeroed_ = false;
     rpm = 0.0f;
     stall_counter_ = 0;
 }
 
 HAL_StatusTypeDef Encoder::start(void) {
     return HAL_TIM_Encoder_Start(htim_, TIM_CHANNEL_ALL);
+}
+
+void Encoder::elecZeroAlign(void) {
+    elec_zero_pos_ = (uint16_t)htim_->Instance->CNT;
+    if (!zero_aligned_) zero_aligned_ = true;
+    if (is_synchronized_ && !is_zeroed_) {
+        elec_zero_offset_ = calcElecOffset(elec_zero_pos_, index_offset_);
+        is_zeroed_ = true;
+    }
 }
 
 void Encoder::irqHandlerIndex(uint16_t pin){
@@ -157,6 +130,20 @@ uint16_t Encoder::getPos(void) const {
     return (uint16_t)(current_hw_cnt - index_offset_) & (counts_per_rev_ - 1);
 }
 
+uint16_t Encoder::getPosBypass(void) const {
+    uint16_t current_hw_cnt = (uint16_t)htim_->Instance->CNT;
+    return (uint16_t)(current_hw_cnt - index_offset_) & (counts_per_rev_ - 1);
+}
+
+uint16_t Encoder::getElecPos(void) const {
+    if (!is_synchronized_ || !is_zeroed_) return 0;
+    uint16_t current_hw_cnt = (uint16_t)htim_->Instance->CNT;
+    int32_t elec_pos = (int32_t)current_hw_cnt - (int32_t)index_offset_ - (int32_t)elec_zero_offset_;
+    elec_pos %= (int32_t)elec_pos_range_;
+    if (elec_pos < 0) elec_pos += (int32_t)elec_pos_range_;
+    return (uint16_t)elec_pos;
+}
+
 int8_t Encoder::getDirection(void) const {
     return __HAL_TIM_IS_TIM_COUNTING_DOWN(htim_) ? -1 : 1;
 }
@@ -166,11 +153,19 @@ float Encoder::getRPM(void) const {
 }
 
 float Encoder::getPos_deg(void) const {
+    if (!is_synchronized_) return 0.0f;
     float position = ((float)(getPos() % counts_per_rev_)) / counts_per_rev_ * 360.0f;
     return position;
 }
 
 float Encoder::getPos_rad(void) const {
+    if (!is_synchronized_) return 0.0f;
     float position = ((float)(getPos() % counts_per_rev_)) / counts_per_rev_ * 2.0f * M_PI;
     return position;
+}
+
+float Encoder::getElecPos_rad(void) const {
+    if (!is_synchronized_ || !is_zeroed_) return 0.0f;
+    float elec_position = ((float)(getElecPos())) / ((float)elec_pos_range_) * 2.0f * M_PI;
+    return elec_position;
 }

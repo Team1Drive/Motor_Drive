@@ -68,7 +68,7 @@
  * ========================================================================= */
 
 /** Peak phase current limit (A). Fault trips if any phase exceeds this. */
-#define FOC_IMAX            3.5f
+#define FOC_IMAX            4.0f
 
 /** Most negative Id allowed during field weakening (A). */
 #define FOC_ID_FW_MIN      -3.5f
@@ -88,7 +88,7 @@
 #define FOC_SPEED_DIV       20U
 
 /** Speed ramp rate (mechanical rad/s²). From MATLAB: 5000 RPM/s */
-#define FOC_RAMP_RATE       (5000.0f * 2.0f * M_PI / 60.0f)
+#define FOC_RAMP_RATE       (1000.0f * 2.0f * M_PI / 60.0f)
 
 /* =========================================================================
  * PI GAINS
@@ -103,7 +103,7 @@
 #define FOC_KI_I            50.0f
 
 /** Current PI integrator clamp (V). Symmetric ±clamp. */
-#define FOC_INT_I_CLAMP     0.1f
+#define FOC_INT_I_CLAMP     6.0f
 
 /** Speed PI proportional gain. Start: 0.05, MATLAB ref: 0.15 */
 #define FOC_KP_SP           0.05f
@@ -164,6 +164,9 @@ typedef struct {
     float Id_ref;       /* d-axis current reference (A)                  */
     float Iq_ref;       /* q-axis current reference (A)                  */
 
+    /* --- System parameters --- */
+    float ts;           /* FOC / PWM period (s). Must match motorPWM.setFrequency() */
+
     /* --- Observables — written each tick, read by main loop / telemetry --- */
     volatile float Id;
     volatile float Iq;
@@ -222,3 +225,9 @@ void foc_run(FOC_State_t* foc,
  *        Call on MOTOR_STOP or when re-arming after a fault.
  */
 void foc_reset(FOC_State_t* foc);
+
+/**
+ * @brief Apply a voltage vector along the d-axis to align the encoder zero.
+ *        Call before enabling FOC to ensure correct angle tracking.
+ */
+void foc_align_zero(FOC_State_t* foc, float Vmag, float Vdc, float* dutyA, float* dutyB, float* dutyC);
