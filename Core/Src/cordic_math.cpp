@@ -44,36 +44,32 @@ void cordic::cordic_set_mode(uint32_t csr_value) {
     }
 }
 
-void cordic::sincos(float angle_rad, float* sin_out, float* cos_out) {
+void cordic::sincos(float angle_q31, float* sin_out, float* cos_out) {
     // Ensure CORDIC is in the correct mode for Cos/Sin calculations
     cordic_set_mode(CSR_COS_SIN);
     // CORDIC expects angles normalized between -1.0 and 1.0 (representing -PI to PI)
     // Send the data to CORDIC
-    CORDIC->WDATA = float_to_q31(wrap_to_pi(angle_rad));
+    CORDIC->WDATA = angle_q31;
 
     // Reading RDATA stalls the Cortex-M7 CPU for ~4-6 clock cycles until done.
     // Reading it pops the values out in the order they completed.
-    int32_t q31_cos = CORDIC->RDATA;
-    int32_t q31_sin = CORDIC->RDATA;
-
-    // Convert back to floating point
-    *cos_out = q31_to_float(q31_cos);
-    *sin_out = q31_to_float(q31_sin);
+    *cos_out = CORDIC->RDATA;
+    *sin_out = CORDIC->RDATA;
 }
 
-float cordic::sin(float angle_rad) {
+float cordic::sinf(float angle_rad) {
     float s, c;
-    cordic::sincos(angle_rad, &s, &c);
-    return s;
+    cordic::sincos(float_to_q31(wrap_to_pi(angle_rad)), &s, &c);
+    return q31_to_float(s);
 }
 
-float cordic::cos(float angle_rad) {
+float cordic::cosf(float angle_rad) {
     float s, c;
-    cordic::sincos(angle_rad, &s, &c);
-    return c;
+    cordic::sincos(float_to_q31(wrap_to_pi(angle_rad)), &s, &c);
+    return q31_to_float(c);
 }
 
-float cordic::hypot(float x, float y) {
+float cordic::hypotf(float x, float y) {
     // Ensure CORDIC is in the correct mode for Hypotenuse calculations
     cordic_set_mode(CSR_HYPOT);
 
@@ -98,7 +94,7 @@ float cordic::hypot(float x, float y) {
     return q31_to_float(q31_mod) * (max_abs * 1.5f) * 0.607252935f;
 }
 
-float cordic::atan2(float y, float x) {
+float cordic::atan2f(float y, float x) {
     // Ensure CORDIC is in the correct mode for Atan2 calculations
     cordic_set_mode(CSR_ATAN2);
 

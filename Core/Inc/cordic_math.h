@@ -30,24 +30,24 @@ namespace cordic {
      * @return Sine of the input angle.
      * @note If Cosine is also needed, use `cordic_sincos()` instead to avoid redundant CORDIC calls and get both results with zero overhead.
      */
-    float sin(float angle_rad);
+    float sinf(float angle_rad);
 
     /**
      * @brief Calculates Cosine using CORDIC.
      * @return Cosine of the input angle.
      * @note If Sine is also needed, use `cordic_sincos()` instead to avoid redundant CORDIC calls and get both results with zero overhead.
      */
-    float cos(float angle_rad);
+    float cosf(float angle_rad);
 
     /**
      * @brief Calculates the magnitude (hypotenuse) of a vector given its x and y components using CORDIC.
      * @return The magnitude of the vector defined by (x, y).
      */
-    float hypot(float x, float y);
+    float hypotf(float x, float y);
 
     /**
      * @brief Calculates the arctangent of y/x using CORDIC, returning the angle in radians.
      * @return The angle in radians between the positive x-axis and the point (x, y).
      */
-    float atan2(float y, float x);
+    float atan2f(float y, float x);
 }
