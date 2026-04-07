@@ -3,9 +3,6 @@
 #define M_PI 3.14159265358979323846264338327950288f
 #define SQRT3 1.73205080756887729352744634150587236f
 
-#define RX_RING_SIZE 256
-#define CMD_MAX_LEN 64
-
 #define ADC1_NUM_CHANNELS   3U
 #define ADC2_NUM_CHANNELS   2U
 #define ADC3_NUM_CHANNELS   2U
@@ -41,6 +38,9 @@
 #define FOC_INITIAL_RPM             1500U // Target RPM for FOC mode (used when FOC is enabled and selected)
 #define FOC_OVERSAMPLING_SIZE       16U // Number of samples to average for oversampling (must be a power of 2 for efficient averaging)
 
+#define MASTER_MODE                 true // Set master or slave mode in load testing
+#define BATTERY_PROTECTION          false // Set to true when powered with supply without current limit
+
 #define ENCODER_PPR                 2048U // Pulses per revolution for the encoder
 #define ENCODER_MT_THRESHOLD        500U // Threshold in RPM for switching between M and T methods
 #define ENCODER_ONEPULSE_THRESHOLD  1000U // Threshold in RPM for using one pulse counting
@@ -61,12 +61,6 @@ enum class MotorControlMode : uint8_t {
     MOTOR_FOC_LINEAR,
     MOTOR_FOC_DPWM
 };
-
-typedef struct {
-    uint8_t buffer[RX_RING_SIZE];
-    volatile uint16_t head;
-    volatile uint16_t tail;
-} ring_buffer_t;
 
 enum SystemFlag : uint32_t {
     FLAG_VVVF_RUNNING       = 1 << 0,

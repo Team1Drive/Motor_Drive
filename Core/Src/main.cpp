@@ -9,6 +9,7 @@
 #include "adc_sampler.h"
 #include "timer.h"
 #include "foc.h"
+#include "cmd.h"
 #include <cstdint>
 
 #include "usbd_cdc_if.h"
@@ -43,11 +44,6 @@ void test_PWM_sweep(void);
 float adcToVoltage(uint32_t raw, float vref, uint32_t resolution, float gain, float offset);
 float adcToCurrent(uint32_t raw, float vref, uint32_t resolution, float gain, float offset, float shunt);
 uint16_t fastAverage(uint16_t* data_ptr, uint16_t size);
-
-static void process_command(const char* cmd);
-void usb_printf(const char *format, ...);
-static bool ring_buffer_write(uint8_t data);
-static bool read_line_from_ring(char* line, int max_len);
 
 /* Declare ADC buffers */
 alignas(32) volatile uint16_t adc1_buffer[ADC1_BUF_LEN] __attribute__((section(".sram_d1")));
@@ -118,7 +114,7 @@ volatile Target_t target = { .speed = 0.0f, .torque = 0.0f };
 volatile uint32_t print_mask = 0;
 volatile PrintFormat print_format = PrintFormat::PRINT_UTF8;
 
-static ring_buffer_t rx_ring = { .head = 0, .tail = 0 };
+ring_buffer_t rx_ring = { .head = 0, .tail = 0 };
 
 /* FOC state — single global instance */
 FOC_State_t foc_state;
@@ -229,8 +225,8 @@ int main(void)
   adc1.setProcessingBuffer(adc1_proc_buffer, ADC1_BUF_LEN);
   adc2.setProcessingBuffer(adc2_proc_buffer, ADC2_BUF_LEN);
   adc3.setProcessingBuffer(adc3_proc_buffer, ADC3_BUF_LEN);
-  
-  if (error_flag) led_red.write(0);
+
+  if (!error_flag) led_red.write(0);
   led_green.write(0);
   led_yellow_1.write(0);
   led_yellow_2.write(0);
@@ -245,10 +241,8 @@ int main(void)
   {
     /* USER CODE BEGIN WHILE */
     char cmd_line[CMD_MAX_LEN];
-    if (read_line_from_ring(cmd_line, CMD_MAX_LEN)) {
-      process_command(cmd_line);
-    }
-    /* USER CODE END WHILE */
+    if (read_line_from_ring(&rx_ring, cmd_line, CMD_MAX_LEN)) process_command(cmd_line);
+    /* USER CODE BEGIN 3 */
   }
   /* USER CODE BEGIN 3 */
 
@@ -345,7 +339,7 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
 /* USB CDC Receive Handler */
 void USB_CDC_RxHandler(uint8_t* Buf, uint32_t Len) {
   for (uint32_t i = 0; i < Len; i++) {
-    ring_buffer_write(Buf[i]);
+    ring_buffer_write(&rx_ring, Buf[i]);
   }
 }
 
@@ -952,10 +946,468 @@ uint16_t fastAverage(uint16_t* data_ptr, uint16_t size) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  USB Command Processing
+//  USB Command Handling
+//  The following functions facilitate handling of USB commands received from host computer
 // ─────────────────────────────────────────────────────────────────────────────
+/**
+ * @brief Command handler for "start" command.
+ * @note Initializes the motor control system and starts the VVVF ramp-up sequence.
+ */
+void cmd_start(int argc, char** argv) {
+    if (control_mode == MotorControlMode::MOTOR_PROTECTION) {protectionModePrint(); return;}
+    control_mode = MotorControlMode::MOTOR_STARTUP;
+    system_flag &= ~FLAG_VVVF_RUNNING;
+    system_flag &= ~FLAG_SIXSTEP_RUNNING;
+    system_flag &= ~FLAG_FOC_RUNNING;
+    relay.write(1);
+    startUpSequence();
+    CDC_Transmit_HS((uint8_t*)"Starting\r\n", 10);
+}
 
-static void process_command(const char* cmd) {
+/**
+ * @brief Command handler for "stop" command.
+ * @note Stops the motor immediately and resets the control state.
+ * @note If currently in VVVF ramp-up, it will start ramping down instead of an immediate stop.
+ */
+void cmd_stop(int argc, char** argv) {
+    if (control_mode == MotorControlMode::MOTOR_VVVF && system_flag & FLAG_VVVF_RAMP_UP) {
+        system_flag &= ~FLAG_VVVF_RAMP_UP; // Start ramp down
+        CDC_Transmit_HS((uint8_t*)"VVVF ramping down\r\n", 21);
+    } else {
+        control_mode = MotorControlMode::MOTOR_STOP;
+        system_flag &= ~FLAG_VVVF_RUNNING;
+        system_flag &= ~FLAG_SIXSTEP_RUNNING;
+        system_flag &= ~FLAG_FOC_RUNNING;
+        motorPWM.stop();
+        foc_reset(&foc_state);
+        relay.write(0);
+        CDC_Transmit_HS((uint8_t*)"Stopping\r\n", 10);
+    }
+}
+
+/**
+ * @brief Command handler for "reset" command.
+ * @note Resets the entire system to a known safe state, stopping the motor and clearing any active control modes or flags.
+ */
+void cmd_reset(int argc, char** argv) {
+    control_mode = MotorControlMode::MOTOR_STOP;
+    system_flag &= ~FLAG_VVVF_RUNNING;
+    system_flag &= ~FLAG_SIXSTEP_RUNNING;
+    system_flag &= ~FLAG_FOC_RUNNING;
+    motorPWM.stop();
+    led_red.write(0);
+    foc_reset(&foc_state);
+    relay.write(0);
+    CDC_Transmit_HS((uint8_t*)"Resetting\r\n", 11);
+}
+
+/**
+ * @brief Command handler for "foc" command.
+ * @note If the argument is "status" or "stat", it prints the current FOC state including RPM, currents, voltages, and fault status.
+ * @note Otherwise, it treats the argument as a target RPM value, resets the FOC state, and starts FOC control to reach the target RPM.
+ */
+void cmd_foc(int argc, char** argv) {
+    if (strcmp(argv[1], "status") == 0 || strcmp(argv[1], "stat") == 0) {
+        usb_printf("RPM=%.1f  Id=%.3fA  Iq=%.3fA  Vd=%.2fV  Vq=%.2fV  Vdc=%.2fV  |u|=%.2fV  fault=%d\r\n",
+                  foc_state.rpm,
+                  foc_state.Id, foc_state.Iq,
+                  foc_state.Vd_cmd, foc_state.Vq_cmd,
+                  foc_state.Vdc, foc_state.u_mag,
+                  (int)foc_state.fault);
+    }
+    // argv[1] contains the string of the target RPM
+    else {
+        if (control_mode == MotorControlMode::MOTOR_PROTECTION) {protectionModePrint(); return;}
+        int rpm_cmd = atoi(argv[1]);
+        
+        foc_reset(&foc_state);
+        foc_state.target_rpm = (float)rpm_cmd;
+        system_flag &= ~FLAG_VVVF_RUNNING;
+        system_flag &= ~FLAG_SIXSTEP_RUNNING;
+        system_flag |= FLAG_FOC_RUNNING;
+        relay.write(1);
+        motorPWM.start();
+        control_mode = MotorControlMode::MOTOR_FOC_LINEAR;
+        usb_printf("FOC started  target=%d RPM\r\n", rpm_cmd);
+    }
+}
+
+/**
+ * @brief Command handler for "rpm" command.
+ * @note Sets the target RPM for the motor
+ */
+void cmd_rpm(int argc, char** argv) {
+    int rpm_cmd = atoi(argv[1]);
+    foc_state.target_rpm = (float)rpm_cmd;
+    usb_printf("Target RPM set to %d\r\n", rpm_cmd);
+}
+
+/**
+ * @brief Command handler for "sixstep" command.
+ * @note Starts six-step commutation control mode.
+ */
+void cmd_sixstep(int argc, char** argv) {
+    if (control_mode == MotorControlMode::MOTOR_PROTECTION) {protectionModePrint(); return;}
+    control_mode = MotorControlMode::MOTOR_SIX_STEP;
+    system_flag &= ~FLAG_VVVF_RUNNING;
+    system_flag &= ~FLAG_FOC_RUNNING;
+    relay.write(1);
+    sixStepCommutation();
+    CDC_Transmit_HS((uint8_t*)"Six-step running\r\n", 31);
+}
+
+/**
+ * @brief Command handler for "vvvf" command.
+ * @note Set the speed setpoint for FOC speed loop.
+ */
+void cmd_speed(int argc, char** argv) {
+    float speed = atof(argv[1]);
+    if (speed >= -5000.0f && speed <= 5000.0f) {
+        relay.write(1);
+        target.speed = speed;
+        foc_state.target_rpm = speed;
+        CDC_Transmit_HS((uint8_t*)"Speed set\r\n", 11);
+    } else {
+        const char* err = "Invalid speed\r\n";
+        CDC_Transmit_HS((uint8_t*)err, strlen(err));
+    }
+}
+
+/**
+ * @brief Command handler for "duty" command.
+ * @note Sets the duty cycle for each phase directly.
+ * @attention ONLY use when supplied with a CURRENT LIMITED power source.
+ * @attention This command overrides all control modes and should be used with caution.
+ */
+void cmd_duty(int argc, char** argv) {
+  if (BATTERY_PROTECTION) {batteryProtectionPrint(); return;}
+    if (control_mode == MotorControlMode::MOTOR_PROTECTION) {protectionModePrint(); return;}
+    // argv[1] lands as "0.3,0.3,0.3" from the universal space tokenizer.
+    // We split it via commas using strtok in-place.
+    float values[3] = {0};
+    int count = 0;
+    
+    char* token = strtok(argv[1], ",");
+    while (token != NULL && count < 3) {
+        while (*token == ' ') token++; // Remove leading spaces if any
+        values[count++] = atof(token);
+        token = strtok(NULL, ",");
+    }
+
+    if (count == 3) {
+        if (values[0] >= -1.0f && values[0] <= 1.0f &&
+            values[1] >= -1.0f && values[1] <= 1.0f &&
+            values[2] >= -1.0f && values[2] <= 1.0f) {
+            
+            relay.write(1);
+            motorPWM.setDuty(values[0], values[1], values[2]);
+            control_mode = MotorControlMode::MOTOR_MANUAL;
+            system_flag &= ~FLAG_VVVF_RUNNING;
+            system_flag &= ~FLAG_SIXSTEP_RUNNING;
+            system_flag &= ~FLAG_FOC_RUNNING;
+            CDC_Transmit_HS((uint8_t*)"Duty set\r\n", 10);
+        } else {
+            CDC_Transmit_HS((uint8_t*)"Duty values out of range [-1,1]\r\n", 34);
+        }
+    } else {
+        CDC_Transmit_HS((uint8_t*)"Invalid duty format. Usage: duty 0.3,0.3,0.3\r\n", 48);
+    }
+}
+
+/**
+ * @brief Command handler for "vec" command.
+ * @note Applies a predefined six-step commutation vector based on the input number (0-5).
+ * @attention ONLY use when supplied with a CURRENT LIMITED power source.
+ * @attention This command overrides all control modes and should be used with caution.
+ */
+void cmd_vec(int argc, char** argv) {
+    if (BATTERY_PROTECTION) {batteryProtectionPrint(); return;}
+    if (control_mode == MotorControlMode::MOTOR_PROTECTION) {protectionModePrint(); return;}
+    relay.write(1);
+    int vec_num = atoi(argv[1]);
+    
+    if (vec_num >= 0 && vec_num <= 5) {
+        const int8_t vector_states[6][3] = {
+            { 1,  0, -1},  // 0: A+B-
+            { 1, -1,  0},  // 1: A+C-
+            {-1,  1,  0},  // 2: B+C-
+            { 0,  1, -1},  // 3: B+A-
+            { 0, -1,  1},  // 4: C+A-
+            {-1,  0,  1}   // 5: C+B-
+        };
+      
+        int8_t a_state = vector_states[vec_num][0];
+        int8_t b_state = vector_states[vec_num][1];
+        int8_t c_state = vector_states[vec_num][2];
+      
+        float dutyA = (a_state == 1) ? SIXSTEP_DUTYCYCLE : (a_state == 0) ? (1.0f - SIXSTEP_DUTYCYCLE) : -1.0f;
+        float dutyB = (b_state == 1) ? SIXSTEP_DUTYCYCLE : (b_state == 0) ? (1.0f - SIXSTEP_DUTYCYCLE) : -1.0f;
+        float dutyC = (c_state == 1) ? SIXSTEP_DUTYCYCLE : (c_state == 0) ? (1.0f - SIXSTEP_DUTYCYCLE) : -1.0f;
+      
+        motorPWM.setDuty(dutyA, dutyB, dutyC);
+        control_mode = MotorControlMode::MOTOR_MANUAL;
+        system_flag &= ~FLAG_VVVF_RUNNING;
+        system_flag &= ~FLAG_SIXSTEP_RUNNING;
+        system_flag &= ~FLAG_FOC_RUNNING;
+
+        uint8_t hall_state = hallsensor.getState();
+        char resp[64];
+        int len = snprintf(resp, sizeof(resp), "Vector %d applied, Hall=%d\r\n", vec_num, hall_state);
+        CDC_Transmit_HS((uint8_t*)resp, len);
+    } else {
+        CDC_Transmit_HS((uint8_t*)"Invalid vector. Use 0-5.\r\n", 26);
+    }
+}
+
+/**
+ * @brief Command handler for "tune" command.
+ * @note Allows tuning of various parameters such as PID gains and ADC calibration values via USB commands.
+ */
+void cmd_tune(int argc, char** argv) {
+    // "tune speed p 0.1" -> argv[1]="speed", argv[2]="p", argv[3]="0.1"
+    char* subsys = argv[1];
+    char* param = argv[2];
+    float value = atof(argv[3]);
+
+    bool success = false;
+    char resp[64];
+    float original = 0.0f;
+
+    if (strcmp(subsys, "speed") == 0) {
+        if (strcmp(param, "p") == 0) {
+            original = foc_state.pi_speed.kp;
+            foc_state.pi_speed.kp = value;
+            success = true;
+        }
+        else if (strcmp(param, "i") == 0) {
+            original = foc_state.pi_speed.ki;
+            foc_state.pi_speed.ki = value;
+            success = true;
+        }
+    } 
+    else if (strcmp(subsys, "id") == 0) {
+        if (strcmp(param, "p") == 0) {
+            original = foc_state.pi_d.kp;
+            foc_state.pi_d.kp = value;
+            success = true;
+        }
+        else if (strcmp(param, "i") == 0) {
+            original = foc_state.pi_d.ki;
+            foc_state.pi_d.ki = value;
+            success = true;
+        }
+    } 
+    else if (strcmp(subsys, "iq") == 0) {
+        if (strcmp(param, "p") == 0) {
+            original = foc_state.pi_q.kp;
+            foc_state.pi_q.kp = value;
+            success = true;
+        }
+        else if (strcmp(param, "i") == 0) {
+            original = foc_state.pi_q.ki;
+            foc_state.pi_q.ki = value;
+            success = true;
+        }
+    } 
+    else if (strcmp(subsys, "fw") == 0) {
+        if (strcmp(param, "p") == 0) {
+            original = foc_state.pi_fw.kp;
+            foc_state.pi_fw.kp = value;
+            success = true;
+        }
+        else if (strcmp(param, "i") == 0) {
+            original = foc_state.pi_fw.ki;
+            foc_state.pi_fw.ki = value;
+            success = true;
+        }
+    } 
+    else if (strcmp(subsys, "flux") == 0) {
+        if (strcmp(param, "p") == 0) { 
+            snprintf(resp, sizeof(resp), "Flux gain set to %.3f\r\n", value); 
+            CDC_Transmit_HS((uint8_t*)resp, strlen(resp));
+            return; 
+        }
+    } 
+    else if (strcmp(subsys, "gain") == 0) {
+        if (strcmp(param, "ia") == 0) {
+            original = adc_gain.ia_shunt;
+            adc_gain.ia_shunt = value;
+            success = true;
+        } else if (strcmp(param, "ib") == 0) {
+            original = adc_gain.ib_shunt;
+            adc_gain.ib_shunt = value;
+            success = true;
+        } else if (strcmp(param, "ic") == 0) {
+            original = adc_gain.ic_shunt;
+            adc_gain.ic_shunt = value;
+            success = true;
+        } else if (strcmp(param, "va") == 0) {
+            original = adc_gain.va_gain;
+            adc_gain.va_gain = value;
+            success = true;
+        } else if (strcmp(param, "vb") == 0) {
+            original = adc_gain.vb_gain;
+            adc_gain.vb_gain = value;
+            success = true;
+        } else if (strcmp(param, "ibatt") == 0) {
+            original = adc_gain.ibatt_shunt;
+            adc_gain.ibatt_shunt = value;
+            success = true;
+        } else if (strcmp(param, "vbatt") == 0) {
+            original = adc_gain.vbatt_gain;
+            adc_gain.vbatt_gain = value;
+            success = true;
+        }
+    } 
+    else if (strcmp(subsys, "offset") == 0) {
+        if (strcmp(param, "ia") == 0) {
+            original = adc_gain.ia_offset;
+            adc_gain.ia_offset = value;
+            success = true;
+        } else if (strcmp(param, "ib") == 0) {
+            original = adc_gain.ib_offset;
+            adc_gain.ib_offset = value;
+            success = true;
+        } else if (strcmp(param, "ic") == 0) {
+            original = adc_gain.ic_offset;
+            adc_gain.ic_offset = value;
+            success = true;
+        } else if (strcmp(param, "va") == 0) {
+            original = adc_gain.va_offset;
+            adc_gain.va_offset = value;
+            success = true;
+        } else if (strcmp(param, "vb") == 0) {
+            original = adc_gain.vb_offset;
+            adc_gain.vb_offset = value;
+            success = true;
+        } else if (strcmp(param, "ibatt") == 0) {
+            original = adc_gain.ibatt_offset;
+            adc_gain.ibatt_offset = value;
+            success = true;
+        } else if (strcmp(param, "vbatt") == 0) {
+            original = adc_gain.vbatt_offset;
+            adc_gain.vbatt_offset = value;
+            success = true;
+        }
+    }
+
+    if (success) {
+        int len = snprintf(resp, sizeof(resp), "%s %s set to %.4f (was %.4f)\r\n", subsys, param, value, original);
+        CDC_Transmit_HS((uint8_t*)resp, len);
+    } else {
+        int len = snprintf(resp, sizeof(resp), "Unknown parameter '%s' or subsystem '%s'\r\n", param, subsys);
+        CDC_Transmit_HS((uint8_t*)resp, len);
+    }
+}
+
+/**
+ * @brief Command handler for "log" command.
+ * @note Allows dynamic configuration of which variables to include in the data log output andoutput encoding.
+ */
+void cmd_log(int argc, char** argv) {
+    char* action = argv[1];
+
+    if (strcmp(action, "preset") == 0) {
+        if (argc < 3) {
+            CDC_Transmit_HS((uint8_t*)"Missing preset number\r\n", 23);
+            return;
+        }
+        
+        int preset_id = atoi(argv[2]); // Safe conversion of "1", "2", etc.
+        
+        switch (preset_id) {
+            case 1: // Preset 1: FOC Tuning
+                print_mask = PRINT_RPM | PRINT_IA | PRINT_IB | PRINT_IC | PRINT_VBATT;
+                CDC_Transmit_HS((uint8_t*)"Preset 1 active\r\n", 37);
+                break;
+                
+            case 2: // Preset 2: Raw Sensor Calibration
+                print_mask = PRINT_IA | PRINT_IB | PRINT_IC | PRINT_IA_RAW | PRINT_IB_RAW | PRINT_IC_RAW;
+                CDC_Transmit_HS((uint8_t*)"Preset 2 active\r\n", 45);
+                break;
+                
+            case 3: // Preset 3: Power Monitoring
+                print_mask = PRINT_VBATT | PRINT_IBATT | PRINT_DUTY_A | PRINT_DUTY_B | PRINT_DUTY_C;
+                CDC_Transmit_HS((uint8_t*)"Preset 3 active\r\n", 40);
+                break;
+                
+            default:
+                CDC_Transmit_HS((uint8_t*)"Unknown preset. Try 1, 2, or 3\r\n", 32);
+                break;
+        }
+        return; // Exit here
+    }
+
+    else if (strcmp(action, "add") == 0 || strcmp(action, "rm") == 0) {
+        if (argc < 3) {
+            CDC_Transmit_HS((uint8_t*)"Missing variable name\r\n", 23);
+            return;
+        }
+        char* token = argv[2];
+        uint32_t flag = 0;
+        
+        if (strcmp(token, "hall") == 0) flag = PRINT_HALLBIN;
+        else if (strcmp(token, "hall_dec") == 0) flag = PRINT_HALLDEC;
+        else if (strcmp(token, "rpm") == 0) flag = PRINT_RPM;
+        else if (strcmp(token, "pos") == 0) flag = PRINT_POS;
+        else if (strcmp(token, "duty_a") == 0) flag = PRINT_DUTY_A;
+        else if (strcmp(token, "duty_b") == 0) flag = PRINT_DUTY_B;
+        else if (strcmp(token, "duty_c") == 0) flag = PRINT_DUTY_C;
+        else if (strcmp(token, "ia") == 0) flag = PRINT_IA;
+        else if (strcmp(token, "ib") == 0) flag = PRINT_IB;
+        else if (strcmp(token, "ic") == 0) flag = PRINT_IC;
+        else if (strcmp(token, "va") == 0) flag = PRINT_VA;
+        else if (strcmp(token, "vb") == 0) flag = PRINT_VB;
+        else if (strcmp(token, "vbatt") == 0) flag = PRINT_VBATT;
+        else if (strcmp(token, "ibatt") == 0) flag = PRINT_IBATT;
+        else if (strcmp(token, "ia_raw") == 0) flag = PRINT_IA_RAW;
+        else if (strcmp(token, "ib_raw") == 0) flag = PRINT_IB_RAW;
+        else if (strcmp(token, "ic_raw") == 0) flag = PRINT_IC_RAW;
+        else if (strcmp(token, "va_raw") == 0) flag = PRINT_VA_RAW;
+        else if (strcmp(token, "vb_raw") == 0) flag = PRINT_VB_RAW;
+        else if (strcmp(token, "vbatt_raw") == 0) flag = PRINT_VBATT_RAW;
+        else if (strcmp(token, "ibatt_raw") == 0) flag = PRINT_IBATT_RAW;
+        else if (strcmp(token, "all") == 0 && strcmp(action, "rm") == 0) {
+            print_mask = 0;
+            CDC_Transmit_HS((uint8_t*)"All variables removed\r\n", 23);
+            return;
+        } else {
+            CDC_Transmit_HS((uint8_t*)"Unknown variable\r\n", 18);
+            return;
+        }
+
+        if (strcmp(action, "add") == 0) {
+            print_mask |= flag;
+            CDC_Transmit_HS((uint8_t*)"Variable added\r\n", 16);
+        } else {
+            print_mask &= ~flag;
+            CDC_Transmit_HS((uint8_t*)"Variable removed\r\n", 18);
+        }
+    } 
+    else if (strcmp(action, "utf8") == 0) {
+        print_format = PrintFormat::PRINT_UTF8;
+        CDC_Transmit_HS((uint8_t*)"Print format set to UTF8\r\n", 27);
+    } 
+    else if (strcmp(action, "bin") == 0) {
+        print_format = PrintFormat::PRINT_BINARY;
+        CDC_Transmit_HS((uint8_t*)"Print format set to BINARY\r\n", 28);
+    } 
+    else {
+        CDC_Transmit_HS((uint8_t*)"Invalid log action\r\n", 20);
+    }
+}
+
+void cmd_audible(int argc, char** argv) {
+    if (system_flag & FLAG_AUDIBLE) {
+        system_flag &= ~FLAG_AUDIBLE;
+        CDC_Transmit_HS((uint8_t*)"Audible frequency disabled\r\n", 28);
+    } else {
+        system_flag |= FLAG_AUDIBLE;
+        CDC_Transmit_HS((uint8_t*)"Audible frequency enabled\r\n", 27);
+    }
+}
+
+/* static void process_command(const char* cmd) {
 
   // Start
   if (strcmp(cmd, "start") == 0) {
@@ -1470,62 +1922,8 @@ static void process_command(const char* cmd) {
       const char* err = "Unknown command\r\n";
       CDC_Transmit_HS((uint8_t*)err, strlen(err));
   }
-}
+} */
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  USB Communication and Command Processing
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * @brief A simple printf-like function that formats a string and sends it over USB using the CDC interface. This function uses a fixed-size buffer to hold the formatted string and supports variable arguments like printf.
- * @param format The format string, similar to printf.
- */
-void usb_printf(const char *format, ...) {
-    char buffer[256];
-    va_list args;
-    va_start(args, format);
-
-    int len = vsnprintf(buffer, sizeof(buffer), format, args);
-    va_end(args);
-
-    if (len > 0) {
-        CDC_Transmit_HS((uint8_t*)buffer, len);
-    }
-}
-
-static bool ring_buffer_write(uint8_t data) {
-    uint16_t next_head = (rx_ring.head + 1) % RX_RING_SIZE;
-    if (next_head != rx_ring.tail) {
-        rx_ring.buffer[rx_ring.head] = data;
-        rx_ring.head = next_head;
-        return true;
-    }
-    return false;
-}
-
-static bool read_line_from_ring(char* line, int max_len) {
-    static char line_buffer[CMD_MAX_LEN];
-    static int idx = 0;
-
-    while (rx_ring.tail != rx_ring.head) {
-        uint8_t c = rx_ring.buffer[rx_ring.tail];
-        rx_ring.tail = (rx_ring.tail + 1) % RX_RING_SIZE;
-
-        if (c == '\n' || c == '\r') {
-            if (idx > 0) {
-                line_buffer[idx] = '\0';
-                strncpy(line, line_buffer, max_len);
-                idx = 0;
-                return true;
-            }
-        } else if (idx < max_len - 1) {
-            line_buffer[idx++] = c;
-        } else {
-            idx = 0;
-        }
-    }
-    return false;
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  FOC ISR tick — called from TIM8 update interrupt at 20 kHz

@@ -29,10 +29,7 @@ void Timer::interruptHandler(void) {
 }
 
 Timer::Timer(TIM_HandleTypeDef* htim):
-    htim_(htim) {
-        uint32_t i = getInstanceIndex(htim_);
-        instance_[i] = this;
-    }
+    htim_(htim) {}
 
 void Timer::irqHandler(TIM_HandleTypeDef* htim) {
     uint32_t i = getInstanceIndex(htim);
@@ -47,10 +44,14 @@ HAL_StatusTypeDef Timer::init(void) {
 }
 
 HAL_StatusTypeDef Timer::start(void) {
+    uint32_t i = getInstanceIndex(htim_);
+    if (i != (uint32_t)-1) instance_[i] = this;
     return HAL_TIM_Base_Start(htim_);
 }
 
 HAL_StatusTypeDef Timer::startIT(void) {
+    uint32_t i = getInstanceIndex(htim_);
+    if (i != (uint32_t)-1) instance_[i] = this;
     return HAL_TIM_Base_Start_IT(htim_);
 }
 
