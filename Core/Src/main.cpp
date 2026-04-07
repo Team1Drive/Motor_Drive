@@ -448,7 +448,7 @@ void printTelemetryUTF8(void) {
                    | PRINT_IA_RAW
                    | PRINT_VB_RAW
                    | PRINT_VBATT_RAW)) != 0) {
-    adc1.getLatestData(adc1_raw);
+    adc1.getLatestDataMean(adc1_raw, FOC_OVERSAMPLING_SIZE);
 
     ia = adcToCurrent(adc1_raw[0], 3.3f, 65536, 50.0f, 1.65f + adc_gain.ia_offset, adc_gain.ia_shunt);
     vb = adcToVoltage(adc1_raw[1], 3.3f, 65536, adc_gain.vb_gain, 1.65f + adc_gain.vb_offset);
@@ -458,7 +458,7 @@ void printTelemetryUTF8(void) {
                    | PRINT_VA
                    | PRINT_IB_RAW
                    | PRINT_VA_RAW)) != 0) {
-    adc2.getLatestData(adc2_raw);
+    adc2.getLatestDataMean(adc2_raw, FOC_OVERSAMPLING_SIZE);
 
     ib = adcToCurrent(adc2_raw[0], 3.3f, 65536, 50.0f, 1.65f + adc_gain.ib_offset, adc_gain.ib_shunt);
     va = adcToVoltage(adc2_raw[1], 3.3f, 65536, adc_gain.va_gain, 1.65f + adc_gain.va_offset);
@@ -467,7 +467,7 @@ void printTelemetryUTF8(void) {
                    | PRINT_IBATT
                    | PRINT_IC_RAW
                    | PRINT_IBATT_RAW)) != 0) {
-    adc3.getLatestData(adc3_raw);
+    adc3.getLatestDataMean(adc3_raw, FOC_OVERSAMPLING_SIZE);
 
     ic = adcToCurrent(adc3_raw[0], 3.3f, 4096, 50.0f, 1.65f + adc_gain.ic_offset, adc_gain.ic_shunt);
     ibatt = adcToCurrent(adc3_raw[1], 3.3f, 4096, 50.0f, 1.65f + adc_gain.ibatt_offset, adc_gain.ibatt_shunt);
@@ -564,36 +564,29 @@ void printTelemetryBinary(void) {
                    | PRINT_IA_RAW
                    | PRINT_VB_RAW
                    | PRINT_VBATT_RAW)) != 0) {
-    adc1.getLatestData(adc1_raw);
+    adc1.getLatestDataMean(adc1_raw, FOC_OVERSAMPLING_SIZE);
 
-    //ia = adcToCurrent(adc1_raw[0], 3.3f, 65536, 50.0f, 1.65f + adc_gain.ia_offset, adc_gain.ia_shunt);
-    //vb = adcToVoltage(adc1_raw[1], 3.3f, 65536, adc_gain.vb_gain, 1.65f + adc_gain.vb_offset);
-    //vbatt = adcToVoltage(adc1_raw[2], 3.3f, 65536, adc_gain.vbatt_gain, 0.0f + adc_gain.vbatt_offset);
-    ia = adcToCurrent(adc1.getLatestChannelMean(0, FOC_OVERSAMPLING_SIZE), 3.3f, 65536, 50.0f, 1.65f + adc_gain.ia_offset, adc_gain.ia_shunt);
-    vb = adcToVoltage(adc1.getLatestChannelMean(1, FOC_OVERSAMPLING_SIZE), 3.3f, 65536, adc_gain.vb_gain, 1.65f + adc_gain.vb_offset);
-    vbatt = adcToVoltage(adc1.getLatestChannelMean(2, FOC_OVERSAMPLING_SIZE), 3.3f, 65536, adc_gain.vbatt_gain, 0.0f + adc_gain.vbatt_offset);
+    ia = adcToCurrent(adc1_raw[0], 3.3f, 65536, 50.0f, 1.65f + adc_gain.ia_offset, adc_gain.ia_shunt);
+    vb = adcToVoltage(adc1_raw[1], 3.3f, 65536, adc_gain.vb_gain, 1.65f + adc_gain.vb_offset);
+    vbatt = adcToVoltage(adc1_raw[2], 3.3f, 65536, adc_gain.vbatt_gain, 0.0f + adc_gain.vbatt_offset);
   }
   if ((print_mask & (PRINT_IB
                    | PRINT_VA
                    | PRINT_IB_RAW
                    | PRINT_VA_RAW)) != 0) {
-    adc2.getLatestData(adc2_raw);
+    adc2.getLatestDataMean(adc2_raw, FOC_OVERSAMPLING_SIZE);
 
-    //ib = adcToCurrent(adc2_raw[0], 3.3f, 65536, 50.0f, 1.65f + adc_gain.ib_offset, adc_gain.ib_shunt);
-    //va = adcToVoltage(adc2_raw[1], 3.3f, 65536, adc_gain.va_gain, 1.65f + adc_gain.va_offset);
-    ib = adcToCurrent(adc2.getLatestChannelMean(0, FOC_OVERSAMPLING_SIZE), 3.3f, 65536, 50.0f, 1.65f + adc_gain.ib_offset, adc_gain.ib_shunt);
-    va = adcToVoltage(adc2.getLatestChannelMean(1, FOC_OVERSAMPLING_SIZE), 3.3f, 65536, adc_gain.va_gain, 1.65f + adc_gain.va_offset);
+    ib = adcToCurrent(adc2_raw[0], 3.3f, 65536, 50.0f, 1.65f + adc_gain.ib_offset, adc_gain.ib_shunt);
+    va = adcToVoltage(adc2_raw[1], 3.3f, 65536, adc_gain.va_gain, 1.65f + adc_gain.va_offset);
   }
   if ((print_mask & (PRINT_IC
                    | PRINT_IBATT
                    | PRINT_IC_RAW
                    | PRINT_IBATT_RAW)) != 0) {
-    adc3.getLatestData(adc3_raw);
+    adc3.getLatestDataMean(adc3_raw, FOC_OVERSAMPLING_SIZE);
 
-    //ic = adcToCurrent(adc3_raw[0], 3.3f, 4096, 50.0f, 1.65f + adc_gain.ic_offset, adc_gain.ic_shunt);
-    //ibatt = adcToCurrent(adc3_raw[1], 3.3f, 4096, 50.0f, 1.65f + adc_gain.ibatt_offset, adc_gain.ibatt_shunt);
-    ic = adcToCurrent(adc3.getLatestChannelMean(0, FOC_OVERSAMPLING_SIZE), 3.3f, 4096, 50.0f, 1.65f + adc_gain.ic_offset, adc_gain.ic_shunt);
-    ibatt = adcToCurrent(adc3.getLatestChannelMean(1, FOC_OVERSAMPLING_SIZE), 3.3f, 4096, 50.0f, 1.65f + adc_gain.ibatt_offset, adc_gain.ibatt_shunt);
+    ic = adcToCurrent(adc3_raw[0], 3.3f, 4096, 50.0f, 1.65f + adc_gain.ic_offset, adc_gain.ic_shunt);
+    ibatt = adcToCurrent(adc3_raw[1], 3.3f, 4096, 50.0f, 1.65f + adc_gain.ibatt_offset, adc_gain.ibatt_shunt);
   }
 
   // Construct a binary packet
@@ -1409,524 +1402,6 @@ void cmd_audible(int argc, char** argv) {
     }
 }
 
-/* static void process_command(const char* cmd) {
-
-  // Start
-  if (strcmp(cmd, "start") == 0) {
-    control_mode = MotorControlMode::MOTOR_STARTUP;
-    system_flag &= ~FLAG_VVVF_RUNNING;
-    system_flag &= ~FLAG_SIXSTEP_RUNNING;
-    system_flag &= ~FLAG_FOC_RUNNING;
-    relay.write(1);
-    startUpSequence();
-    CDC_Transmit_HS((uint8_t*)"Starting\r\n", 10);
-
-  // Stop
-  } else if (strcmp(cmd, "stop") == 0) {
-    if (control_mode == MotorControlMode::MOTOR_VVVF && system_flag & FLAG_VVVF_RAMP_UP) {
-      system_flag &= ~FLAG_VVVF_RAMP_UP; // Start ramp down
-      CDC_Transmit_HS((uint8_t*)"VVVF ramping down\r\n", 21);
-    }
-    else {
-      control_mode = MotorControlMode::MOTOR_STOP;
-      system_flag &= ~FLAG_VVVF_RUNNING;
-      system_flag &= ~FLAG_SIXSTEP_RUNNING;
-      system_flag &= ~FLAG_FOC_RUNNING;
-      motorPWM.stop();
-      foc_reset(&foc_state);
-      relay.write(0);
-      CDC_Transmit_HS((uint8_t*)"Stopping\r\n", 10);
-    }
-
-  // Reset
-  } else if (strcmp(cmd, "reset") == 0) {
-      control_mode = MotorControlMode::MOTOR_STOP;
-      system_flag &= ~FLAG_VVVF_RUNNING;
-      system_flag &= ~FLAG_SIXSTEP_RUNNING;
-      system_flag &= ~FLAG_FOC_RUNNING;
-      motorPWM.stop();
-      led_red.write(0);
-      foc_reset(&foc_state);
-      relay.write(0);
-      CDC_Transmit_HS((uint8_t*)"Resetting\r\n", 11);
-
-  // FOC: "foc <rpm>" — align encoder, start FOC at target RPM
-  } else if (strncmp(cmd, "foc ", 4) == 0) {
-    int rpm_cmd;
-    if (sscanf(cmd + 4, "%d", &rpm_cmd) == 1) {
-      foc_reset(&foc_state);
-      foc_state.target_rpm = (float)rpm_cmd;
-      system_flag &= ~FLAG_VVVF_RUNNING;
-      system_flag &= ~FLAG_SIXSTEP_RUNNING;
-      system_flag |= FLAG_FOC_RUNNING;
-      relay.write(1);
-      motorPWM.start();
-      control_mode = MotorControlMode::MOTOR_FOC_LINEAR;
-      usb_printf("FOC started  target=%d RPM\r\n", rpm_cmd);
-    } else {
-      CDC_Transmit_HS((uint8_t*)"Usage: foc <rpm>\r\n", 18);
-    }
-
-  // RPM: "rpm <value>" — update FOC speed setpoint while running
-  } else if (strncmp(cmd, "rpm ", 4) == 0) {
-    int rpm_cmd;
-    if (sscanf(cmd + 4, "%d", &rpm_cmd) == 1) {
-      foc_state.target_rpm = (float)rpm_cmd;
-      usb_printf("Target RPM set to %d\r\n", rpm_cmd);
-    } else {
-      CDC_Transmit_HS((uint8_t*)"Usage: rpm <value>\r\n", 20);
-    }
-
-  // FOC status telemetry
-  } else if (strcmp(cmd, "foc_status") == 0) {
-    usb_printf("RPM=%.1f  Id=%.3fA  Iq=%.3fA  Vd=%.2fV  Vq=%.2fV  Vdc=%.2fV  |u|=%.2fV  fault=%d\r\n",
-               foc_state.rpm,
-               foc_state.Id,  foc_state.Iq,
-               foc_state.Vd_cmd, foc_state.Vq_cmd,
-               foc_state.Vdc, foc_state.u_mag,
-               (int)foc_state.fault);
-
-  // Six-step commutation
-  } else if (strcmp(cmd, "sixstep") == 0) {
-    control_mode = MotorControlMode::MOTOR_SIX_STEP;
-    system_flag &= ~FLAG_VVVF_RUNNING;
-    system_flag &= ~FLAG_FOC_RUNNING;
-    relay.write(1);
-    sixStepCommutation();
-    CDC_Transmit_HS((uint8_t*)"Six-step running\r\n", 31);
-
-  // Set speed for speed loop
-  } else if (strncmp(cmd, "speed ", 6) == 0) {
-    float speed = atof(cmd + 6);
-    if (speed >= -5000.0f && speed <= 5000.0f) {
-      relay.write(1);
-        // Insert speed loop set speed
-      target.speed = speed;
-      foc_state.target_rpm = speed;
-      CDC_Transmit_HS((uint8_t*)"Speed set\r\n", 11);
-    } else {
-      // Wrong speed format
-      const char* err = "Invalid speed\r\n";
-      CDC_Transmit_HS((uint8_t*)err, strlen(err));
-    }
-
-  // Set duty cycle for each phase
-  } else if (strncmp(cmd, "duty ", 5) == 0) {
-    // Copy arguments to a temporary buffer for tokenization, ensuring null-termination
-    char cmd_copy[CMD_MAX_LEN];
-    strncpy(cmd_copy, cmd + 5, CMD_MAX_LEN - 1);
-    cmd_copy[CMD_MAX_LEN - 1] = '\0';
-
-    // Parse three float values from the command
-    float values[3] = {0};
-    int count = 0;
-    char* token = strtok(cmd_copy, ",");   // Comma as delimiter for three duty values
-    while (token != NULL && count < 3) {
-      // Remove leading spaces from the token
-      while (*token == ' ') token++;
-      char* endptr;
-      float val = strtof(token, &endptr);
-      // Check if the entire token was a valid float (endptr should point to the end of the token or a space)
-      if (endptr != token && (*endptr == '\0' || *endptr == ' ')) {
-        values[count++] = val;
-      } else {
-        break; // Invalid float format, exit parsing
-      }
-      token = strtok(NULL, ",");
-    }
-
-    // Validate 3 values and in range [-1.0, 1.0]
-    if (count == 3) {
-      if (values[0] >= -1.0f && values[0] <= 1.0f &&
-          values[1] >= -1.0f && values[1] <= 1.0f &&
-          values[2] >= -1.0f && values[2] <= 1.0f) {
-            relay.write(1);
-            motorPWM.setDuty(values[0], values[1], values[2]);
-            control_mode = MotorControlMode::MOTOR_MANUAL;
-            system_flag &= ~FLAG_VVVF_RUNNING;
-            system_flag &= ~FLAG_SIXSTEP_RUNNING;
-            system_flag &= ~FLAG_FOC_RUNNING;
-            CDC_Transmit_HS((uint8_t*)"Duty set\r\n", 4);
-      } else {
-        CDC_Transmit_HS((uint8_t*)"Duty values out of range [-1,1]\r\n", 34);
-      }
-    } else {
-      CDC_Transmit_HS((uint8_t*)"Invalid duty format. Usage: duty 0.3,0.3,0.3\r\n", 48);
-    }
-
-  // Set specific six-step vector
-  } else if (strncmp(cmd, "vec ", 4) == 0) {
-    relay.write(1);
-    int vec_num = atoi(cmd + 4);  // Convert the vector number from string to integer
-    if (vec_num >= 0 && vec_num <= 5) {
-      // Commutation table
-      const int8_t vector_states[6][3] = {
-        { 1,  0, -1},  // 0: A+B-
-        { 1, -1,  0},  // 1: A+C-
-        {-1,  1,  0},  // 2: B+C-
-        { 0,  1, -1},  // 3: B+A-
-        { 0, -1,  1},  // 4: C+A-
-        {-1,  0,  1}   // 5: C+B-
-      };
-      
-      int8_t a_state = vector_states[vec_num][0];
-      int8_t b_state = vector_states[vec_num][1];
-      int8_t c_state = vector_states[vec_num][2];
-      
-      // Convert to duty cycles or -1 (high impedance)
-      float dutyA = (a_state == 1) ? SIXSTEP_DUTYCYCLE : 
-                    (a_state == 0) ? (1.0f - SIXSTEP_DUTYCYCLE) : -1.0f;
-      float dutyB = (b_state == 1) ? SIXSTEP_DUTYCYCLE : 
-                    (b_state == 0) ? (1.0f - SIXSTEP_DUTYCYCLE) : -1.0f;
-      float dutyC = (c_state == 1) ? SIXSTEP_DUTYCYCLE : 
-                    (c_state == 0) ? (1.0f - SIXSTEP_DUTYCYCLE) : -1.0f;
-      
-      motorPWM.setDuty(dutyA, dutyB, dutyC);
-      control_mode = MotorControlMode::MOTOR_MANUAL;
-      system_flag &= ~FLAG_VVVF_RUNNING;
-      system_flag &= ~FLAG_SIXSTEP_RUNNING;
-      system_flag &= ~FLAG_FOC_RUNNING;
-
-      // Read current Hall sensor state for debugging
-      uint8_t hall_state = hallsensor.getState();  // Ensure this function exists
-      char resp[64];
-      snprintf(resp, sizeof(resp), "Vector %d applied, Hall=%d\r\n", vec_num, hall_state);
-      CDC_Transmit_HS((uint8_t*)resp, strlen(resp));
-    } else {
-        CDC_Transmit_HS((uint8_t*)"Invalid vector. Use 0-5.\r\n", 26);
-    }
-
-  // Tune control parameters
-  } else if (strncmp(cmd, "tune ", 5) == 0) {
-    // Copy command to a mutable buffer
-    char cmd_copy[CMD_MAX_LEN];
-    strncpy(cmd_copy, cmd + 5, CMD_MAX_LEN - 1);
-    cmd_copy[CMD_MAX_LEN - 1] = '\0';
-
-    // Tokenize: expect three tokens: subsystem, parameter, value
-    char* token = strtok(cmd_copy, " ");
-    if (token == NULL) {
-        CDC_Transmit_HS((uint8_t*)"Invalid tune format. Use: tune <subsys> <param> <value>\r\n", 58);
-        return;
-    }
-    char* subsys = token;   // e.g. "speed", "current", "flux"
-
-    token = strtok(NULL, " ");
-    if (token == NULL) {
-        CDC_Transmit_HS((uint8_t*)"Missing parameter type\r\n", 25);
-        return;
-    }
-    char* param = token;    // e.g. "p", "i", "d"
-
-    token = strtok(NULL, " ");
-    if (token == NULL) {
-        CDC_Transmit_HS((uint8_t*)"Missing value\r\n", 16);
-        return;
-    }
-    // Convert value to float (supports integer or decimal)
-    char* endptr;
-    float value = strtof(token, &endptr);
-    if (endptr == token || (*endptr != '\0' && *endptr != ' ' && *endptr != '\n')) {
-        CDC_Transmit_HS((uint8_t*)"Invalid numeric value\r\n", 23);
-        return;
-    }
-
-    // Now apply based on subsys and param
-    bool success = false;
-    char resp[64];
-    float original;
-
-    // Speed loop parameters
-    if (strcmp(subsys, "speed") == 0) {
-      if (strcmp(param, "p") == 0) {
-        // Set speed loop proportional gain
-        original = foc_state.pi_speed.kp;
-        foc_state.pi_speed.kp = value;
-        snprintf(resp, sizeof(resp), "Speed Kp set to %.4f was %.4f\r\n", value, original);
-        success = true;
-      } else if (strcmp(param, "i") == 0) {
-        original = foc_state.pi_speed.ki;
-        foc_state.pi_speed.ki = value;
-        snprintf(resp, sizeof(resp), "Speed Ki set to %.4f was %.4f\r\n", value, original);
-        success = true;
-      } else {
-        snprintf(resp, sizeof(resp), "Unknown speed parameter '%s'\r\n", param);
-      }
-
-    // Current Id loop parameters
-    } else if (strcmp(subsys, "id") == 0) {
-      if (strcmp(param, "p") == 0) {
-        // Set current loop proportional gain
-        original = foc_state.pi_d.kp;
-        foc_state.pi_d.kp = value;
-        snprintf(resp, sizeof(resp), "Id Kp set to %.4f was %.4f\r\n", value, original);
-        success = true;
-      } else if (strcmp(param, "i") == 0) {
-        original = foc_state.pi_d.ki;
-        foc_state.pi_d.ki = value;
-        snprintf(resp, sizeof(resp), "Id Ki set to %.4f was %.4f\r\n", value, original);
-        success = true;
-      } else {
-        snprintf(resp, sizeof(resp), "Unknown Id parameter '%s'\r\n", param);
-      }
-
-    // Current Iq loop parameters
-    } else if (strcmp(subsys, "iq") == 0) {
-      if (strcmp(param, "p") == 0) {
-        // Set current loop proportional gain
-        original = foc_state.pi_q.kp;
-        foc_state.pi_q.kp = value;
-        snprintf(resp, sizeof(resp), "Iq Kp set to %.4f was %.4f\r\n", value, original);
-        success = true;
-      } else if (strcmp(param, "i") == 0) {
-          // Replace with your actual function
-        original = foc_state.pi_q.ki;
-        foc_state.pi_q.ki = value;
-        snprintf(resp, sizeof(resp), "Iq Ki set to %.4f was %.4f\r\n", value, original);
-        success = true;
-      } else {
-        snprintf(resp, sizeof(resp), "Unknown Iq parameter '%s'\r\n", param);
-      }
-
-    // Field weakening loop parameters
-    } else if (strcmp(subsys, "fw") == 0) {
-      if (strcmp(param, "p") == 0) {
-        // Set field weakening loop proportional gain
-        original = foc_state.pi_fw.kp;
-        foc_state.pi_fw.kp = value;
-        snprintf(resp, sizeof(resp), "Fw Kp set to %.4f was %.4f\r\n", value, original);
-        success = true;
-      } else if (strcmp(param, "i") == 0) {
-          // Replace with your actual function
-        original = foc_state.pi_fw.ki;
-        foc_state.pi_fw.ki = value;
-        snprintf(resp, sizeof(resp), "Fw Ki set to %.4f was %.4f\r\n", value, original);
-        success = true;
-      } else {
-        snprintf(resp, sizeof(resp), "Unknown Fw parameter '%s'\r\n", param);
-      }
-
-    // Add more subsystems and parameters as needed
-    } else if (strcmp(subsys, "flux") == 0) {
-      if (strcmp(param, "p") == 0) {
-          // Replace with your actual function
-        snprintf(resp, sizeof(resp), "Flux gain set to %.3f\r\n", value);
-        success = true;
-      } else {
-        snprintf(resp, sizeof(resp), "Unknown flux parameter '%s'\r\n", param);
-      }
-    
-    // ADC parameters
-    } else if (strcmp(subsys, "adc") == 0) {
-      if (strcmp(param, "ia") == 0) {
-        original = adc_gain.ia_shunt;
-        adc_gain.ia_shunt = value;
-        snprintf(resp, sizeof(resp), "Ia shunt set to %.4f was %.4f\r\n", value, original);
-        success = true;
-      } else if (strcmp(param, "ib") == 0) {
-        original = adc_gain.ib_shunt;
-        adc_gain.ib_shunt = value;
-        snprintf(resp, sizeof(resp), "Ib shunt set to %.4f was %.4f\r\n", value, original);
-        success = true;
-      } else if (strcmp(param, "ic") == 0) {
-        original = adc_gain.ic_shunt;
-        adc_gain.ic_shunt = value;
-        snprintf(resp, sizeof(resp), "Ic shunt set to %.4f was %.4f\r\n", value, original);
-        success = true;
-      } else if (strcmp(param, "va") == 0) {
-        original = adc_gain.va_gain;
-        adc_gain.va_gain = value;
-        snprintf(resp, sizeof(resp), "Va gain set to %.4f was %.4f\r\n", value, original);
-        success = true;
-      } else if (strcmp(param, "vb") == 0) {
-        original = adc_gain.vb_gain;
-        adc_gain.vb_gain = value;
-        snprintf(resp, sizeof(resp), "Vb gain set to %.4f was %.4f\r\n", value, original);
-        success = true;
-      } else if (strcmp(param, "ibatt") == 0) {
-        original = adc_gain.ibatt_shunt;
-        adc_gain.ibatt_shunt = value;
-        snprintf(resp, sizeof(resp), "Ibatt shunt set to %.4f was %.4f\r\n", value, original);
-        success = true;
-      } else if (strcmp(param, "vbatt") == 0) {
-        original = adc_gain.vbatt_gain;
-        adc_gain.vbatt_gain = value;
-        snprintf(resp, sizeof(resp), "Vbatt gain set to %.4f was %.4f\r\n", value, original);
-        success = true;
-      } else {
-          snprintf(resp, sizeof(resp), "Unknown ADC parameter '%s'\r\n", param);
-      }
-    
-    // ADC offset parameters
-    } else if (strcmp(subsys, "offset") == 0) {
-      if (strcmp(param, "ia") == 0) {
-        original = adc_gain.ia_offset;
-        adc_gain.ia_offset = value;
-        snprintf(resp, sizeof(resp), "Ia offset set to %.4f was %.4f\r\n", value, original);
-        success = true;
-      } else if (strcmp(param, "ib") == 0) {
-        original = adc_gain.ib_offset;
-        adc_gain.ib_offset = value;
-        snprintf(resp, sizeof(resp), "Ib offset set to %.4f was %.4f\r\n", value, original);
-        success = true;
-      } else if (strcmp(param, "ic") == 0) {
-        original = adc_gain.ic_offset;
-        adc_gain.ic_offset = value;
-        snprintf(resp, sizeof(resp), "Ic offset set to %.4f was %.4f\r\n", value, original);
-        success = true;
-      } else if (strcmp(param, "va") == 0) {
-        original = adc_gain.va_offset;
-        adc_gain.va_offset = value;
-        snprintf(resp, sizeof(resp), "Va offset set to %.4f was %.4f\r\n", value, original);
-        success = true;
-      } else if (strcmp(param, "vb") == 0) {
-        original = adc_gain.vb_offset;
-        adc_gain.vb_offset = value;
-        snprintf(resp, sizeof(resp), "Vb offset set to %.4f was %.4f\r\n", value, original);
-        success = true;
-      } else if (strcmp(param, "ibatt") == 0) {
-        original = adc_gain.ibatt_offset;
-        adc_gain.ibatt_offset = value;
-        snprintf(resp, sizeof(resp), "Ibatt offset set to %.4f was %.4f\r\n", value, original);
-        success = true;
-      } else if (strcmp(param, "vbatt") == 0) {
-        original = adc_gain.vbatt_offset;
-        adc_gain.vbatt_offset = value;
-        snprintf(resp, sizeof(resp), "Vbatt offset set to %.4f was %.4f\r\n", value, original);
-        success = true;
-      } else {
-          snprintf(resp, sizeof(resp), "Unknown ADC offset parameter '%s'\r\n", param);
-      }
-
-    } else {
-        snprintf(resp, sizeof(resp), "Unknown subsystem '%s'\r\n", subsys);
-    }
-
-    if (success) {
-        CDC_Transmit_HS((uint8_t*)resp, strlen(resp));
-    } else {
-        // Error message already prepared
-        CDC_Transmit_HS((uint8_t*)resp, strlen(resp));
-    }
-
-  // Print variables or change print format
-  } else if (strncmp(cmd, "log ", 4) == 0) {
-    char cmd_copy[CMD_MAX_LEN];
-    strncpy(cmd_copy, cmd + 4, CMD_MAX_LEN - 1);
-    cmd_copy[CMD_MAX_LEN - 1] = '\0';
-
-    char* token = strtok(cmd_copy, " ");
-    if (token == NULL) {
-        CDC_Transmit_HS((uint8_t*)"Usage: log <add|rm|utf8|bin> [var]\r\n", 44);
-        return;
-    }
-
-    if (strcmp(token, "add") == 0) {
-        token = strtok(NULL, " ");
-        if (token == NULL) {
-            CDC_Transmit_HS((uint8_t*)"Missing variable name\r\n", 23);
-            return;
-        }
-        uint32_t flag = 0;
-        // Map variable names to print flags
-        if (strcmp(token, "hall") == 0) flag = PRINT_HALLBIN;
-        else if (strcmp(token, "hall_dec") == 0) flag = PRINT_HALLDEC;
-        else if (strcmp(token, "rpm") == 0) flag = PRINT_RPM;
-        else if (strcmp(token, "pos") == 0) flag = PRINT_POS;
-        else if (strcmp(token, "duty_a") == 0) flag = PRINT_DUTY_A;
-        else if (strcmp(token, "duty_b") == 0) flag = PRINT_DUTY_B;
-        else if (strcmp(token, "duty_c") == 0) flag = PRINT_DUTY_C;
-        else if (strcmp(token, "ia") == 0) flag = PRINT_IA;
-        else if (strcmp(token, "ib") == 0) flag = PRINT_IB;
-        else if (strcmp(token, "ic") == 0) flag = PRINT_IC;
-        else if (strcmp(token, "va") == 0) flag = PRINT_VA;
-        else if (strcmp(token, "vb") == 0) flag = PRINT_VB;
-        else if (strcmp(token, "vbatt") == 0) flag = PRINT_VBATT;
-        else if (strcmp(token, "ibatt") == 0) flag = PRINT_IBATT;
-        else if (strcmp(token, "ia_raw") == 0) flag = PRINT_IA_RAW;
-        else if (strcmp(token, "ib_raw") == 0) flag = PRINT_IB_RAW;
-        else if (strcmp(token, "ic_raw") == 0) flag = PRINT_IC_RAW;
-        else if (strcmp(token, "va_raw") == 0) flag = PRINT_VA_RAW;
-        else if (strcmp(token, "vb_raw") == 0) flag = PRINT_VB_RAW;
-        else if (strcmp(token, "vbatt_raw") == 0) flag = PRINT_VBATT_RAW;
-        else if (strcmp(token, "ibatt_raw") == 0) flag = PRINT_IBATT_RAW;
-        // Add more variables as needed
-        else {
-            CDC_Transmit_HS((uint8_t*)"Unknown variable\r\n", 18);
-            return;
-        }
-        print_mask |= flag;
-        CDC_Transmit_HS((uint8_t*)"Variable added\r\n", 16);
-    }
-    else if (strcmp(token, "rm") == 0) {
-        token = strtok(NULL, " ");
-        if (token == NULL) {
-            CDC_Transmit_HS((uint8_t*)"Missing variable name\r\n", 23);
-            return;
-        }
-        uint32_t flag = 0;
-        // Map variable names to print flags
-        if (strcmp(token, "hall") == 0) flag = PRINT_HALLBIN;
-        else if (strcmp(token, "hall_dec") == 0) flag = PRINT_HALLDEC;
-        else if (strcmp(token, "rpm") == 0) flag = PRINT_RPM;
-        else if (strcmp(token, "pos") == 0) flag = PRINT_POS;
-        else if (strcmp(token, "duty_a") == 0) flag = PRINT_DUTY_A;
-        else if (strcmp(token, "duty_b") == 0) flag = PRINT_DUTY_B;
-        else if (strcmp(token, "duty_c") == 0) flag = PRINT_DUTY_C;
-        else if (strcmp(token, "ia") == 0) flag = PRINT_IA;
-        else if (strcmp(token, "ib") == 0) flag = PRINT_IB;
-        else if (strcmp(token, "ic") == 0) flag = PRINT_IC;
-        else if (strcmp(token, "va") == 0) flag = PRINT_VA;
-        else if (strcmp(token, "vb") == 0) flag = PRINT_VB;
-        else if (strcmp(token, "vbatt") == 0) flag = PRINT_VBATT;
-        else if (strcmp(token, "ibatt") == 0) flag = PRINT_IBATT;
-        else if (strcmp(token, "ia_raw") == 0) flag = PRINT_IA_RAW;
-        else if (strcmp(token, "ib_raw") == 0) flag = PRINT_IB_RAW;
-        else if (strcmp(token, "ic_raw") == 0) flag = PRINT_IC_RAW;
-        else if (strcmp(token, "va_raw") == 0) flag = PRINT_VA_RAW;
-        else if (strcmp(token, "vb_raw") == 0) flag = PRINT_VB_RAW;
-        else if (strcmp(token, "vbatt_raw") == 0) flag = PRINT_VBATT_RAW;
-        else if (strcmp(token, "ibatt_raw") == 0) flag = PRINT_IBATT_RAW;
-        else if (strcmp(token, "all") == 0) print_mask = 0;
-        // Add more variables as needed
-        else {
-            CDC_Transmit_HS((uint8_t*)"Unknown variable\r\n", 18);
-            return;
-        }
-        print_mask &= ~flag;
-        CDC_Transmit_HS((uint8_t*)"Variable removed\r\n", 18);
-    }
-    else if (strcmp(token, "utf8") == 0) {
-        print_format = PrintFormat::PRINT_UTF8;
-        CDC_Transmit_HS((uint8_t*)"Print format set to UTF8\r\n", 27);
-    }
-    else if (strcmp(token, "bin") == 0) {
-        print_format = PrintFormat::PRINT_BINARY;
-        CDC_Transmit_HS((uint8_t*)"Print format set to BINARY\r\n", 28);
-    }
-    else {
-        CDC_Transmit_HS((uint8_t*)"Invalid print subcommand\r\n", 26);
-    }
-
-  // Toggle audible frequency
-  } else if (strcmp(cmd, "audible") == 0) {
-    if (system_flag & FLAG_AUDIBLE) {
-      system_flag &= ~FLAG_AUDIBLE;
-      CDC_Transmit_HS((uint8_t*)"Audible frequency disabled\r\n", 28);
-    } else {
-      system_flag |= FLAG_AUDIBLE;
-      CDC_Transmit_HS((uint8_t*)"Audible frequency enabled\r\n", 27);
-    }
-    
-  // Handle invalid case
-  } else {
-      // Unknown command
-      const char* err = "Unknown command\r\n";
-      CDC_Transmit_HS((uint8_t*)err, strlen(err));
-  }
-} */
-
-
 // ─────────────────────────────────────────────────────────────────────────────
 //  FOC ISR tick — called from TIM8 update interrupt at 20 kHz
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1988,13 +1463,13 @@ static void foc_isr_tick(void)
      *   ADC3[0] = I_C   (PC1,  INP11, 12-bit → 4096 counts)
      *   ADC3[1] = I_BATT(PC0,  INP10, 12-bit)  — not used in FOC loop
      * --------------------------------------------------------------------- */
-    //uint16_t adc1_raw[3];
-    //uint16_t adc2_raw[2];
-    //uint16_t adc3_raw[2];
+    uint16_t adc1_raw[3];
+    uint16_t adc2_raw[2];
+    uint16_t adc3_raw[2];
 
-    //adc1.getLatestData(adc1_raw);
-    //adc2.getLatestData(adc2_raw);
-    //adc3.getLatestData(adc3_raw);
+    adc1.getLatestDataMean(adc1_raw, FOC_OVERSAMPLING_SIZE);
+    adc2.getLatestDataMean(adc2_raw, FOC_OVERSAMPLING_SIZE);
+    adc3.getLatestDataMean(adc3_raw, FOC_OVERSAMPLING_SIZE);
 
     /*
      * Convert raw ADC to amps using the real formula:
@@ -2008,25 +1483,15 @@ static void foc_isr_tick(void)
      *       channels — the op-amp gain of 50 is already embedded in the
      *       shunt value (effective sensitivity = 50 × shunt V/A).
      */
-    //float Ia = adcToCurrent(adc1_raw[0], 3.3f, 65536, 1.0f,
-    //                        1.65f + adc_gain.ia_offset, adc_gain.ia_shunt);
-    //float Ib = adcToCurrent(adc2_raw[0], 3.3f, 65536, 1.0f,
-    //                        1.65f + adc_gain.ib_offset, adc_gain.ib_shunt);
-    //float Ic = adcToCurrent(adc3_raw[0], 3.3f,  4096, 1.0f,
-    //                        1.65f + adc_gain.ic_offset, adc_gain.ic_shunt);
-
-    float Ia = adcToCurrent(adc1.getLatestChannelMean(0, FOC_OVERSAMPLING_SIZE), 3.3f, 65536, 50.0f,
+    float Ia = adcToCurrent(adc1_raw[0], 3.3f, 65536, 1.0f,
                             1.65f + adc_gain.ia_offset, adc_gain.ia_shunt);
-    float Ib = adcToCurrent(adc2.getLatestChannelMean(0, FOC_OVERSAMPLING_SIZE), 3.3f, 65536, 50.0f,
+    float Ib = adcToCurrent(adc2_raw[0], 3.3f, 65536, 1.0f,
                             1.65f + adc_gain.ib_offset, adc_gain.ib_shunt);
-    float Ic = adcToCurrent(adc3.getLatestChannelMean(0, FOC_OVERSAMPLING_SIZE), 3.3f,  4096, 50.0f,
+    float Ic = adcToCurrent(adc3_raw[0], 3.3f,  4096, 1.0f,
                             1.65f + adc_gain.ic_offset, adc_gain.ic_shunt);
 
     /* DC bus voltage */
-    //float Vdc = adcToVoltage(adc1_raw[2], 3.3f, 65536,
-    //                         adc_gain.vbatt_gain, adc_gain.vbatt_offset);
-                             
-    float Vdc = adcToVoltage(adc1.getLatestChannelMean(2, FOC_OVERSAMPLING_SIZE), 3.3f, 65536,
+    float Vdc = adcToVoltage(adc1_raw[2], 3.3f, 65536,
                              adc_gain.vbatt_gain, adc_gain.vbatt_offset);
 
     /* Guard: Vdc too low — SVPWM would divide by zero */
