@@ -34,7 +34,7 @@
 #define VVVF_MAX_RPM                3000U // Max RPM for VVVF mod
 #define VVVF_THRESHOLD_RPM          1500U // Minimum RPM to maintain after ramp-up
 
-#define FOC_ALLOWED                 false // Allow FOC mode in the system (set to false to disable FOC-related code and save flash/RAM)
+#define FOC_ALLOWED                 true // Allow FOC mode in the system (set to false to disable FOC-related code and save flash/RAM)
 #define FOC_INITIAL_RPM             1500U // Target RPM for FOC mode (used when FOC is enabled and selected)
 #define FOC_OVERSAMPLING_SIZE       16U // Number of samples to average for oversampling (must be a power of 2 for efficient averaging)
 
