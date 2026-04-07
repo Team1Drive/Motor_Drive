@@ -19,7 +19,9 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "adc.h"
+#include "comp.h"
 #include "cordic.h"
+#include "dac.h"
 #include "dma.h"
 #include "tim.h"
 #include "usb_device.h"
