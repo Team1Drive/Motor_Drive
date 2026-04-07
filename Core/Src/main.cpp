@@ -214,48 +214,39 @@ int main(void)
   SCB_EnableICache();
   SCB_EnableDCache();
 
-  /* USER CODE END 2 */
   usb_printf("HAL Initialized\n");
-
+  
   if (motorPWM.setFrequency(20000) != HAL_OK) error_flag |= ERROR_PWM_CONFIG;
   if (motorPWM.setDeadTime(1000) != HAL_OK) error_flag |= ERROR_PWM_CONFIG;
-
+  
   /* Initialise FOC controller */
   foc_init(&foc_state);
   foc_state.target_rpm = FOC_INITIAL_RPM;
-
+  
   adc1.setProcessingBuffer(adc1_proc_buffer, ADC1_BUF_LEN);
   adc2.setProcessingBuffer(adc2_proc_buffer, ADC2_BUF_LEN);
   adc3.setProcessingBuffer(adc3_proc_buffer, ADC3_BUF_LEN);
 
-  if (error_flag) led_red.write(0);
+  if (!error_flag) led_red.write(0);
   led_green.write(0);
   led_yellow_1.write(0);
   led_yellow_2.write(0);
-
+  
   control_mode = MotorControlMode::MOTOR_STOP;
-
+  
   usb_printf("System Initialized\n");
-
+  /* USER CODE END 2 */
+  
   /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
   while (1)
   {
-    //usb_printf("Hello from STM32! Counter: %lu\r\n", counter++);
-    /* USER CODE END WHILE */
-    /* HAL_ADC_Start(&hadc1);
-    HAL_ADC_PollForConversion(&hadc1, 10);
-    uint32_t val = HAL_ADC_GetValue(&hadc1);
-    usb_printf("Polling Val: %lu\r\n", val); */
+    /* USER CODE BEGIN WHILE */
     char cmd_line[CMD_MAX_LEN];
-    if (read_line_from_ring(&rx_ring, cmd_line, CMD_MAX_LEN)) {
-      CDC_Transmit_HS((uint8_t*)"Received: ", 10);
-      CDC_Transmit_HS((uint8_t*)cmd_line, strlen(cmd_line));
-      // Debugging print, remove above lines after validation
-      process_command(cmd_line);
-    }
+    if (read_line_from_ring(&rx_ring, cmd_line, CMD_MAX_LEN)) process_command(cmd_line);
     /* USER CODE BEGIN 3 */
   }
+  /* USER CODE BEGIN 3 */
+
   /* USER CODE END 3 */
 }
 
@@ -363,31 +354,7 @@ void USB_CDC_RxHandler(uint8_t* Buf, uint32_t Len) {
  * @note Currently not used.
  */
 void timer2IRQ(void) {
-  /* uint16_t adc1_raw[3];
-  uint16_t adc2_raw[2];
-  uint16_t adc3_raw[2];
-
-  adc1.getLatestData(adc1_raw);
-  adc2.getLatestData(adc2_raw);
-  adc3.getLatestData(adc3_raw);
-
-  //usb_printf("RAW: %u\t%u\t%u\t%.1f\n", adc1_raw[0], adc2_raw[0], adc3_raw[0], encoder.getRPM());
-
-  float ia = adcToCurrent(adc1_raw[0], 3.3f, 65536, 50.0f, 1.65f, adc_gain.ia_shunt);
-  float ib = adcToCurrent(adc2_raw[0], 3.3f, 65536, 50.0f, 1.65f, adc_gain.ib_shunt);
-  float ic = adcToCurrent(adc3_raw[0], 3.3f, 4096, 50.0f, 1.65f, adc_gain.ic_shunt);
-
-  float vab = adcToVoltage(adc2_raw[1], 3.3f, 65536, adc_gain.va_gain, 1.65f);
-  float vbc = adcToVoltage(adc1_raw[1], 3.3f, 65536, adc_gain.vb_gain, 1.65f);
-
-  float vbatt = adcToVoltage(adc1_raw[2], 3.3f, 65536, adc_gain.vbatt_gain, 0.0f);
-  float ibatt = adcToCurrent(adc3_raw[1], 3.3f, 4096, 50.0f, 1.65f, adc_gain.ibatt_shunt);
-
-  //usb_printf("i a/b/c (A):\t%.2f\t%.2f\t%.2f\n", ia, ib, ic);
-  //usb_printf("v ab/bc (V):\t%.2f\t%.2f\n", vab, vbc);
-  //usb_printf("v batt (V): %.2f\t, i batt (A): %.2f\n", vbatt, ibatt);
-
-  //usb_printf("RPM: %.2f\t, Direction: %d\n", encoder.getRPM(), encoder.getDirection()); */
+  
 }
 
 /**
@@ -461,32 +428,7 @@ void timer3IRQ(void) {
  * @note Currently not used.
  */
 void timer6IRQ(void) {
-  /* uint16_t adc1_raw[3];
-  uint16_t adc2_raw[2];
-  uint16_t adc3_raw[2];
 
-  adc1.getLatestData(adc1_raw);
-  adc2.getLatestData(adc2_raw);
-  adc3.getLatestData(adc3_raw);
-
-  float ia = adcToCurrent(adc1_raw[0], 3.3f, 65536, 50.0f, 1.65f, adc_gain.ia_shunt);
-  float ib = adcToCurrent(adc2_raw[0], 3.3f, 65536, 50.0f, 1.65f, adc_gain.ib_shunt);
-  float ic = adcToCurrent(adc3_raw[0], 3.3f, 4096, 50.0f, 1.65f, adc_gain.ic_shunt);
-
-  float vab = adcToVoltage(adc2_raw[1], 3.3f, 65536, adc_gain.va_gain, 1.65f);
-  float vbc = adcToVoltage(adc1_raw[1], 3.3f, 65536, adc_gain.vb_gain, 1.65f);
-
-  float vbatt = adcToVoltage(adc1_raw[2], 3.3f, 65536, adc_gain.vbatt_gain, 0.0f);
-  float ibatt = adcToCurrent(adc3_raw[1], 3.3f, 4096, 50.0f, 1.65f, adc_gain.ibatt_shunt);
-
-  LogData_t data;
-  data.ia    = adc1_raw[0];
-  data.ib    = adc2_raw[0];
-  data.ic    = adc3_raw[0];
-  data.speed = encoder.getRPM();
-  data.pos   = encoder.getPos();
-
-  CDC_Transmit_HS((uint8_t*)&data, sizeof(LogData_t)); */
 }
 
 /**
@@ -947,10 +889,29 @@ const int8_t commutation_acw[8][3] = {
   motorPWM.setDuty(dutyA, dutyB, dutyC);
 }
 
+/**
+ * @brief Converts a raw ADC value to a voltage in volts, applying the reference voltage, resolution, gain, and offset for calibration.
+ * @param raw The raw ADC value to be converted.
+ * @param vref The reference voltage for the ADC.
+ * @param resolution The resolution of the ADC (e.g., 4096 for 12-bit, 65536 for 16-bit).
+ * @param gain The gain factor for the ADC.
+ * @param offset The offset factor for the ADC.
+ * @return The converted voltage in volts.
+ */
 float adcToVoltage(uint32_t raw, float vref, uint32_t resolution, float gain, float offset) {
   return (((float)raw / (float)resolution) * vref - offset) / gain;
 }
 
+/**
+ * @brief Converts a raw ADC value to a current in amps, using the voltage conversion and applying the shunt resistance for current measurement.
+ * @param raw The raw ADC value to be converted.
+ * @param vref The reference voltage for the ADC.
+ * @param resolution The resolution of the ADC (e.g., 4096 for 12-bit, 65536 for 16-bit).
+ * @param gain The gain factor for the ADC.
+ * @param offset The offset factor for the ADC.
+ * @param shunt The shunt resistance in ohms used for current measurement.
+ * @return The converted current in amps.
+ */
 float adcToCurrent(uint32_t raw, float vref, uint32_t resolution, float gain, float offset, float shunt) {
   float voltage = adcToVoltage(raw, vref, resolution, gain, offset);
   return voltage / shunt;
