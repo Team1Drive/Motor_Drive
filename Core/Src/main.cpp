@@ -744,8 +744,8 @@ void speedControl(void) {
 void alignRotor(void) {
   if (control_mode != MotorControlMode::MOTOR_ALIGN) return;
 
-  static uint16_t pos_buffer[MOTOR_ALIGNMENT_POS_WINDOW] = {0};
-  static uint8_t buffer_idx = 0;
+  static uint16_t p_pos = 0;
+  static uint8_t settlement_counter = 0;
 
   if ((system_flag & FLAG_ROTOR_ALIGNING) == 0) {
     uint16_t vdc_sample[FOC_OVERSAMPLING_SIZE];
@@ -754,39 +754,30 @@ void alignRotor(void) {
                              adc_gain.vbatt_gain, adc_gain.vbatt_offset);
 
     float dutyA, dutyB, dutyC;
+    foc_state.ts = 1.0f / (float)motorPWM.getFrequency();
     foc_align_zero(&foc_state, MOTOR_ALIGNMENT_VOLTAGE, Vdc, &dutyA, &dutyB, &dutyC);
     motorPWM.setDuty(dutyA, dutyB, dutyC);
 
     system_flag |= FLAG_ROTOR_ALIGNING;
   }
 
-  pos_buffer[buffer_idx] = encoder.getPos();
+  uint16_t pos = encoder.getPos();
   
-  uint16_t min_pos = pos_buffer[0], max_pos = pos_buffer[0];
-  for (uint8_t i = 1; i < MOTOR_ALIGNMENT_POS_WINDOW; i++) {
-    uint16_t p = pos_buffer[i];
-      if (p < min_pos) min_pos = p;
-      if (p > max_pos) max_pos = p;
-    }
-  uint16_t pos_delta = max_pos - min_pos;
+  int16_t delta_pos = (int16_t)(pos - p_pos);
+  if (abs(delta_pos) < MOTOR_ALIGNMENT_THRESHOLD) {
+    settlement_counter++;
+  }
+  else {
+    settlement_counter = 0;
+  }
 
-  if (pos_delta < MOTOR_ALIGNMENT_THRESHOLD) {
-    uint16_t aligned_pos = pos_buffer[buffer_idx];
-    const uint16_t elec_pos_range = ENCODER_PPR * 4U / MOTOR_POLE_PAIRS;
-    while (aligned_pos >= elec_pos_range) {
-      aligned_pos -= elec_pos_range;
-    }
-    foc_state.elec_zero_encoder_pos = aligned_pos;
+  if (settlement_counter > MOTOR_ALIGNMENT_POS_WINDOW) {
+    encoder.elecZeroAlign();
 
     control_mode = MotorControlMode::MOTOR_STOP;
     system_flag &= ~FLAG_ROTOR_ALIGNING;
     system_flag |= FLAG_ELEC_ZERO_ALIGNED;
-
-    return;
   }
-
-  buffer_idx++;
-  if (buffer_idx >= MOTOR_ALIGNMENT_POS_WINDOW) buffer_idx = 0;
 }
 
 /**
@@ -802,16 +793,17 @@ void alignRotor(void) {
 void startUpSequence(void) {
   if (control_mode != MotorControlMode::MOTOR_STARTUP) return;
 
+  if (!encoder.is_zeroed_) {
+    control_mode = MotorControlMode::MOTOR_ALIGN;
+    return;
+  }
+
   foc_reset(&foc_state);
+  hallsensor.read();
+  system_flag |= FLAG_VVVF_RAMP_UP;
+  control_mode = MotorControlMode::MOTOR_VVVF;
 
-  system_flag &= ~FLAG_VVVF_RUNNING;
-  system_flag &= ~FLAG_SIXSTEP_RUNNING;
-  system_flag |= FLAG_FOC_RUNNING;
-
-  motorPWM.start();
-  control_mode = MotorControlMode::MOTOR_FOC_LINEAR;
-
-  usb_printf("Startup: FOC enabled, target=%u RPM\r\n", (unsigned)FOC_INITIAL_RPM);
+  //usb_printf("Startup: FOC enabled, target=%u RPM\r\n", (unsigned)FOC_INITIAL_RPM);
 }
 
 /**
@@ -1031,10 +1023,6 @@ static void process_command(const char* cmd) {
     system_flag &= ~FLAG_SIXSTEP_RUNNING;
     system_flag &= ~FLAG_FOC_RUNNING;
     relay.write(1);
-    control_mode = MotorControlMode::MOTOR_STARTUP;
-    system_flag &= ~FLAG_VVVF_RUNNING;
-    system_flag &= ~FLAG_SIXSTEP_RUNNING;
-    system_flag &= ~FLAG_FOC_RUNNING;
     startUpSequence();
     CDC_Transmit_HS((uint8_t*)"Starting\r\n", 10);
 
@@ -1721,9 +1709,10 @@ static void foc_isr_tick(void)
      *    theta_e = theta_mech × pole_pairs, wrapped to [0, 2π)
      *    omega_m = mechanical angular velocity (rad/s)
      * --------------------------------------------------------------------- */
-    float theta_mech = encoder.getPos_rad();
-    float theta_e    = fmodf(theta_mech * (float)MOTOR_POLE_PAIRS, 2.0f * M_PI);
-    if (theta_e < 0.0f) theta_e += 2.0f * M_PI;
+    //float theta_mech = encoder.getPos_rad();
+    //float theta_e    = fmodf(theta_mech * (float)MOTOR_POLE_PAIRS, 2.0f * M_PI);
+    //if (theta_e < 0.0f) theta_e += 2.0f * M_PI;
+    float theta_e    = encoder.getElecPos_rad();
 
     float omega_m = encoder.getRPM() * (2.0f * M_PI / 60.0f);
 
@@ -1731,6 +1720,7 @@ static void foc_isr_tick(void)
      * 3. Run one FOC tick
      * --------------------------------------------------------------------- */
     float dutyA, dutyB, dutyC;
+    foc_state.ts = 1.0f / (float)motorPWM.getFrequency();  // Update FOC state with actual PWM period
     foc_run(&foc_state,
             Ia, Ib, Ic,
             Vdc,

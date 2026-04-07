@@ -164,8 +164,8 @@ typedef struct {
     float Id_ref;       /* d-axis current reference (A)                  */
     float Iq_ref;       /* q-axis current reference (A)                  */
 
-    /* --- Alignment state --- */
-    uint16_t elec_zero_encoder_pos; /* Encoder position at which electrical angle is zero (set during alignment) */
+    /* --- System parameters --- */
+    float ts;           /* FOC / PWM period (s). Must match motorPWM.setFrequency() */
 
     /* --- Observables — written each tick, read by main loop / telemetry --- */
     volatile float Id;

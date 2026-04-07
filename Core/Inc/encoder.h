@@ -13,12 +13,16 @@ class Encoder {
         uint16_t indexPin_;
         const uint32_t counts_per_rev_;
         const float speedloop_period;
+        const uint16_t elec_pos_range_;
         float mt_threshold_;
         uint8_t stall_threshold_;
         int32_t overflow_count_;
 
-        uint16_t index_offset_;
-        uint16_t last_hw_cnt_;
+        volatile uint16_t index_offset_;
+        volatile uint16_t elec_zero_pos_;
+        volatile uint16_t elec_zero_offset_;
+        volatile uint16_t last_hw_cnt_;
+        volatile bool zero_aligned_;
 
         float rpm;
         float filtered_rpm_;
@@ -39,6 +43,8 @@ class Encoder {
 
         void index_rise(void);
 
+        uint16_t calcElecOffset(uint16_t elec_zero_pos, uint16_t index_offset);
+
         void updateSpeed(void);
 
         void counterOverflow(void);
@@ -46,11 +52,14 @@ class Encoder {
     public:
         Encoder(TIM_HandleTypeDef* htim, MicrosecondTimer timer, uint16_t index_pin, uint32_t pulses_per_rev, uint32_t speedloop_freq, uint8_t stall_threshold);
 
-        bool is_synchronized_;
+        volatile bool is_synchronized_;
+        volatile bool is_zeroed_;
         
         void init(void);
 
         HAL_StatusTypeDef start(void);
+
+        void elecZeroAlign(void);
 
         static void irqHandlerIndex(uint16_t pin);
 
@@ -61,10 +70,16 @@ class Encoder {
         void reset(void);
 
         /**
-         * @brief Gets the current count of encoder pulses. This count is incremented on each rising edge of channel A and channel B, and can be reset to zero using the reset() function. The count represents the total number of pulses detected since the last reset, and can be used to calculate position, speed, and direction of rotation.
+         * @brief Gets the current count of encoder pulses.
          * @return The current count of encoder pulses.
          */
         uint16_t getPos(void) const;
+
+        /**
+         * @brief Gets the current electrical angle of the motor in encoder counts.
+         * @return The current electrical angle of the motor in encoder counts.
+         */
+        uint16_t getElecPos(void) const;
 
         /**
          * @brief Gets the current direction of rotation based on the state of the encoder channels. The direction is determined by the sequence of rising and falling edges on channel A and channel B, and is typically represented as 1 for clockwise rotation, -1 for counterclockwise rotation, and 0 for no movement or invalid state.
@@ -92,4 +107,6 @@ class Encoder {
          * @return The current position of the encoder in radians. The position is calculated using the formula: Position (radians) = (Count % (PPR * 4)) / (PPR * 4) * 2π, where Count is the current pulse count, PPR is the number of pulses per revolution, and the factor of 4 accounts for quadrature encoding.
          */
         float getPos_rad(void) const;
+
+        float getElecPos_rad(void) const;
 };
