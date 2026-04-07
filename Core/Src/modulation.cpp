@@ -32,7 +32,7 @@ static inline void sector_to_times(int sector,
 static inline void get_sector_and_angle(float v_alpha, float v_beta,
                                         int& sector, float& theta_s)
 {
-    float theta = atan2f(v_beta, v_alpha);
+    float theta = cordic::atan2f(v_beta, v_alpha);
     if (theta < 0.0f) theta += 2.0f * M_PI;
     sector  = (int)(theta / (M_PI / 3.0f)) + 1;   // 1-based (1..6)
     if (sector > 6) sector = 6;
@@ -59,16 +59,18 @@ void inv_clarke(float alpha, float beta, float* a, float* b, float* c)
 
 void park(float alpha, float beta, float theta, float* d, float* q)
 {
-    float cos_t = cosf(theta);
-    float sin_t = sinf(theta);
+    float cos_t;
+    float sin_t;
+    cordic::sincos(theta, &sin_t, &cos_t);
     *d =  alpha * cos_t + beta * sin_t;
     *q = -alpha * sin_t + beta * cos_t;
 }
 
 void inv_park(float d, float q, float theta, float* alpha, float* beta)
 {
-    float cos_t = cosf(theta);
-    float sin_t = sinf(theta);
+    float cos_t;
+    float sin_t;
+    cordic::sincos(theta, &sin_t, &cos_t);
     *alpha = d * cos_t - q * sin_t;
     *beta  = d * sin_t + q * cos_t;
 }
@@ -89,12 +91,12 @@ static void svpwm_standard(float v_alpha, float v_beta, float v_dc,
     float theta_s;
     get_sector_and_angle(v_alpha, v_beta, sector, theta_s);
 
-    float v_ref   = hypotf(v_alpha, v_beta);
+    float v_ref   = cordic::hypotf(v_alpha, v_beta);
     float v_ratio = v_ref / v_dc;                        // normalised magnitude
     const float csc60 = 2.0f / SQRT3;
 
-    float d2 = sinf(theta_s)               * v_ratio * csc60;
-    float d1 = sinf(M_PI / 3.0f - theta_s) * v_ratio * csc60;
+    float d2 = cordic::sinf(theta_s)               * v_ratio * csc60;
+    float d1 = cordic::sinf(M_PI / 3.0f - theta_s) * v_ratio * csc60;
     float d0 = 1.0f - d1 - d2;
     if (d0 < 0.0f) d0 = 0.0f;                           // clamp before mapping
 
@@ -119,12 +121,12 @@ static void svpwm_comp(float v_alpha, float v_beta, float v_dc, float Ts,
     float theta_s;
     get_sector_and_angle(v_alpha, v_beta, sector, theta_s);
 
-    float v_ref = hypotf(v_alpha, v_beta);
+    float v_ref = cordic::hypotf(v_alpha, v_beta);
     float K     = (SQRT3 * Ts / v_dc) * v_ref;          // time scaling factor
 
-    float T1 = std::max(K * sinf(M_PI / 3.0f - theta_s), 0.0f);
-    float T2 = std::max(K * sinf(theta_s),                0.0f);
-    float T0 = std::max(Ts - T1 - T2,                    0.0f);
+    float T1 = std::max(K * cordic::sinf(M_PI / 3.0f - theta_s), 0.0f);
+    float T2 = std::max(K * cordic::sinf(theta_s),               0.0f);
+    float T0 = std::max(Ts - T1 - T2,                            0.0f);
 
     float Ta, Tb, Tc;
     sector_to_times(sector, T0, T1, T2, Ta, Tb, Tc);
@@ -148,13 +150,13 @@ static void svpwm_superposition(float v_alpha, float v_beta, float v_dc, float T
     get_sector_and_angle(v_alpha, v_beta, sector, theta_s);
 
     // Compute normalised modulation index from voltage vector magnitude
-    float v_ref = hypotf(v_alpha, v_beta);
+    float v_ref = cordic::hypotf(v_alpha, v_beta);
     float m     = v_ref / (v_dc * 0.5f);                // [0..1], >1 = overmod
     m = std::min(m, 1.0f);                              // hard cap at six-step
 
-    float s1  = sinf(M_PI / 3.0f - theta_s);
-    float s2  = sinf(theta_s);
-    float cd  = std::max(cosf(theta_s - M_PI / 6.0f), 1e-6f);
+    float s1  = cordic::sinf(M_PI / 3.0f - theta_s);
+    float s2  = cordic::sinf(theta_s);
+    float cd  = std::max(cordic::cosf(theta_s - M_PI / 6.0f), 1e-6f);
 
     float T1, T2;
 
