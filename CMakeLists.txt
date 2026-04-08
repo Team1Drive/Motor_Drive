@@ -84,6 +84,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Core/Src/timer.cpp
     Core/Src/foc.cpp
     Core/Src/cmd.cpp
+    Core/Src/math_helpers.cpp
 )
 
 # Add include paths
