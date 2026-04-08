@@ -1512,7 +1512,7 @@ void cmd_arctan(int argc, char** argv) {
         CDC_Transmit_HS((uint8_t*)"x and y must be positive for arctan test\r\n", 43);
         return;
     }
-    char resp[64];
+    char resp[128];
     int len = snprintf(resp, sizeof(resp), "atan2f(%.2f, %.2f) = %.5f, cordic::atan2f(%.2f, %.2f) = %.5f\r\n", y, x, atan2f(y, x), y, x, cordic::atan2f(y, x));
     CDC_Transmit_HS((uint8_t*)resp, len);
 }
@@ -1524,7 +1524,7 @@ void cmd_hypot(int argc, char** argv) {
         CDC_Transmit_HS((uint8_t*)"x and y must be positive for hypot test\r\n", 42);
         return;
     }
-    char resp[64];
+    char resp[128];
     int len = snprintf(resp, sizeof(resp), "hypotf(%.2f, %.2f) = %.5f, cordic::hypotf(%.2f, %.2f) = %.5f\r\n", x, y, hypotf(x, y), x, y, cordic::hypotf(x, y));
     CDC_Transmit_HS((uint8_t*)resp, len);
 }

@@ -3,13 +3,17 @@
 #include <stdint.h>
 
 #define M_PI   3.14159265358979323846264338327950288f
+#define SQRT2  1.41421356237309504880168872420969808f
 #define SQRT3  1.73205080756887729352744634150587236f
+#define CORDIC_GAIN  1.64676025812107f
+
+float normalize_rad(float angle_rad);
 
 int32_t float_to_q31(float angle_rad);
 
 float q31_to_float(int32_t q31_val);
 
-float wrap_to_pi(float angle);
+float wrap_to_pi(float angle_rad);
 
 namespace cordic {
     /**
@@ -26,7 +30,7 @@ namespace cordic {
      * @param sin_out Pointer to the float where the sine result will be stored.
      * @param cos_out Pointer to the float where the cosine result will be stored.
      */
-    void sincos(float angle_q31, float* sin_out, float* cos_out);
+    void sincos(int32_t angle_q31, int32_t* sin_out, int32_t* cos_out);
 
     /**
      * @brief Calculates both Sine and Cosine in a single zero-overhead call.
