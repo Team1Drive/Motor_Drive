@@ -608,6 +608,11 @@ void printTelemetryUTF8(void) {
 }
 
 /**
+ * Print telemetry data in binary format over USB.
+ * Data structure:
+ * [Header: 0xAA 0x55][4-byte print_mask][Data fields...]
+ * The data fields are included based on the print_mask bits, and are in the same order as defined in the printTelemetryUTF8 function. Each field is represented in its raw binary format (e.g., float as 4 bytes, uint16_t as 2 bytes).
+ * 
  * @brief Function to print telemetry data in binary format over USB.
  * @note The data fields to be printed are determined by the print_mask variable,with variable data packet length. The packet starts with a header (0xAA 0x55), followed by a 4-byte mask indicating which fields are included, and then the data fields in the order defined by the print_mask.
  * @note Binary data sent is parsed automatically by a script on the host computer.
