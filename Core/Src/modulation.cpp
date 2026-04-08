@@ -61,7 +61,7 @@ void park(float alpha, float beta, float theta, float* d, float* q)
 {
     float cos_t;
     float sin_t;
-    cordic::sincos(theta, &sin_t, &cos_t);
+    cordic::sincosf(theta, &sin_t, &cos_t);
     *d =  alpha * cos_t + beta * sin_t;
     *q = -alpha * sin_t + beta * cos_t;
 }
@@ -70,7 +70,7 @@ void inv_park(float d, float q, float theta, float* alpha, float* beta)
 {
     float cos_t;
     float sin_t;
-    cordic::sincos(theta, &sin_t, &cos_t);
+    cordic::sincosf(theta, &sin_t, &cos_t);
     *alpha = d * cos_t - q * sin_t;
     *beta  = d * sin_t + q * cos_t;
 }

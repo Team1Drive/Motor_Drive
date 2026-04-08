@@ -20,10 +20,23 @@ namespace cordic {
 
     /**
      * @brief Calculates both Sine and Cosine in a single zero-overhead call.
-     * Best used for FOC Park/Inverse Park transforms!
-     * @param angle_rad Angle in radians. Must be pre-bounded between -PI and PI.
+     *        Accepting the angle in Q31 fixed-point format.
+     *        Best used for FOC Park/Inverse Park transforms.
+     * @param angle_q31 Angle in Q31 fixed-point format.
+     * @param sin_out Pointer to the float where the sine result will be stored.
+     * @param cos_out Pointer to the float where the cosine result will be stored.
      */
-    void sincos(float angle_rad, float* sin_out, float* cos_out);
+    void sincos(float angle_q31, float* sin_out, float* cos_out);
+
+    /**
+     * @brief Calculates both Sine and Cosine in a single zero-overhead call.
+     *        Accepting the angle in radians as a float. The function will handle conversion to Q31 and wrapping internally.
+     *        Best used for FOC Park/Inverse Park transforms.
+     * @param angle_rad Angle in radians. Must be pre-bounded between -PI and PI.
+     * @param sin_out Pointer to the float where the sine result will be stored.
+     * @param cos_out Pointer to the float where the cosine result will be stored.
+     */
+    void sincosf(float angle_rad, float* sin_out, float* cos_out);
 
     /**
      * @brief Calculates Sine using CORDIC.

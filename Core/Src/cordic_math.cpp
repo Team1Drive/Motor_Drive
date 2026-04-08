@@ -57,6 +57,12 @@ void cordic::sincos(float angle_q31, float* sin_out, float* cos_out) {
     *sin_out = CORDIC->RDATA;
 }
 
+void cordic::sincosf(float angle_rad, float* sin_out, float* cos_out) {
+    cordic::sincos(float_to_q31(wrap_to_pi(angle_rad)), sin_out, cos_out);
+    *sin_out = q31_to_float(*sin_out);
+    *cos_out = q31_to_float(*cos_out);
+}
+
 float cordic::sinf(float angle_rad) {
     float s, c;
     cordic::sincos(float_to_q31(wrap_to_pi(angle_rad)), &s, &c);
