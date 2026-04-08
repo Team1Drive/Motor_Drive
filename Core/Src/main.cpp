@@ -10,6 +10,7 @@
 #include "timer.h"
 #include "foc.h"
 #include "cmd.h"
+#include "math_helpers.h"
 #include <cstdint>
 
 #include "usbd_cdc_if.h"
@@ -120,6 +121,8 @@ ring_buffer_t rx_ring = { .head = 0, .tail = 0 };
 
 /* FOC state — single global instance */
 FOC_State_t foc_state;
+
+RollingMax ia_max, ib_max, ic_max, ibatt_max;
 
 
 
@@ -461,6 +464,8 @@ void printTelemetryUTF8(void) {
   uint16_t adc2_raw[2];
   uint16_t adc3_raw[2];
   float ia, ib, ic, va, vb, vbatt, ibatt;
+
+  // Construct ADC data in physical units only if at least one of the relevant print_mask bits is set
   if ((print_mask & (PRINT_IA
                    | PRINT_VB
                    | PRINT_VBATT
@@ -472,6 +477,8 @@ void printTelemetryUTF8(void) {
     ia = adcToCurrent(adc1_raw[0], 3.3f, 65536, 50.0f, 1.65f + adc_gain.ia_offset, adc_gain.ia_shunt);
     vb = adcToVoltage(adc1_raw[1], 3.3f, 65536, adc_gain.vb_gain, 1.65f + adc_gain.vb_offset);
     vbatt = adcToVoltage(adc1_raw[2], 3.3f, 65536, adc_gain.vbatt_gain, 0.0f + adc_gain.vbatt_offset);
+
+    ia_max.newValue(fabsf(ia));
   }
   if ((print_mask & (PRINT_IB
                    | PRINT_VA
@@ -481,6 +488,8 @@ void printTelemetryUTF8(void) {
 
     ib = adcToCurrent(adc2_raw[0], 3.3f, 65536, 50.0f, 1.65f + adc_gain.ib_offset, adc_gain.ib_shunt);
     va = adcToVoltage(adc2_raw[1], 3.3f, 65536, adc_gain.va_gain, 1.65f + adc_gain.va_offset);
+
+    ib_max.newValue(fabsf(ib));
   }
   if ((print_mask & (PRINT_IC
                    | PRINT_IBATT
@@ -490,22 +499,25 @@ void printTelemetryUTF8(void) {
 
     ic = adcToCurrent(adc3_raw[0], 3.3f, 4096, 50.0f, 1.65f + adc_gain.ic_offset, adc_gain.ic_shunt);
     ibatt = adcToCurrent(adc3_raw[1], 3.3f, 4096, 50.0f, 1.65f + adc_gain.ibatt_offset, adc_gain.ibatt_shunt);
+
+    ic_max.newValue(fabsf(ic));
+    ibatt_max.newValue(fabsf(ibatt));
   }
 
   // Construct a UTF-8 string, e.g. "rpm 123.45 pos 67.89\r\n"
   char buffer[128];
   int pos = 0;
-  if (print_mask & PRINT_HALLBIN) {
+  if (print_mask & PRINT_HALL) {
     pos += snprintf(buffer + pos, sizeof(buffer) - pos, "hall %u%u%u ", hallsensor.getState() >> 2 & 1, hallsensor.getState() >> 1 & 1, hallsensor.getState() & 1);
-  }
-  if (print_mask & PRINT_HALLDEC) {
-    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "hall_ %u ", hallsensor.getState());
   }
   if (print_mask & PRINT_RPM) {
     pos += snprintf(buffer + pos, sizeof(buffer) - pos, "rpm %.2f ", encoder.getRPM());
   }
   if (print_mask & PRINT_POS) {
     pos += snprintf(buffer + pos, sizeof(buffer) - pos, "pos %u ", encoder.getPos());
+  }
+  if (print_mask & PRINT_ELPOS) {
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "elpos %u ", encoder.getElecPos());
   }
   if (print_mask & PRINT_DUTY_A) {
     pos += snprintf(buffer + pos, sizeof(buffer) - pos, "duty_a %.2f ", motorPWM.getDuty(0));
@@ -558,6 +570,36 @@ void printTelemetryUTF8(void) {
   if (print_mask & PRINT_IBATT_RAW) {
     pos += snprintf(buffer + pos, sizeof(buffer) - pos, "ibatt_ %u ", adc3_raw[1]);
   }
+  if (print_mask & PRINT_IA_MAX) {
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "ia_max %.2f ", ia_max.getMax());
+  }
+  if (print_mask & PRINT_IB_MAX) {
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "ib_max %.2f ", ib_max.getMax());
+  }
+  if (print_mask & PRINT_IC_MAX) {
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "ic_max %.2f ", ic_max.getMax());
+  }
+  if (print_mask & PRINT_IBATT_MAX) {
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "ibatt_max %.2f ", ibatt_max.getMax());
+  }
+  if (print_mask & PRINT_FOC_ID) {
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "foc_id %.2f ", foc_state.Id);
+  }
+  if (print_mask & PRINT_FOC_IQ) {
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "foc_iq %.2f ", foc_state.Iq);
+  }
+  if (print_mask & PRINT_FOC_IDSP) {
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "foc_idsp %.2f ", foc_state.Id_ref);
+  }
+  if (print_mask & PRINT_FOC_IQSP) {
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "foc_iqsp %.2f ", foc_state.Iq_ref);
+  }
+  if (print_mask & PRINT_FOC_VD) {
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "foc_vd %.2f ", foc_state.Vd_cmd);
+  }
+  if (print_mask & PRINT_FOC_VQ) {
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "foc_vq %.2f ", foc_state.Vq_cmd);
+  }
   if (pos > 0) {
     buffer[pos - 1] = '\n';
     buffer[pos] = '\0';
@@ -566,6 +608,11 @@ void printTelemetryUTF8(void) {
 }
 
 /**
+ * Print telemetry data in binary format over USB.
+ * Data structure:
+ * [Header: 0xAA 0x55][4-byte print_mask][Data fields...]
+ * The data fields are included based on the print_mask bits, and are in the same order as defined in the printTelemetryUTF8 function. Each field is represented in its raw binary format (e.g., float as 4 bytes, uint16_t as 2 bytes).
+ * 
  * @brief Function to print telemetry data in binary format over USB.
  * @note The data fields to be printed are determined by the print_mask variable,with variable data packet length. The packet starts with a header (0xAA 0x55), followed by a 4-byte mask indicating which fields are included, and then the data fields in the order defined by the print_mask.
  * @note Binary data sent is parsed automatically by a script on the host computer.
@@ -588,6 +635,8 @@ void printTelemetryBinary(void) {
     ia = adcToCurrent(adc1_raw[0], 3.3f, 65536, 50.0f, 1.65f + adc_gain.ia_offset, adc_gain.ia_shunt);
     vb = adcToVoltage(adc1_raw[1], 3.3f, 65536, adc_gain.vb_gain, 1.65f + adc_gain.vb_offset);
     vbatt = adcToVoltage(adc1_raw[2], 3.3f, 65536, adc_gain.vbatt_gain, 0.0f + adc_gain.vbatt_offset);
+
+    ia_max.newValue(fabsf(ia));
   }
   if ((print_mask & (PRINT_IB
                    | PRINT_VA
@@ -597,6 +646,8 @@ void printTelemetryBinary(void) {
 
     ib = adcToCurrent(adc2_raw[0], 3.3f, 65536, 50.0f, 1.65f + adc_gain.ib_offset, adc_gain.ib_shunt);
     va = adcToVoltage(adc2_raw[1], 3.3f, 65536, adc_gain.va_gain, 1.65f + adc_gain.va_offset);
+
+    ib_max.newValue(fabsf(ib));
   }
   if ((print_mask & (PRINT_IC
                    | PRINT_IBATT
@@ -606,6 +657,9 @@ void printTelemetryBinary(void) {
 
     ic = adcToCurrent(adc3_raw[0], 3.3f, 4096, 50.0f, 1.65f + adc_gain.ic_offset, adc_gain.ic_shunt);
     ibatt = adcToCurrent(adc3_raw[1], 3.3f, 4096, 50.0f, 1.65f + adc_gain.ibatt_offset, adc_gain.ibatt_shunt);
+
+    ic_max.newValue(fabsf(ic));
+    ibatt_max.newValue(fabsf(ibatt));
   }
 
   // Construct a binary packet
@@ -619,12 +673,7 @@ void printTelemetryBinary(void) {
   memcpy(ptr, &mask, 4);
   ptr += 4;
 
-  if (print_mask & PRINT_HALLBIN) {
-    uint8_t val = hallsensor.getState() & 0x07;
-    memcpy(ptr, &val, 1);
-    ptr += 1;
-  }
-  if (print_mask & PRINT_HALLDEC) {
+  if (print_mask & PRINT_HALL) {
     uint8_t val = hallsensor.getState() & 0x07;
     memcpy(ptr, &val, 1);
     ptr += 1;
@@ -636,6 +685,11 @@ void printTelemetryBinary(void) {
   }
   if (print_mask & PRINT_POS) {
     uint16_t val = encoder.getPos();
+    memcpy(ptr, &val, 2);
+    ptr += 2;
+  }
+  if (print_mask & PRINT_ELPOS) {
+    uint16_t val = encoder.getElecPos();
     memcpy(ptr, &val, 2);
     ptr += 2;
   }
@@ -723,6 +777,56 @@ void printTelemetryBinary(void) {
     uint16_t val = adc3_raw[1];
     memcpy(ptr, &val, 2);
     ptr += 2;
+  }
+  if (print_mask & PRINT_IA_MAX) {
+    float val = ia_max.getMax();
+    memcpy(ptr, &val, 4);
+    ptr += 4;
+  }
+  if (print_mask & PRINT_IB_MAX) {
+    float val = ib_max.getMax();
+    memcpy(ptr, &val, 4);
+    ptr += 4;
+  }
+  if (print_mask & PRINT_IC_MAX) {
+    float val = ic_max.getMax();
+    memcpy(ptr, &val, 4);
+    ptr += 4;
+  }
+  if (print_mask & PRINT_IBATT_MAX) {
+    float val = ibatt_max.getMax();
+    memcpy(ptr, &val, 4);
+    ptr += 4;
+  }
+  if (print_mask & PRINT_FOC_ID) {
+    float val = foc_state.Id;
+    memcpy(ptr, &val, 4);
+    ptr += 4;
+  }
+  if (print_mask & PRINT_FOC_IQ) {
+    float val = foc_state.Iq;
+    memcpy(ptr, &val, 4);
+    ptr += 4;
+  }
+  if (print_mask & PRINT_FOC_IDSP) {
+    float val = foc_state.Id_ref;
+    memcpy(ptr, &val, 4);
+    ptr += 4;
+  }
+  if (print_mask & PRINT_FOC_IQSP) {
+    float val = foc_state.Iq_ref;
+    memcpy(ptr, &val, 4);
+    ptr += 4;
+  }
+  if (print_mask & PRINT_FOC_VD) {
+    float val = foc_state.Vd_cmd;
+    memcpy(ptr, &val, 4);
+    ptr += 4;
+  }
+  if (print_mask & PRINT_FOC_VQ) {
+    float val = foc_state.Vq_cmd;
+    memcpy(ptr, &val, 4);
+    ptr += 4;
   }
   if (ptr != buffer) {
       CDC_Transmit_HS(buffer, ptr - buffer);
@@ -965,64 +1069,6 @@ const int8_t commutation_acw[8][3] = {
   float dutyA = (a_state == 1) ? SIXSTEP_DUTYCYCLE : (a_state == 0) ? (1.0f - SIXSTEP_DUTYCYCLE) : -1.0f;
 
   motorPWM.setDuty(dutyA, dutyB, dutyC);
-}
-
-/**
- * @brief Converts a raw ADC value to a voltage in volts, applying the reference voltage, resolution, gain, and offset for calibration.
- * @param raw The raw ADC value to be converted.
- * @param vref The reference voltage for the ADC.
- * @param resolution The resolution of the ADC (e.g., 4096 for 12-bit, 65536 for 16-bit).
- * @param gain The gain factor for the ADC.
- * @param offset The offset factor for the ADC.
- * @return The converted voltage in volts.
- */
-float adcToVoltage(uint32_t raw, float vref, uint32_t resolution, float gain, float offset) {
-  return (((float)raw / (float)resolution) * vref - offset) / gain;
-}
-
-/**
- * @brief Converts a raw ADC value to a current in amps, using the voltage conversion and applying the shunt resistance for current measurement.
- * @param raw The raw ADC value to be converted.
- * @param vref The reference voltage for the ADC.
- * @param resolution The resolution of the ADC (e.g., 4096 for 12-bit, 65536 for 16-bit).
- * @param gain The gain factor for the ADC.
- * @param offset The offset factor for the ADC.
- * @param shunt The shunt resistance in ohms used for current measurement.
- * @return The converted current in amps.
- */
-float adcToCurrent(uint32_t raw, float vref, uint32_t resolution, float gain, float offset, float shunt) {
-  float voltage = adcToVoltage(raw, vref, resolution, gain, offset);
-  return voltage / shunt;
-}
-
-/**
- * @brief Computes the average of an array of uint16_t values using a fast method that avoids overflow. The function sums all values in a uint32_t variable and then right shifts by the number of bits corresponding to the size of the array (assuming size is a power of 2) to get the average.
- * @param data_ptr Pointer to the array of uint16_t values.
- * @param size The number of elements in the array (must be a power of 2).
- * @return The average value as a uint16_t.
- * @attention `size` must be a power of 2, otherwise 0 will be returned.
- */
-uint16_t fastAverage(uint16_t* data_ptr, uint16_t size) {
-  if (size == 0) return 0; // Avoid division by zero
-  if (!isPowerOfTwo(size)) return 0; // Size must be a power of 2 for this method to work correctly
-
-  uint32_t sum = 0;
-  for (uint16_t i = 0; i < size; i++) {
-    sum += data_ptr[i];
-  }
-
-  uint32_t shift = 31 - __builtin_clz(size);
-
-  return (uint16_t)(sum >> shift);
-}
-
-/**
- * @brief Checks if a given uint16_t value is a power of 2.
- * @param x The value to check.
- * @return true if x is a power of 2, false otherwise.
- */
-bool isPowerOfTwo(uint16_t x) {
-  return (x != 0) && ((x & (x - 1)) == 0);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1428,10 +1474,10 @@ void cmd_log(int argc, char** argv) {
         char* token = argv[2];
         uint32_t flag = 0;
         
-        if (strcmp(token, "hall") == 0) flag = PRINT_HALLBIN;
-        else if (strcmp(token, "hall_dec") == 0) flag = PRINT_HALLDEC;
+        if (strcmp(token, "hall") == 0) flag = PRINT_HALL;
         else if (strcmp(token, "rpm") == 0) flag = PRINT_RPM;
         else if (strcmp(token, "pos") == 0) flag = PRINT_POS;
+        else if (strcmp(token, "elpos") == 0) flag = PRINT_ELPOS;
         else if (strcmp(token, "duty_a") == 0) flag = PRINT_DUTY_A;
         else if (strcmp(token, "duty_b") == 0) flag = PRINT_DUTY_B;
         else if (strcmp(token, "duty_c") == 0) flag = PRINT_DUTY_C;
@@ -1449,6 +1495,16 @@ void cmd_log(int argc, char** argv) {
         else if (strcmp(token, "vb_raw") == 0) flag = PRINT_VB_RAW;
         else if (strcmp(token, "vbatt_raw") == 0) flag = PRINT_VBATT_RAW;
         else if (strcmp(token, "ibatt_raw") == 0) flag = PRINT_IBATT_RAW;
+        else if (strcmp(token, "ia_max") == 0) flag = PRINT_IA_MAX;
+        else if (strcmp(token, "ib_max") == 0) flag = PRINT_IB_MAX;
+        else if (strcmp(token, "ic_max") == 0) flag = PRINT_IC_MAX;
+        else if (strcmp(token, "ibatt_max") == 0) flag = PRINT_IBATT_MAX;
+        else if (strcmp(token, "id") == 0) flag = PRINT_FOC_ID;
+        else if (strcmp(token, "iq") == 0) flag = PRINT_FOC_IQ;
+        else if (strcmp(token, "idsp") == 0) flag = PRINT_FOC_IDSP;
+        else if (strcmp(token, "iqsp") == 0) flag = PRINT_FOC_IQSP;
+        else if (strcmp(token, "vd") == 0) flag = PRINT_FOC_VD;
+        else if (strcmp(token, "vq") == 0) flag = PRINT_FOC_VQ;
         else if (strcmp(token, "all") == 0 && strcmp(action, "rm") == 0) {
             print_mask = 0;
             CDC_Transmit_HS((uint8_t*)"All variables removed\r\n", 23);

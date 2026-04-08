@@ -2,9 +2,6 @@
 //#include <cmath>
 #include <cstdint>
 
-extern uint16_t fastAverage(uint16_t* data_ptr, uint16_t size);
-extern bool isPowerOfTwo(uint16_t x);
-
 ADCSampler* ADCSampler::instance_[3] = {nullptr, nullptr, nullptr};
 
 uint32_t ADCSampler::getInstanceIndex(ADC_HandleTypeDef* hadc) {

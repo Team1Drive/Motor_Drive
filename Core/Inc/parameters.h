@@ -50,8 +50,10 @@
 #define ENCODER_ONEPULSE_THRESHOLD  1000U // Threshold in RPM for using one pulse counting
 #define ENCODER_STALL_THRESHOLD     10U // Threshold for detecting stall
 
-#define USTIMER_ENCODER_PULSE_ID  0U // Identifier for encoder pulse timing in the microsecond timer
-#define USTIMER_ENCODER_INDEX_ID  1U // Identifier for encoder index timing in the microsecond timer
+#define USTIMER_ENCODER_PULSE_ID    0U // Identifier for encoder pulse timing in the microsecond timer
+#define USTIMER_ENCODER_INDEX_ID    1U // Identifier for encoder index timing in the microsecond timer
+
+#define LOG_MAX_VALUE_WINDOW_SIZE   32U // Number of samples to consider when calculating max current for logging (must be a power of 2 for efficient averaging)
 
 
 
@@ -111,10 +113,10 @@ typedef struct {
 } Target_t;
 
 enum PrintData : uint32_t {
-    PRINT_HALLBIN   = 1 << 0,
-    PRINT_HALLDEC   = 1 << 1,
-    PRINT_RPM       = 1 << 2,
-    PRINT_POS       = 1 << 3,
+    PRINT_HALL      = 1 << 0,
+    PRINT_RPM       = 1 << 1,
+    PRINT_POS       = 1 << 2,
+    PRINT_ELPOS     = 1 << 3,
     PRINT_DUTY_A    = 1 << 4,
     PRINT_DUTY_B    = 1 << 5,
     PRINT_DUTY_C    = 1 << 6,
@@ -135,7 +137,13 @@ enum PrintData : uint32_t {
     PRINT_IA_MAX    = 1 << 21,
     PRINT_IB_MAX    = 1 << 22,
     PRINT_IC_MAX    = 1 << 23,
-    PRINT_COUNT     = 1 << 24
+    PRINT_IBATT_MAX = 1 << 24,
+    PRINT_FOC_ID    = 1 << 25,
+    PRINT_FOC_IQ    = 1 << 26,
+    PRINT_FOC_IDSP  = 1 << 27,
+    PRINT_FOC_IQSP  = 1 << 28,
+    PRINT_FOC_VD    = 1 << 29,
+    PRINT_FOC_VQ    = 1 << 30
 };
 
 enum class PrintFormat : uint8_t {
