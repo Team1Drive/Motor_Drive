@@ -830,11 +830,44 @@ void vvvfRampUp(void) {
 
   // Audible frequency adjustment
   if (system_flag & FLAG_AUDIBLE) {
-    if (rpm < 500.0f) {
-      motorPWM.setFrequency(450);
+    if (rpm < 30.0f) {
+      motorPWM.setFrequency(293.66f);
     }
-    else if (rpm < 1000.0f) {
-      motorPWM.setFrequency(900);
+    else if (rpm < 60.0f) {
+      motorPWM.setFrequency(329.63f);
+    }
+    else if (rpm < 90.0f) {
+      motorPWM.setFrequency(349.23f);
+    }
+    else if (rpm < 120.0f) {
+      motorPWM.setFrequency(392.00f);
+    }
+    else if (rpm < 150.0f) {
+      motorPWM.setFrequency(440.00f);
+    }
+    else if (rpm < 180.0f) {
+      motorPWM.setFrequency(493.88f);
+    }
+    else if (rpm < 210.0f) {
+      motorPWM.setFrequency(523.25f);
+    }
+    else if (rpm < 240.0f) {
+      motorPWM.setFrequency(587.33f);
+    }
+    else if (rpm < 270.0f) {
+      motorPWM.setFrequency(659.26f);
+    }
+    else if (rpm < 300.0f) {
+      motorPWM.setFrequency(698.46f);
+    }
+    else if (rpm < 330.0f) {
+      motorPWM.setFrequency(783.99f);
+    }
+    else if (rpm < 360.0f) {
+      motorPWM.setFrequency(880.00f);
+    }
+    else if (rpm < 600.0f) {
+      motorPWM.setFrequency(900.00f);
     }
     else {
       motorPWM.setFrequency((uint32_t)rpm * 2);
@@ -876,7 +909,7 @@ void vvvfRampUp(void) {
   float electrical_freq = rpm / 60.0f * MOTOR_POLE_PAIRS;
 
   float delta_angle = 2.0f * M_PI * electrical_freq / frequency;
-  angle += delta_angle * MOTOR_ROTATION_DIRECTION * -1.0f;
+  angle += delta_angle * MOTOR_ROTATION_DIRECTION;
   if (angle >= 2.0f * M_PI) angle -= 2.0f * M_PI;
 
   // Calculate voltage amplitude
@@ -895,8 +928,8 @@ void vvvfRampUp(void) {
   if (amplitude > 1.0f) amplitude = 1.0f;
 
   float dutyA = 0.5f + amplitude * 0.5f * sinf(angle);
-  float dutyB = 0.5f + amplitude * 0.5f * sinf(angle + 2.0f * M_PI / 3.0f);
-  float dutyC = 0.5f + amplitude * 0.5f * sinf(angle + 4.0f * M_PI / 3.0f);
+  float dutyB = 0.5f + amplitude * 0.5f * sinf(angle - 2.0f * M_PI / 3.0f);
+  float dutyC = 0.5f + amplitude * 0.5f * sinf(angle + 2.0f * M_PI / 3.0f);
 
   motorPWM.setDuty(dutyA, dutyB, dutyC);
 
@@ -960,10 +993,10 @@ const int8_t commutation_acw[8][3] = {
       c_state = commutation_acw[hall_state][2];
   }
 
+  float dutyA = (a_state == 1) ? SIXSTEP_DUTYCYCLE : (a_state == 0) ? (1.0f - SIXSTEP_DUTYCYCLE) : -1.0f;
   float dutyB = (b_state == 1) ? SIXSTEP_DUTYCYCLE : (b_state == 0) ? (1.0f - SIXSTEP_DUTYCYCLE) : -1.0f;
   float dutyC = (c_state == 1) ? SIXSTEP_DUTYCYCLE : (c_state == 0) ? (1.0f - SIXSTEP_DUTYCYCLE) : -1.0f;
-  float dutyA = (a_state == 1) ? SIXSTEP_DUTYCYCLE : (a_state == 0) ? (1.0f - SIXSTEP_DUTYCYCLE) : -1.0f;
-
+  
   motorPWM.setDuty(dutyA, dutyB, dutyC);
 }
 
