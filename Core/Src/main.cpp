@@ -507,11 +507,8 @@ void printTelemetryUTF8(void) {
   // Construct a UTF-8 string, e.g. "rpm 123.45 pos 67.89\r\n"
   char buffer[128];
   int pos = 0;
-  if (print_mask & PRINT_HALLBIN) {
+  if (print_mask & PRINT_HALL) {
     pos += snprintf(buffer + pos, sizeof(buffer) - pos, "hall %u%u%u ", hallsensor.getState() >> 2 & 1, hallsensor.getState() >> 1 & 1, hallsensor.getState() & 1);
-  }
-  if (print_mask & PRINT_HALLDEC) {
-    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "hall_ %u ", hallsensor.getState());
   }
   if (print_mask & PRINT_RPM) {
     pos += snprintf(buffer + pos, sizeof(buffer) - pos, "rpm %.2f ", encoder.getRPM());
@@ -585,6 +582,24 @@ void printTelemetryUTF8(void) {
   if (print_mask & PRINT_IBATT_MAX) {
     pos += snprintf(buffer + pos, sizeof(buffer) - pos, "ibatt_max %.2f ", ibatt_max.getMax());
   }
+  if (print_mask & PRINT_FOC_ID) {
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "foc_id %.2f ", foc_state.Id);
+  }
+  if (print_mask & PRINT_FOC_IQ) {
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "foc_iq %.2f ", foc_state.Iq);
+  }
+  if (print_mask & PRINT_FOC_IDSP) {
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "foc_idsp %.2f ", foc_state.Id_ref);
+  }
+  if (print_mask & PRINT_FOC_IQSP) {
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "foc_iqsp %.2f ", foc_state.Iq_ref);
+  }
+  if (print_mask & PRINT_FOC_VD) {
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "foc_vd %.2f ", foc_state.Vd_cmd);
+  }
+  if (print_mask & PRINT_FOC_VQ) {
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "foc_vq %.2f ", foc_state.Vq_cmd);
+  }
   if (pos > 0) {
     buffer[pos - 1] = '\n';
     buffer[pos] = '\0';
@@ -653,12 +668,7 @@ void printTelemetryBinary(void) {
   memcpy(ptr, &mask, 4);
   ptr += 4;
 
-  if (print_mask & PRINT_HALLBIN) {
-    uint8_t val = hallsensor.getState() & 0x07;
-    memcpy(ptr, &val, 1);
-    ptr += 1;
-  }
-  if (print_mask & PRINT_HALLDEC) {
+  if (print_mask & PRINT_HALL) {
     uint8_t val = hallsensor.getState() & 0x07;
     memcpy(ptr, &val, 1);
     ptr += 1;
@@ -780,6 +790,36 @@ void printTelemetryBinary(void) {
   }
   if (print_mask & PRINT_IBATT_MAX) {
     float val = ibatt_max.getMax();
+    memcpy(ptr, &val, 4);
+    ptr += 4;
+  }
+  if (print_mask & PRINT_FOC_ID) {
+    float val = foc_state.Id;
+    memcpy(ptr, &val, 4);
+    ptr += 4;
+  }
+  if (print_mask & PRINT_FOC_IQ) {
+    float val = foc_state.Iq;
+    memcpy(ptr, &val, 4);
+    ptr += 4;
+  }
+  if (print_mask & PRINT_FOC_IDSP) {
+    float val = foc_state.Id_ref;
+    memcpy(ptr, &val, 4);
+    ptr += 4;
+  }
+  if (print_mask & PRINT_FOC_IQSP) {
+    float val = foc_state.Iq_ref;
+    memcpy(ptr, &val, 4);
+    ptr += 4;
+  }
+  if (print_mask & PRINT_FOC_VD) {
+    float val = foc_state.Vd_cmd;
+    memcpy(ptr, &val, 4);
+    ptr += 4;
+  }
+  if (print_mask & PRINT_FOC_VQ) {
+    float val = foc_state.Vq_cmd;
     memcpy(ptr, &val, 4);
     ptr += 4;
   }
@@ -1429,8 +1469,7 @@ void cmd_log(int argc, char** argv) {
         char* token = argv[2];
         uint32_t flag = 0;
         
-        if (strcmp(token, "hall") == 0) flag = PRINT_HALLBIN;
-        else if (strcmp(token, "hall_dec") == 0) flag = PRINT_HALLDEC;
+        if (strcmp(token, "hall") == 0) flag = PRINT_HALL;
         else if (strcmp(token, "rpm") == 0) flag = PRINT_RPM;
         else if (strcmp(token, "pos") == 0) flag = PRINT_POS;
         else if (strcmp(token, "elpos") == 0) flag = PRINT_ELPOS;
@@ -1455,6 +1494,12 @@ void cmd_log(int argc, char** argv) {
         else if (strcmp(token, "ib_max") == 0) flag = PRINT_IB_MAX;
         else if (strcmp(token, "ic_max") == 0) flag = PRINT_IC_MAX;
         else if (strcmp(token, "ibatt_max") == 0) flag = PRINT_IBATT_MAX;
+        else if (strcmp(token, "id") == 0) flag = PRINT_FOC_ID;
+        else if (strcmp(token, "iq") == 0) flag = PRINT_FOC_IQ;
+        else if (strcmp(token, "idsp") == 0) flag = PRINT_FOC_IDSP;
+        else if (strcmp(token, "iqsp") == 0) flag = PRINT_FOC_IQSP;
+        else if (strcmp(token, "vd") == 0) flag = PRINT_FOC_VD;
+        else if (strcmp(token, "vq") == 0) flag = PRINT_FOC_VQ;
         else if (strcmp(token, "all") == 0 && strcmp(action, "rm") == 0) {
             print_mask = 0;
             CDC_Transmit_HS((uint8_t*)"All variables removed\r\n", 23);

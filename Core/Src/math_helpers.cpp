@@ -4,7 +4,7 @@
 
 
 RollingMax::RollingMax() : max_value(0.0f), index(0) {
-    for (int i = 0; i < LOG_MAX_VALUE_WINDOW_SIZE; i++) {
+    for (uint16_t i = 0; i < LOG_MAX_VALUE_WINDOW_SIZE; i++) {
         buffer[i] = 0.0f;
     }
 }
