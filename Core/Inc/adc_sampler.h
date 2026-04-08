@@ -3,6 +3,7 @@
 #include "stm32h7xx_hal.h"
 #include <cstdint>
 #include <cstring>
+#include "math_helpers.h"
 
 class ADCSampler {
     private:

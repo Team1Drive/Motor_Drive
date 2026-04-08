@@ -50,8 +50,10 @@
 #define ENCODER_ONEPULSE_THRESHOLD  1000U // Threshold in RPM for using one pulse counting
 #define ENCODER_STALL_THRESHOLD     10U // Threshold for detecting stall
 
-#define USTIMER_ENCODER_PULSE_ID  0U // Identifier for encoder pulse timing in the microsecond timer
-#define USTIMER_ENCODER_INDEX_ID  1U // Identifier for encoder index timing in the microsecond timer
+#define USTIMER_ENCODER_PULSE_ID    0U // Identifier for encoder pulse timing in the microsecond timer
+#define USTIMER_ENCODER_INDEX_ID    1U // Identifier for encoder index timing in the microsecond timer
+
+#define LOG_MAX_VALUE_WINDOW_SIZE   32U // Number of samples to consider when calculating max current for logging (must be a power of 2 for efficient averaging)
 
 
 
@@ -115,27 +117,28 @@ enum PrintData : uint32_t {
     PRINT_HALLDEC   = 1 << 1,
     PRINT_RPM       = 1 << 2,
     PRINT_POS       = 1 << 3,
-    PRINT_DUTY_A    = 1 << 4,
-    PRINT_DUTY_B    = 1 << 5,
-    PRINT_DUTY_C    = 1 << 6,
-    PRINT_IA        = 1 << 7,
-    PRINT_IB        = 1 << 8,
-    PRINT_IC        = 1 << 9,
-    PRINT_VA        = 1 << 10,
-    PRINT_VB        = 1 << 11,
-    PRINT_VBATT     = 1 << 12,
-    PRINT_IBATT     = 1 << 13,
-    PRINT_IA_RAW    = 1 << 14,
-    PRINT_IB_RAW    = 1 << 15,
-    PRINT_IC_RAW    = 1 << 16,
-    PRINT_VA_RAW    = 1 << 17,
-    PRINT_VB_RAW    = 1 << 18,
-    PRINT_VBATT_RAW = 1 << 19,
-    PRINT_IBATT_RAW = 1 << 20,
-    PRINT_IA_MAX    = 1 << 21,
-    PRINT_IB_MAX    = 1 << 22,
-    PRINT_IC_MAX    = 1 << 23,
-    PRINT_COUNT     = 1 << 24
+    PRINT_ELPOS     = 1 << 4,
+    PRINT_DUTY_A    = 1 << 5,
+    PRINT_DUTY_B    = 1 << 6,
+    PRINT_DUTY_C    = 1 << 7,
+    PRINT_IA        = 1 << 8,
+    PRINT_IB        = 1 << 9,
+    PRINT_IC        = 1 << 10,
+    PRINT_VA        = 1 << 11,
+    PRINT_VB        = 1 << 12,
+    PRINT_VBATT     = 1 << 13,
+    PRINT_IBATT     = 1 << 14,
+    PRINT_IA_RAW    = 1 << 15,
+    PRINT_IB_RAW    = 1 << 16,
+    PRINT_IC_RAW    = 1 << 17,
+    PRINT_VA_RAW    = 1 << 18,
+    PRINT_VB_RAW    = 1 << 19,
+    PRINT_VBATT_RAW = 1 << 20,
+    PRINT_IBATT_RAW = 1 << 21,
+    PRINT_IA_MAX    = 1 << 22,
+    PRINT_IB_MAX    = 1 << 23,
+    PRINT_IC_MAX    = 1 << 24,
+    PRINT_IBATT_MAX = 1 << 25
 };
 
 enum class PrintFormat : uint8_t {
