@@ -3,6 +3,12 @@
 #define M_PI 3.14159265358979323846264338327950288f
 #define SQRT3 1.73205080756887729352744634150587236f
 
+#define RPM_TO_RAD_S        (2.0f * M_PI / 60.0f)
+#define RAD_S_TO_RPM        (60.0f / (2.0f * M_PI))
+
+#define DEG_TO_RAD          (M_PI / 180.0f)
+#define RAD_TO_DEG          (180.0f / M_PI)
+
 #define ADC1_NUM_CHANNELS   3U
 #define ADC2_NUM_CHANNELS   2U
 #define ADC3_NUM_CHANNELS   2U

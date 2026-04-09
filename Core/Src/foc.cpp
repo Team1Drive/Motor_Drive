@@ -269,10 +269,17 @@ void focAlignZero(FOC_State_t* foc, float Vmag, float Vdc, float* dutyA, float* 
              dutyA, dutyB, dutyC);
 }
 
-void focTest(FOC_State_t* foc, float Vmag, float Vdc, float* dutyA, float* dutyB, float* dutyC) {
-    /* Test function: apply fixed voltage vector for verification. */
+void focTest(FOC_State_t* foc,
+             float Ia, float Ib, float Ic,
+             float Vdc,
+             float theta_e, float omega_m,
+             float* dutyA, float* dutyB, float* dutyC) {
+    
+    float v_alpha, v_beta;
+    inv_park(foc->Vd_cmd, foc->Vq_cmd, theta_e, &v_alpha, &v_beta);     
+
     Modulate(ModulationType::SVPWM,
-             Vmag, 0.0f,
+             v_alpha, v_beta,
              Vdc,
              foc->ts,
              dutyA, dutyB, dutyC);

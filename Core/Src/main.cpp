@@ -41,6 +41,7 @@ void clearRunningFlags(void);
 
 /* Forward declaration for FOC ISR helper */
 static void foc_isr_tick(void);
+void focTick(void);
 
 void test_PWM(void);
 void test_PWM_sweep(void);
@@ -1181,9 +1182,33 @@ void cmd_foc(int argc, char** argv) {
     else if (strcmp(argv[1], "manual") == 0) {
         control_mode = MotorControlMode::MOTOR_FOC_MANUAL;
         clearRunningFlags();
-        relay.write(1);
-        motorPWM.start();
         usb_printf("FOC in manual mode, use with care\r\n");
+    }
+    else if (strcmp(argv[1], "vd") == 0) {
+        if (control_mode != MotorControlMode::MOTOR_FOC_MANUAL) {
+            usb_printf("Command only valid in FOC manual mode\r\n");
+            return;
+        }
+        foc_state.Vd_cmd = atof(argv[2]);
+        if ((system_flag & FLAG_FOC_RUNNING) == 0) {
+            system_flag |= FLAG_FOC_RUNNING;
+            relay.write(1);
+            focTick();
+        }
+        usb_printf("FOC Vd set to %.2fV\r\n", foc_state.Vd_cmd);
+    }
+    else if (strcmp(argv[1], "vq") == 0) {
+        if (control_mode != MotorControlMode::MOTOR_FOC_MANUAL) {
+            usb_printf("Command only valid in FOC manual mode\r\n");
+            return;
+        }
+        foc_state.Vq_cmd = atof(argv[2]);
+        if ((system_flag & FLAG_FOC_RUNNING) == 0) {
+            system_flag |= FLAG_FOC_RUNNING;
+            relay.write(1);
+            focTick();
+        }
+        usb_printf("FOC Vq set to %.2fV\r\n", foc_state.Vq_cmd);
     }
     else {
         if (control_mode == MotorControlMode::MOTOR_PROTECTION) {protectionModePrint(); return;}
@@ -1711,11 +1736,25 @@ void focTick(void) {
     adc2.getLatestDataMean(adc2_raw, FOC_OVERSAMPLING_SIZE);
     adc3.getLatestDataMean(adc3_raw, FOC_OVERSAMPLING_SIZE);
 
-    float Ia = adcToCurrent(adc1_raw[0], 3.3f, 65536, 50.0f, 1.65f + adc_gain.ia_offset, adc_gain.ia_shunt);
-    float Ib = adcToCurrent(adc2_raw[0], 3.3f, 65536, 50.0f, 1.65f + adc_gain.ib_offset, adc_gain.ib_shunt);
-    float Ic = adcToCurrent(adc3_raw[0], 3.3f,  4096, 50.0f, 1.65f + adc_gain.ic_offset, adc_gain.ic_shunt);
-    float Vdc = adcToVoltage(adc1_raw[2], 3.3f, 65536, adc_gain.vbatt_gain, adc_gain.vbatt_offset);
+    float ia = adcToCurrent(adc1_raw[0], 3.3f, 65536, 50.0f, 1.65f + adc_gain.ia_offset, adc_gain.ia_shunt);
+    float ib = adcToCurrent(adc2_raw[0], 3.3f, 65536, 50.0f, 1.65f + adc_gain.ib_offset, adc_gain.ib_shunt);
+    float ic = adcToCurrent(adc3_raw[0], 3.3f,  4096, 50.0f, 1.65f + adc_gain.ic_offset, adc_gain.ic_shunt);
+    float vdc = adcToVoltage(adc1_raw[2], 3.3f, 65536, adc_gain.vbatt_gain, adc_gain.vbatt_offset);
 
+    float theta_e = encoder.getElecPos_rad();
+    float omega_m = encoder.getRPM() * RPM_TO_RAD_S;
+
+    foc_state.ts = 1.0f / (float)motorPWM.getFrequency();
+
+    float dutyA, dutyB, dutyC;
+
+    focTest(&foc_state,
+            ia, ib, ic,
+            vdc,
+            theta_e, omega_m,
+            &dutyA, &dutyB, &dutyC);
+
+    motorPWM.setDuty(dutyA, dutyB, dutyC);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

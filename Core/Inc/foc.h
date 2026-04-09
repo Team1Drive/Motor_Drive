@@ -232,4 +232,8 @@ void foc_reset(FOC_State_t* foc);
  */
 void focAlignZero(FOC_State_t* foc, float Vmag, float Vdc, float* dutyA, float* dutyB, float* dutyC);
 
-void focTest(FOC_State_t* foc, float Vmag, float Vdc, float* dutyA, float* dutyB, float* dutyC);
+void focTest(FOC_State_t* foc,
+             float Ia, float Ib, float Ic,
+             float Vdc,
+             float theta_e, float omega_m,
+             float* dutyA, float* dutyB, float* dutyC);
