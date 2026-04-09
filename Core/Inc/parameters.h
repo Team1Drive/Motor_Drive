@@ -70,14 +70,14 @@ enum class MotorControlMode : uint8_t {
 };
 
 enum SystemFlag : uint32_t {
-    FLAG_VVVF_RUNNING       = 1 << 0,
-    FLAG_VVVF_RAMP_UP       = 1 << 1,
+    FLAG_VVVF_RUNNING       = 1 << 0,   // Indicates VVVF mode is active, for resetting ramp-up on mode change
+    FLAG_VVVF_RAMP_UP       = 1 << 1,   // Indicates ramping up in VVVF, default 0 for fail-safe(ramping down), only set when ramping up
     FLAG_AUDIBLE            = 1 << 2,
-    FLAG_SIXSTEP_RUNNING    = 1 << 3,
-    FLAG_FOC_RUNNING        = 1 << 4,
+    FLAG_SIXSTEP_RUNNING    = 1 << 3,   // Indicates six-step mode is active, for reading encoder at stand still
+    FLAG_FOC_RUNNING        = 1 << 4,   // For resetting FOC state at mode change
     FLAG_FOC_ALLOWED        = 1 << 5,
-    FLAG_ROTOR_ALIGNING     = 1 << 6,
-    FLAG_ELEC_ZERO_ALIGNED  = 1 << 7
+    FLAG_ROTOR_ALIGNING     = 1 << 6,   // For sending duty cycle at beginning of alignment
+    FLAG_ELEC_ZERO_ALIGNED  = 1 << 7    // Indicates electrical zero acquired after alignment
 };
 
 enum ErrorFlag : uint32_t {

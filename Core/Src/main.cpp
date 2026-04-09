@@ -37,6 +37,8 @@ void alignRotor(void);
 void vvvfRampUp(void);
 void sixStepCommutation(void);
 
+void clearRunningFlags(void);
+
 /* Forward declaration for FOC ISR helper */
 static void foc_isr_tick(void);
 
@@ -868,10 +870,6 @@ void alignRotor(void) {
     settlement_counter = 0;
   }
 
-  //char buffer[64];
-  //snprintf(buffer, sizeof(buffer), "Aligning... Pos: %u, Delta: %d, Counter: %d\n", pos, delta_pos, settlement_counter);
-  //CDC_Transmit_HS((uint8_t*)buffer, strlen(buffer));
-
   if (settlement_counter > MOTOR_ALIGNMENT_POS_WINDOW) {
     encoder.elecZeroAlign();
 
@@ -881,7 +879,7 @@ void alignRotor(void) {
     system_flag &= ~FLAG_ROTOR_ALIGNING;
     system_flag |= FLAG_ELEC_ZERO_ALIGNED;
 
-    CDC_Transmit_HS((uint8_t*)"Electrical Zero Angle Aligned\n", 33);
+    usb_printf("Electrical Zero Angle Aligned\n");
   }
 }
 
@@ -1042,7 +1040,7 @@ void vvvfRampUp(void) {
     system_flag |= FLAG_FOC_RUNNING;
     foc_state.target_rpm = FOC_INITIAL_RPM;
     control_mode = MotorControlMode::MOTOR_FOC_LINEAR;
-    CDC_Transmit_HS((uint8_t*)"Entering FOC mode\r\n", 19);
+    usb_printf("Entering FOC mode\r\n");
   }
 }
 
@@ -1104,6 +1102,13 @@ const int8_t commutation_acw[8][3] = {
   motorPWM.setDuty(dutyA, dutyB, dutyC);
 }
 
+void clearRunningFlags(void) {
+    system_flag &= ~FLAG_ROTOR_ALIGNING;
+    system_flag &= ~FLAG_VVVF_RUNNING;
+    system_flag &= ~FLAG_SIXSTEP_RUNNING;
+    system_flag &= ~FLAG_FOC_RUNNING;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 //  USB Command Handling
 //  The following functions facilitate handling of USB commands received from host computer
@@ -1115,12 +1120,10 @@ const int8_t commutation_acw[8][3] = {
 void cmd_start(int argc, char** argv) {
     if (control_mode == MotorControlMode::MOTOR_PROTECTION) {protectionModePrint(); return;}
     control_mode = MotorControlMode::MOTOR_STARTUP;
-    system_flag &= ~FLAG_VVVF_RUNNING;
-    system_flag &= ~FLAG_SIXSTEP_RUNNING;
-    system_flag &= ~FLAG_FOC_RUNNING;
+    clearRunningFlags();
     relay.write(1);
     startUpSequence();
-    CDC_Transmit_HS((uint8_t*)"Starting\r\n", 10);
+    usb_printf("Starting\r\n");
 }
 
 /**
@@ -1131,17 +1134,14 @@ void cmd_start(int argc, char** argv) {
 void cmd_stop(int argc, char** argv) {
     if (control_mode == MotorControlMode::MOTOR_VVVF && system_flag & FLAG_VVVF_RAMP_UP) {
         system_flag &= ~FLAG_VVVF_RAMP_UP; // Start ramp down
-        CDC_Transmit_HS((uint8_t*)"VVVF ramping down\r\n", 21);
+        usb_printf("VVVF ramping down\r\n");
     } else {
         control_mode = MotorControlMode::MOTOR_STOP;
-        system_flag &= ~FLAG_ROTOR_ALIGNING;
-        system_flag &= ~FLAG_VVVF_RUNNING;
-        system_flag &= ~FLAG_SIXSTEP_RUNNING;
-        system_flag &= ~FLAG_FOC_RUNNING;
+        clearRunningFlags();
         motorPWM.stop();
         foc_reset(&foc_state);
         relay.write(0);
-        CDC_Transmit_HS((uint8_t*)"Stopping\r\n", 10);
+        usb_printf("Stopping\r\n");
     }
 }
 
@@ -1150,16 +1150,18 @@ void cmd_stop(int argc, char** argv) {
  * @note Resets the entire system to a known safe state, stopping the motor and clearing any active control modes or flags.
  */
 void cmd_reset(int argc, char** argv) {
+    if (strcmp(argv[1], "align") == 0) {
+        system_flag &= ~FLAG_ELEC_ZERO_ALIGNED;
+        usb_printf("Electrical zero angle reset\r\n");
+    }
     control_mode = MotorControlMode::MOTOR_STOP;
-    system_flag &= ~FLAG_VVVF_RUNNING;
-    system_flag &= ~FLAG_SIXSTEP_RUNNING;
-    system_flag &= ~FLAG_FOC_RUNNING;
+    clearRunningFlags();
     error_flag &= ~ERROR_OVERCURRENT;
     motorPWM.stop();
     led_red.write(0);
     foc_reset(&foc_state);
     relay.write(0);
-    CDC_Transmit_HS((uint8_t*)"Resetting\r\n", 11);
+    usb_printf("Resetting\r\n");
 }
 
 /**
@@ -1183,8 +1185,7 @@ void cmd_foc(int argc, char** argv) {
         
         foc_reset(&foc_state);
         foc_state.target_rpm = (float)rpm_cmd;
-        system_flag &= ~FLAG_VVVF_RUNNING;
-        system_flag &= ~FLAG_SIXSTEP_RUNNING;
+        clearRunningFlags();
         system_flag |= FLAG_FOC_RUNNING;
         relay.write(1);
         motorPWM.start();
@@ -1210,11 +1211,10 @@ void cmd_rpm(int argc, char** argv) {
 void cmd_sixstep(int argc, char** argv) {
     if (control_mode == MotorControlMode::MOTOR_PROTECTION) {protectionModePrint(); return;}
     control_mode = MotorControlMode::MOTOR_SIX_STEP;
-    system_flag &= ~FLAG_VVVF_RUNNING;
-    system_flag &= ~FLAG_FOC_RUNNING;
+    clearRunningFlags();
     relay.write(1);
     sixStepCommutation();
-    CDC_Transmit_HS((uint8_t*)"Six-step running\r\n", 31);
+    usb_printf("Six-step running\r\n");
 }
 
 /**
@@ -1227,11 +1227,9 @@ void cmd_speed(int argc, char** argv) {
         relay.write(1);
         target.speed = speed;
         foc_state.target_rpm = speed;
-        CDC_Transmit_HS((uint8_t*)"Speed set\r\n", 11);
-    } else {
-        const char* err = "Invalid speed\r\n";
-        CDC_Transmit_HS((uint8_t*)err, strlen(err));
+        usb_printf("Speed set\r\n");
     }
+    else usb_printf("Invalid speed value: %s\r\n", argv[1]);
 }
 
 /**
@@ -1260,18 +1258,17 @@ void cmd_duty(int argc, char** argv) {
             values[1] >= -1.0f && values[1] <= 1.0f &&
             values[2] >= -1.0f && values[2] <= 1.0f) {
             
+            control_mode = MotorControlMode::MOTOR_MANUAL;
+            clearRunningFlags();
             relay.write(1);
             motorPWM.setDuty(values[0], values[1], values[2]);
-            control_mode = MotorControlMode::MOTOR_MANUAL;
-            system_flag &= ~FLAG_VVVF_RUNNING;
-            system_flag &= ~FLAG_SIXSTEP_RUNNING;
-            system_flag &= ~FLAG_FOC_RUNNING;
-            CDC_Transmit_HS((uint8_t*)"Duty set\r\n", 10);
+
+            usb_printf("Duty set to A=%.2f B=%.2f C=%.2f\r\n", values[0], values[1], values[2]);
         } else {
-            CDC_Transmit_HS((uint8_t*)"Duty values out of range [-1,1]\r\n", 34);
+            usb_printf("Duty values out of range [-1,1]: A=%.2f B=%.2f C=%.2f\r\n", values[0], values[1], values[2]);
         }
     } else {
-        CDC_Transmit_HS((uint8_t*)"Invalid duty format. Usage: duty 0.3,0.3,0.3\r\n", 48);
+        usb_printf("Invalid duty format. Usage: duty 0.3,0.3,0.3\r\n");
     }
 }
 
@@ -1307,16 +1304,12 @@ void cmd_vec(int argc, char** argv) {
       
         motorPWM.setDuty(dutyA, dutyB, dutyC);
         control_mode = MotorControlMode::MOTOR_MANUAL;
-        system_flag &= ~FLAG_VVVF_RUNNING;
-        system_flag &= ~FLAG_SIXSTEP_RUNNING;
-        system_flag &= ~FLAG_FOC_RUNNING;
+        clearRunningFlags();
 
         uint8_t hall_state = hallsensor.getState();
-        char resp[64];
-        int len = snprintf(resp, sizeof(resp), "Vector %d applied, Hall=%d\r\n", vec_num, hall_state);
-        CDC_Transmit_HS((uint8_t*)resp, len);
+        usb_printf("Vector %d applied, Hall=%d\r\n", vec_num, hall_state);
     } else {
-        CDC_Transmit_HS((uint8_t*)"Invalid vector. Use 0-5.\r\n", 26);
+        usb_printf("Invalid vector. Use 0-5.\r\n");
     }
 }
 
@@ -1331,7 +1324,6 @@ void cmd_tune(int argc, char** argv) {
     float value = atof(argv[3]);
 
     bool success = false;
-    char resp[64];
     float original = 0.0f;
 
     if (strcmp(subsys, "speed") == 0) {
@@ -1384,9 +1376,6 @@ void cmd_tune(int argc, char** argv) {
     } 
     else if (strcmp(subsys, "flux") == 0) {
         if (strcmp(param, "p") == 0) { 
-            snprintf(resp, sizeof(resp), "Flux gain set to %.3f\r\n", value); 
-            CDC_Transmit_HS((uint8_t*)resp, strlen(resp));
-            return; 
         }
     } 
     else if (strcmp(subsys, "gain") == 0) {
@@ -1453,11 +1442,9 @@ void cmd_tune(int argc, char** argv) {
     }
 
     if (success) {
-        int len = snprintf(resp, sizeof(resp), "%s %s set to %.4f (was %.4f)\r\n", subsys, param, value, original);
-        CDC_Transmit_HS((uint8_t*)resp, len);
+        usb_printf("%s %s set to %.4f (was %.4f)\r\n", subsys, param, value, original);
     } else {
-        int len = snprintf(resp, sizeof(resp), "Unknown parameter '%s' or subsystem '%s'\r\n", param, subsys);
-        CDC_Transmit_HS((uint8_t*)resp, len);
+        usb_printf("Unknown parameter '%s' or subsystem '%s'\r\n", param, subsys);
     }
 }
 
@@ -1470,7 +1457,7 @@ void cmd_log(int argc, char** argv) {
 
     if (strcmp(action, "preset") == 0) {
         if (argc < 3) {
-            CDC_Transmit_HS((uint8_t*)"Missing preset number\r\n", 23);
+            usb_printf("Missing preset number\r\n");
             return;
         }
         
@@ -1479,21 +1466,21 @@ void cmd_log(int argc, char** argv) {
         switch (preset_id) {
             case 1: // Preset 1: FOC Tuning
                 print_mask = PRINT_RPM | PRINT_IA | PRINT_IB | PRINT_IC | PRINT_VBATT;
-                CDC_Transmit_HS((uint8_t*)"Preset 1 active\r\n", 37);
+                usb_printf("Preset %d active\r\n", preset_id);
                 break;
                 
             case 2: // Preset 2: Raw Sensor Calibration
                 print_mask = PRINT_IA | PRINT_IB | PRINT_IC | PRINT_IA_RAW | PRINT_IB_RAW | PRINT_IC_RAW;
-                CDC_Transmit_HS((uint8_t*)"Preset 2 active\r\n", 45);
+                usb_printf("Preset %d active\r\n", preset_id);
                 break;
                 
             case 3: // Preset 3: Power Monitoring
                 print_mask = PRINT_VBATT | PRINT_IBATT | PRINT_DUTY_A | PRINT_DUTY_B | PRINT_DUTY_C;
-                CDC_Transmit_HS((uint8_t*)"Preset 3 active\r\n", 40);
+                usb_printf("Preset %d active\r\n", preset_id);
                 break;
                 
             default:
-                CDC_Transmit_HS((uint8_t*)"Unknown preset. Try 1, 2, or 3\r\n", 32);
+                usb_printf("Unknown preset. Try 1, 2, or 3\r\n");
                 break;
         }
         return; // Exit here
@@ -1501,7 +1488,7 @@ void cmd_log(int argc, char** argv) {
 
     else if (strcmp(action, "add") == 0 || strcmp(action, "rm") == 0) {
         if (argc < 3) {
-            CDC_Transmit_HS((uint8_t*)"Missing variable name\r\n", 23);
+            usb_printf("Missing variable name\r\n");
             return;
         }
         char* token = argv[2];
@@ -1540,41 +1527,41 @@ void cmd_log(int argc, char** argv) {
         else if (strcmp(token, "vq") == 0) flag = PRINT_FOC_VQ;
         else if (strcmp(token, "all") == 0 && strcmp(action, "rm") == 0) {
             print_mask = 0;
-            CDC_Transmit_HS((uint8_t*)"All variables removed\r\n", 23);
+            usb_printf("All variables removed\r\n");
             return;
         } else {
-            CDC_Transmit_HS((uint8_t*)"Unknown variable\r\n", 18);
+            usb_printf("Unknown variable\r\n");
             return;
         }
 
         if (strcmp(action, "add") == 0) {
             print_mask |= flag;
-            CDC_Transmit_HS((uint8_t*)"Variable added\r\n", 16);
+            usb_printf("Variable %s added\r\n", token);
         } else {
             print_mask &= ~flag;
-            CDC_Transmit_HS((uint8_t*)"Variable removed\r\n", 18);
+            usb_printf("Variable %s removed\r\n", token);
         }
     } 
     else if (strcmp(action, "utf8") == 0) {
         print_format = PrintFormat::PRINT_UTF8;
-        CDC_Transmit_HS((uint8_t*)"Print format set to UTF8\r\n", 27);
+        usb_printf("Print format set to UTF8\r\n");
     } 
     else if (strcmp(action, "bin") == 0) {
         print_format = PrintFormat::PRINT_BINARY;
-        CDC_Transmit_HS((uint8_t*)"Print format set to BINARY\r\n", 28);
+        usb_printf("Print format set to BINARY\r\n");
     } 
     else {
-        CDC_Transmit_HS((uint8_t*)"Invalid log action\r\n", 20);
+        usb_printf("Invalid log action\r\n");
     }
 }
 
 void cmd_audible(int argc, char** argv) {
     if (system_flag & FLAG_AUDIBLE) {
         system_flag &= ~FLAG_AUDIBLE;
-        CDC_Transmit_HS((uint8_t*)"Audible frequency disabled\r\n", 28);
+        usb_printf("Audible frequency disabled\r\n");
     } else {
         system_flag |= FLAG_AUDIBLE;
-        CDC_Transmit_HS((uint8_t*)"Audible frequency enabled\r\n", 27);
+        usb_printf("Audible frequency enabled\r\n");
     }
 }
 
