@@ -230,4 +230,6 @@ void foc_reset(FOC_State_t* foc);
  * @brief Apply a voltage vector along the d-axis to align the encoder zero.
  *        Call before enabling FOC to ensure correct angle tracking.
  */
-void foc_align_zero(FOC_State_t* foc, float Vmag, float Vdc, float* dutyA, float* dutyB, float* dutyC);
+void focAlignZero(FOC_State_t* foc, float Vmag, float Vdc, float* dutyA, float* dutyB, float* dutyC);
+
+void focTest(FOC_State_t* foc, float Vmag, float Vdc, float* dutyA, float* dutyB, float* dutyC);

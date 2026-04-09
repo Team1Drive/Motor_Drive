@@ -260,9 +260,17 @@ void foc_run(FOC_State_t* foc,
              dutyA, dutyB, dutyC);
 }
 
-void foc_align_zero(FOC_State_t* foc, float Vmag, float Vdc, float* dutyA, float* dutyB, float* dutyC)
-{
+void focAlignZero(FOC_State_t* foc, float Vmag, float Vdc, float* dutyA, float* dutyB, float* dutyC) {
     /* Apply voltage vector along alpha axis (d-axis) to align encoder zero. */
+    Modulate(ModulationType::SVPWM,
+             Vmag, 0.0f,
+             Vdc,
+             foc->ts,
+             dutyA, dutyB, dutyC);
+}
+
+void focTest(FOC_State_t* foc, float Vmag, float Vdc, float* dutyA, float* dutyB, float* dutyC) {
+    /* Test function: apply fixed voltage vector for verification. */
     Modulate(ModulationType::SVPWM,
              Vmag, 0.0f,
              Vdc,

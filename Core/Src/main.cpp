@@ -853,7 +853,7 @@ void alignRotor(void) {
 
     float dutyA, dutyB, dutyC;
     foc_state.ts = 1.0f / (float)motorPWM.getFrequency();
-    foc_align_zero(&foc_state, MOTOR_ALIGNMENT_VOLTAGE, Vdc, &dutyA, &dutyB, &dutyC);
+    focAlignZero(&foc_state, MOTOR_ALIGNMENT_VOLTAGE, Vdc, &dutyA, &dutyB, &dutyC);
     motorPWM.setDuty(dutyA, dutyB, dutyC);
 
     system_flag |= FLAG_ROTOR_ALIGNING;
