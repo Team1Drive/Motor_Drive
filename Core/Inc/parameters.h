@@ -44,6 +44,8 @@
 
 #define MASTER_MODE                 true // Set master or slave mode in load testing
 #define BATTERY_PROTECTION          false // Set to true when powered with supply without current limit
+#define BATTERY_LOW_VOLTAGE_THRESHOLD   4.0f // Voltage threshold for low battery protection (in volts)
+#define BATTERY_OVERVOLTAGE_THRESHOLD   5.0f // Voltage threshold for overvoltage protection (in volts)
 
 #define ENCODER_PPR                 2048U // Pulses per revolution for the encoder
 #define ENCODER_MT_THRESHOLD        500U // Threshold in RPM for switching between M and T methods
@@ -65,6 +67,7 @@ enum class MotorControlMode : uint8_t {
     MOTOR_STARTUP,
     MOTOR_VVVF,
     MOTOR_SIX_STEP,
+    MOTOR_FOC_MANUAL,
     MOTOR_FOC_LINEAR,
     MOTOR_FOC_DPWM
 };
@@ -75,9 +78,8 @@ enum SystemFlag : uint32_t {
     FLAG_AUDIBLE            = 1 << 2,
     FLAG_SIXSTEP_RUNNING    = 1 << 3,   // Indicates six-step mode is active, for reading encoder at stand still
     FLAG_FOC_RUNNING        = 1 << 4,   // For resetting FOC state at mode change
-    FLAG_FOC_ALLOWED        = 1 << 5,
-    FLAG_ROTOR_ALIGNING     = 1 << 6,   // For sending duty cycle at beginning of alignment
-    FLAG_ELEC_ZERO_ALIGNED  = 1 << 7    // Indicates electrical zero acquired after alignment
+    FLAG_ROTOR_ALIGNING     = 1 << 5,   // For sending duty cycle at beginning of alignment
+    FLAG_ELEC_ZERO_ALIGNED  = 1 << 6    // Indicates electrical zero acquired after alignment
 };
 
 enum ErrorFlag : uint32_t {

@@ -1035,7 +1035,7 @@ void vvvfRampUp(void) {
 
   motorPWM.setDuty(dutyA, dutyB, dutyC);
 
-  if (FOC_ALLOWED && encoder.is_synchronized_ && rpm >= VVVF_THRESHOLD_RPM >> 1) {
+  if (FOC_ALLOWED && encoder.is_synchronized_ && encoder.is_zeroed_ && rpm >= VVVF_THRESHOLD_RPM >> 1) {
     system_flag &= ~FLAG_VVVF_RUNNING;
     system_flag |= FLAG_FOC_RUNNING;
     foc_state.target_rpm = FOC_INITIAL_RPM;
@@ -1178,7 +1178,13 @@ void cmd_foc(int argc, char** argv) {
                   foc_state.Vdc, foc_state.u_mag,
                   (int)foc_state.fault);
     }
-    // argv[1] contains the string of the target RPM
+    else if (strcmp(argv[1], "manual") == 0) {
+        control_mode = MotorControlMode::MOTOR_FOC_MANUAL;
+        clearRunningFlags();
+        relay.write(1);
+        motorPWM.start();
+        usb_printf("FOC in manual mode, use with care\r\n");
+    }
     else {
         if (control_mode == MotorControlMode::MOTOR_PROTECTION) {protectionModePrint(); return;}
         int rpm_cmd = atoi(argv[1]);
@@ -1692,6 +1698,24 @@ static void foc_isr_tick(void)
     motorPWM.setDuty(dutyA, dutyB, dutyC);
 
     tick_counter++;
+}
+
+void focTick(void) {
+    if (control_mode != MotorControlMode::MOTOR_FOC_MANUAL) return;
+
+    uint16_t adc1_raw[3];
+    uint16_t adc2_raw[2];
+    uint16_t adc3_raw[2];
+
+    adc1.getLatestDataMean(adc1_raw, FOC_OVERSAMPLING_SIZE);
+    adc2.getLatestDataMean(adc2_raw, FOC_OVERSAMPLING_SIZE);
+    adc3.getLatestDataMean(adc3_raw, FOC_OVERSAMPLING_SIZE);
+
+    float Ia = adcToCurrent(adc1_raw[0], 3.3f, 65536, 50.0f, 1.65f + adc_gain.ia_offset, adc_gain.ia_shunt);
+    float Ib = adcToCurrent(adc2_raw[0], 3.3f, 65536, 50.0f, 1.65f + adc_gain.ib_offset, adc_gain.ib_shunt);
+    float Ic = adcToCurrent(adc3_raw[0], 3.3f,  4096, 50.0f, 1.65f + adc_gain.ic_offset, adc_gain.ic_shunt);
+    float Vdc = adcToVoltage(adc1_raw[2], 3.3f, 65536, adc_gain.vbatt_gain, adc_gain.vbatt_offset);
+
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
