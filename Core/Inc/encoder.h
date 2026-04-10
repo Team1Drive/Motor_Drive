@@ -31,17 +31,7 @@ class Encoder {
         uint8_t filter_idx_;
         uint8_t stall_counter_;
 
-        //int8_t direction_decode(void);
-
-        //void chA_rise(void);
-
-        //void chA_fall(void);
-
-        //void chB_rise(void);
-
-        //void chB_fall(void);
-
-        void index_rise(void);
+        void indexRise(void);
 
         uint16_t calcElecOffset(uint16_t elec_zero_pos, uint16_t index_offset);
 
@@ -52,8 +42,8 @@ class Encoder {
     public:
         Encoder(TIM_HandleTypeDef* htim, MicrosecondTimer timer, uint16_t index_pin, uint32_t pulses_per_rev, uint32_t speedloop_freq, uint8_t stall_threshold);
 
-        volatile bool is_synchronized_;
-        volatile bool is_zeroed_;
+        volatile bool is_synchronized_; // Indicates if the encoder has been synchronized with the index pulse
+        volatile bool is_zeroed_;       // Indicates if the electrical zero position has been determined after alignment
         
         void init(void);
 

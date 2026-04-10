@@ -3,6 +3,15 @@
 #define M_PI 3.14159265358979323846264338327950288f
 #define SQRT3 1.73205080756887729352744634150587236f
 
+#define RPM_TO_RAD_S        (2.0f * M_PI / 60.0f)
+#define RAD_S_TO_RPM        (60.0f / (2.0f * M_PI))
+
+#define DEG_TO_RAD          (M_PI / 180.0f)
+#define RAD_TO_DEG          (180.0f / M_PI)
+
+#define FREQ_TO_OMEGA       (2.0f * M_PI)
+#define OMEGA_TO_FREQ       (1.0f / (2.0f * M_PI))
+
 #define ADC1_NUM_CHANNELS   3U
 #define ADC2_NUM_CHANNELS   2U
 #define ADC3_NUM_CHANNELS   2U
@@ -24,6 +33,8 @@
 
 #define TIM6_FREQ_HZ        1000U
 
+#define PWM_FREQ_DEFAULT_HZ 20000U
+
 #define MOTOR_POLE_PAIRS            4U
 
 #define MOTOR_ROTATION_DIRECTION    1 // 1 for anticlockwise, -1 for clockwise
@@ -38,12 +49,14 @@
 #define VVVF_MAX_RPM                3000U // Max RPM for VVVF mod
 #define VVVF_THRESHOLD_RPM          1500U // Minimum RPM to maintain after ramp-up
 
-#define FOC_ALLOWED                 true // Allow FOC mode in the system (set to false to disable FOC-related code and save flash/RAM)
+#define FOC_ALLOWED                 false // Allow FOC mode in the system (set to false to disable FOC-related code and save flash/RAM)
 #define FOC_INITIAL_RPM             1500U // Target RPM for FOC mode (used when FOC is enabled and selected)
 #define FOC_OVERSAMPLING_SIZE       16U // Number of samples to average for oversampling (must be a power of 2 for efficient averaging)
 
 #define MASTER_MODE                 true // Set master or slave mode in load testing
 #define BATTERY_PROTECTION          false // Set to true when powered with supply without current limit
+#define BATTERY_LOW_VOLTAGE_THRESHOLD   4.0f // Voltage threshold for low battery protection (in volts)
+#define BATTERY_OVERVOLTAGE_THRESHOLD   5.0f // Voltage threshold for overvoltage protection (in volts)
 
 #define ENCODER_PPR                 2048U // Pulses per revolution for the encoder
 #define ENCODER_MT_THRESHOLD        500U // Threshold in RPM for switching between M and T methods
@@ -65,19 +78,19 @@ enum class MotorControlMode : uint8_t {
     MOTOR_STARTUP,
     MOTOR_VVVF,
     MOTOR_SIX_STEP,
+    MOTOR_FOC_MANUAL,
     MOTOR_FOC_LINEAR,
     MOTOR_FOC_DPWM
 };
 
 enum SystemFlag : uint32_t {
-    FLAG_VVVF_RUNNING       = 1 << 0,
-    FLAG_VVVF_RAMP_UP       = 1 << 1,
+    FLAG_VVVF_RUNNING       = 1 << 0,   // Indicates VVVF mode is active, for resetting ramp-up on mode change
+    FLAG_VVVF_RAMP_UP       = 1 << 1,   // Indicates ramping up in VVVF, default 0 for fail-safe(ramping down), only set when ramping up
     FLAG_AUDIBLE            = 1 << 2,
-    FLAG_SIXSTEP_RUNNING    = 1 << 3,
-    FLAG_FOC_RUNNING        = 1 << 4,
-    FLAG_FOC_ALLOWED        = 1 << 5,
-    FLAG_ROTOR_ALIGNING     = 1 << 6,
-    FLAG_ELEC_ZERO_ALIGNED  = 1 << 7
+    FLAG_SIXSTEP_RUNNING    = 1 << 3,   // Indicates six-step mode is active, for reading encoder at stand still
+    FLAG_FOC_RUNNING        = 1 << 4,   // For resetting FOC state at mode change
+    FLAG_ROTOR_ALIGNING     = 1 << 5,   // For sending duty cycle at beginning of alignment
+    FLAG_ELEC_ZERO_ALIGNED  = 1 << 6    // Indicates electrical zero acquired after alignment
 };
 
 enum ErrorFlag : uint32_t {

@@ -16,7 +16,7 @@ Encoder::Encoder(TIM_HandleTypeDef* htim, MicrosecondTimer timer, uint16_t index
         init();
     }
 
-void Encoder::index_rise(void) {
+void Encoder::indexRise(void) {
     index_offset_ = (uint16_t)htim_->Instance->CNT;
     if (!is_synchronized_) is_synchronized_ = true;
     if (zero_aligned_ && !is_zeroed_) {
@@ -98,7 +98,7 @@ void Encoder::elecZeroAlign(void) {
 
 void Encoder::irqHandlerIndex(uint16_t pin){
     if (instance_ != nullptr) {
-        if (pin == instance_->indexPin_) instance_->index_rise();
+        if (pin == instance_->indexPin_) instance_->indexRise();
     }
 }
 
