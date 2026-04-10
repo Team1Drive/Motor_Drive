@@ -301,15 +301,26 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
   if (htim->Instance == TIM8) {
     // PWM update interrupt
-    if (control_mode == MotorControlMode::MOTOR_FOC_LINEAR ||
-        control_mode == MotorControlMode::MOTOR_FOC_DPWM) {
-      foc_isr_tick();
-    }
-    else if (control_mode == MotorControlMode::MOTOR_VVVF) {
-      vvvfRampUp();
-    }
-    else if (control_mode == MotorControlMode::MOTOR_ALIGN) {
-      alignRotor();
+    switch (control_mode) {
+      case MotorControlMode::MOTOR_FOC_LINEAR:
+      case MotorControlMode::MOTOR_FOC_DPWM:
+        foc_isr_tick();
+        break;
+
+      case MotorControlMode::MOTOR_FOC_MANUAL:
+        focTick();
+        break;
+
+      case MotorControlMode::MOTOR_VVVF:
+        vvvfRampUp();
+        break;
+
+      case MotorControlMode::MOTOR_ALIGN:
+        alignRotor();
+        break;
+        
+      default:
+        break;
     }
   }
   else if (htim->Instance == TIM6) {
@@ -439,7 +450,7 @@ void timer3IRQ(void) {
       break;
   }
 
-  if ((error_flag & ERROR_OVERCURRENT) == 0) {
+  if (error_flag == 0) {
     led_red.write(0);
   }
   
