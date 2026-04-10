@@ -838,6 +838,8 @@ void printTelemetryBinary(void) {
 
 void speedControl(void) {
   uint32_t rpm = encoder.getRPM();
+
+  foc_state.rpm = rpm;
 }
 
 void alignRotor(void) {
@@ -1209,6 +1211,32 @@ void cmd_foc(int argc, char** argv) {
             focTick();
         }
         usb_printf("FOC Vq set to %.2fV\r\n", foc_state.Vq_cmd);
+    }
+    else if (strcmp(argv[1], "id") == 0) {
+        if (control_mode != MotorControlMode::MOTOR_FOC_MANUAL) {
+            usb_printf("Command only valid in FOC manual mode\r\n");
+            return;
+        }
+        foc_state.Id_ref = atof(argv[2]);
+        if ((system_flag & FLAG_FOC_RUNNING) == 0) {
+            system_flag |= FLAG_FOC_RUNNING;
+            relay.write(1);
+            focTick();
+        }
+        usb_printf("FOC Id set to %.3fA\r\n", foc_state.Id_ref);
+    }
+    else if (strcmp(argv[1], "iq") == 0) {
+        if (control_mode != MotorControlMode::MOTOR_FOC_MANUAL) {
+            usb_printf("Command only valid in FOC manual mode\r\n");
+            return;
+        }
+        foc_state.Iq_ref = atof(argv[2]);
+        if ((system_flag & FLAG_FOC_RUNNING) == 0) {
+            system_flag |= FLAG_FOC_RUNNING;
+            relay.write(1);
+            focTick();
+        }
+        usb_printf("FOC Iq set to %.3fA\r\n", foc_state.Iq_ref);
     }
     else {
         if (control_mode == MotorControlMode::MOTOR_PROTECTION) {protectionModePrint(); return;}
@@ -1808,7 +1836,7 @@ void test_PWM(void) {
     float beta = sinf(angle);
 
     const float Ts = 1.0f / 20000.0f;
-    Modulate(ModulationType::SVPWM, alpha, beta, 2.0f, Ts, &dutyA, &dutyB, &dutyC);
+    modulate(ModulationType::SVPWM, alpha, beta, 2.0f, Ts, &dutyA, &dutyB, &dutyC);
 
     motorPWM.setDuty(dutyA, dutyB, dutyC);
 

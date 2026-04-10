@@ -18,7 +18,7 @@
  */
 
 #include "foc.h"
-#include "modulation.h"   /* clarke, park, inv_park, Modulate, ModulationType */
+#include "modulation.h"   /* clarke, park, inv_park, modulate, ModulationType */
 #include <cmath>
 #include <algorithm>
 
@@ -253,7 +253,7 @@ void foc_run(FOC_State_t* foc,
      *     Matches 'svpwm_comp' mode in the MATLAB reference.
      *     Ts passed for compensated timing calculation.
      * ------------------------------------------------------------------ */
-    Modulate(ModulationType::SVPWM,
+    modulate(ModulationType::SVPWM,
              V_alpha, V_beta,
              Vdc,
              foc->ts,
@@ -262,7 +262,7 @@ void foc_run(FOC_State_t* foc,
 
 void focAlignZero(FOC_State_t* foc, float Vmag, float Vdc, float* dutyA, float* dutyB, float* dutyC) {
     /* Apply voltage vector along alpha axis (d-axis) to align encoder zero. */
-    Modulate(ModulationType::SVPWM,
+    modulate(ModulationType::SVPWM,
              Vmag, 0.0f,
              Vdc,
              foc->ts,
@@ -270,17 +270,48 @@ void focAlignZero(FOC_State_t* foc, float Vmag, float Vdc, float* dutyA, float* 
 }
 
 void focTest(FOC_State_t* foc,
-             float Ia, float Ib, float Ic,
-             float Vdc,
+             float ia, float ib, float ic,
+             float vdc,
              float theta_e, float omega_m,
              float* dutyA, float* dutyB, float* dutyC) {
+
+    /* // Current Clarke Transform
+    float i_alpha, i_beta;
+    clarke(ia, ib, ic, &i_alpha, &i_beta);
+
+    // Current Park Transform
+    float id, iq;
+    park(i_alpha, i_beta, theta_e, &id, &iq);
+
+    foc->Id = id;
+    foc->Iq = iq;
+
+    // Calculate PI outputs
+    float err_id = foc->Id_ref - id;
+    float err_iq = foc->Iq_ref - iq;
+
+    float vd_pi = PI_update(&foc->pi_d, err_id, foc->ts);
+    float vq_pi = PI_update(&foc->pi_q, err_iq, foc->ts);
+
+    // Calculate voltage commands with decoupling feed-forward
+    float omega_e  = omega_m * (float)MOTOR_POLE_PAIRS;
+    foc->Vd_cmd = vd_pi + FOC_R * id  - omega_e * FOC_L * iq;
+    foc->Vq_cmd = vq_pi + FOC_R * iq  + omega_e * FOC_L * id + omega_e * FOC_PSI_F;
+    foc->u_mag  = hypotf(foc->Vd_cmd, foc->Vq_cmd);
+
+    float v_max = vdc / SQRT3;  // Maximum voltage magnitude for SVPWM (line-line voltage limit)
+    if (foc->u_mag > v_max) {
+        float scale = v_max / foc->u_mag;
+        foc->Vd_cmd *= scale;
+        foc->Vq_cmd *= scale;
+    } */
     
     float v_alpha, v_beta;
     inv_park(foc->Vd_cmd, foc->Vq_cmd, theta_e, &v_alpha, &v_beta);     
 
-    Modulate(ModulationType::SVPWM,
+    modulate(ModulationType::SVPWM,
              v_alpha, v_beta,
-             Vdc,
+             vdc,
              foc->ts,
              dutyA, dutyB, dutyC);
 }
