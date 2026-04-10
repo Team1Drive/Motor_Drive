@@ -54,13 +54,20 @@
 /** Per-phase stator inductance (H).  1.5 × 1.20e-3 H (datasheet) */
 #define FOC_L               1.80e-3f
 
+/** Rotor inertia (kg·m²) */
+#define FOC_J               4.802e-6f
+
 /** Electrical damping factor */
 #define FOC_ZETA_I          0.7f
 
+/** Speed PI damping factor */
 #define FOC_ZETA_SP         0.7f
 
 /** Field-weakening bandwidth (rad/s). */
-#define FOC_WND             500 * FREQ_TO_OMEGA
+#define FOC_WND_FW          (500 * FREQ_TO_OMEGA)
+
+/** Speed PI bandwidth (rad/s). */
+#define FOC_WND_SP          (50 * FREQ_TO_OMEGA)
 
 /**
  * PM flux linkage (Wb).
@@ -96,7 +103,7 @@
 #define FOC_SPEED_DIV       20U
 
 /** Speed ramp rate (mechanical rad/s²). From MATLAB: 5000 RPM/s */
-#define FOC_RAMP_RATE       (1000.0f * 2.0f * M_PI / 60.0f)
+#define FOC_RAMP_RATE       1000.0f
 
 /* =========================================================================
  * PI GAINS
@@ -106,21 +113,22 @@
 
 /** Current PI proportional gain. Start: 0.5, MATLAB ref: 15 */
 //#define FOC_KP_I            0.5f
-#define FOC_KP_I            (FOC_WND * FOC_WND * FOC_L)
+#define FOC_KP_I            (FOC_ZETA_I * 2 * FOC_L * FOC_WND_FW - FOC_R)
 
 /** Current PI integral gain. Start: 50, MATLAB ref: 3000 */
 //#define FOC_KI_I            50.0f
-#define FOC_KI_I            (FOC_ZETA_I * 2 * FOC_L * FOC_WND - FOC_R)
+#define FOC_KI_I            (FOC_WND_FW * FOC_WND_FW * FOC_L)
 
 /** Current PI integrator clamp (V). Symmetric ±clamp. */
 #define FOC_INT_I_CLAMP     6.0f
 
 /** Speed PI proportional gain. Start: 0.05, MATLAB ref: 0.15 */
-#define FOC_KP_SP           0.05f
+#define FOC_KP_SP           (FOC_ZETA_SP * 2 * FOC_WND_SP * FOC_J)
 
 /** Speed PI integral gain. Start: 1.0, MATLAB ref: 3.0 */
-#define FOC_KI_SP           1.0f
+#define FOC_KI_SP           (FOC_WND_SP * FOC_WND_SP * FOC_J)
 
+/** Speed PI output clamp (V). Symmetric ±clamp. */
 #define FOC_I_CLAMP_UPPER_SP 2.0f
 
 #define FOC_I_CLAMP_LOWER_SP 0.0f
@@ -131,6 +139,7 @@
 /** Field-weakening PI integral gain. From MATLAB ref: 500 */
 #define FOC_KI_FW           500.0f
 
+/** Field-weakening PI output clamp (V). Symmetric ±clamp. */
 #define FOC_I_CLAMP_UPPER_FW 0.0f
 
 #define FOC_I_CLAMP_LOWER_FW -2.0f

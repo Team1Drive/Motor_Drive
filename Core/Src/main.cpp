@@ -851,9 +851,23 @@ void printTelemetryBinary(void) {
 }
 
 void speedControl(void) {
-  uint32_t rpm = encoder.getRPM();
+  // Calculate speed delta using a ramp function to limit acceleration
+  static float p_rpm = 0.0f;
+  foc_state.rpm = encoder.getRPM() * 0.2f + p_rpm * 0.8f;
+  p_rpm = foc_state.rpm;
+  float omega_m = foc_state.rpm * RPM_TO_RAD_S;
+  float omega_target = foc_state.target_rpm * RPM_TO_RAD_S;
+  const float max_step = FOC_RAMP_RATE * RPM_TO_RAD_S / (float)TIM6_FREQ_HZ;
+  float speed_delta = omega_target - foc_state.omega_ref;
 
-  foc_state.rpm = rpm;
+  // Limit the speed delta to the maximum step size to ensure smooth acceleration
+  if (speed_delta >  max_step) speed_delta =  max_step;
+  if (speed_delta < -max_step) speed_delta = -max_step;
+  foc_state.omega_ref += speed_delta;
+
+  // Update the speed PI controller to adjust Iq reference based on the speed error
+  float err_sp = foc_state.omega_ref - omega_m;
+  foc_state.Iq_ref = PI_update(&foc_state.pi_speed, err_sp, FOC_TS * (float)FOC_SPEED_DIV);
 }
 
 void alignRotor(void) {
@@ -1124,6 +1138,8 @@ void clearRunningFlags(void) {
     system_flag &= ~FLAG_VVVF_RUNNING;
     system_flag &= ~FLAG_SIXSTEP_RUNNING;
     system_flag &= ~FLAG_FOC_RUNNING;
+
+    foc_reset(&foc_state);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1211,7 +1227,7 @@ void cmd_foc(int argc, char** argv) {
             relay.write(1);
             focTick();
         }
-        usb_printf("FOC Vd set to %.2fV\r\n", foc_state.Vd_cmd);
+        usb_printf("FOC Vd set to %.2f V\r\n", foc_state.Vd_cmd);
     }
     else if (strcmp(argv[1], "vq") == 0) {
         if (control_mode != MotorControlMode::MOTOR_FOC_MANUAL) {
@@ -1224,7 +1240,7 @@ void cmd_foc(int argc, char** argv) {
             relay.write(1);
             focTick();
         }
-        usb_printf("FOC Vq set to %.2fV\r\n", foc_state.Vq_cmd);
+        usb_printf("FOC Vq set to %.2f V\r\n", foc_state.Vq_cmd);
     }
     else if (strcmp(argv[1], "id") == 0) {
         if (control_mode != MotorControlMode::MOTOR_FOC_MANUAL) {
@@ -1237,7 +1253,7 @@ void cmd_foc(int argc, char** argv) {
             relay.write(1);
             focTick();
         }
-        usb_printf("FOC Id set to %.3fA\r\n", foc_state.Id_ref);
+        usb_printf("FOC Id set to %.3f A\r\n", foc_state.Id_ref);
     }
     else if (strcmp(argv[1], "iq") == 0) {
         if (control_mode != MotorControlMode::MOTOR_FOC_MANUAL) {
@@ -1250,7 +1266,21 @@ void cmd_foc(int argc, char** argv) {
             relay.write(1);
             focTick();
         }
-        usb_printf("FOC Iq set to %.3fA\r\n", foc_state.Iq_ref);
+        usb_printf("FOC Iq set to %.3f A\r\n", foc_state.Iq_ref);
+    }
+    
+    else if (strcmp(argv[1], "speed") == 0) {
+        if (control_mode != MotorControlMode::MOTOR_FOC_MANUAL) {
+            usb_printf("Command only valid in FOC manual mode\r\n");
+            return;
+        }
+        foc_state.target_rpm = atof(argv[2]);
+        if ((system_flag & FLAG_FOC_RUNNING) == 0) {
+            system_flag |= FLAG_FOC_RUNNING;
+            relay.write(1);
+            focTick();
+        }
+        usb_printf("FOC target RPM set to %.3f\r\n", foc_state.target_rpm);
     }
     else {
         if (control_mode == MotorControlMode::MOTOR_PROTECTION) {protectionModePrint(); return;}
