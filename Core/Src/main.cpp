@@ -10,7 +10,7 @@
 #include "timer.h"
 #include "foc.h"
 #include "cmd.h"
-#include "cordic_math.h"
+//#include "cordic_math.h"
 #include "math_helpers.h"
 #include <cstdint>
 
@@ -179,7 +179,7 @@ int main(void)
   MX_TIM6_Init();
   MX_TIM7_Init();
   MX_TIM8_Init();
-  MX_CORDIC_Init();
+  //MX_CORDIC_Init();
 
   /* USER CODE BEGIN 2 */
   led_red.write(1);
@@ -1676,7 +1676,7 @@ void cmd_audible(int argc, char** argv) {
     }
 }
 
-void cmd_sin(int argc, char** argv) {
+/* void cmd_sin(int argc, char** argv) {
     float value = atof(argv[1]);
     usb_printf("sinf(%.2f) = %.5f, cordic::sinf(%.2f) = %.5f\r\n", value, sinf(value), value, cordic::sinf(value));
 }
@@ -1704,7 +1704,7 @@ void cmd_hypot(int argc, char** argv) {
         return;
     }
     usb_printf("hypotf(%.2f, %.2f) = %.5f, cordic::hypotf(%.2f, %.2f) = %.5f\r\n", x, y, hypotf(x, y), x, y, cordic::hypotf(x, y));
-}
+} */
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  FOC ISR tick — called from TIM8 update interrupt at 20 kHz
