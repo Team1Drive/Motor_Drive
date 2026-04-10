@@ -1678,78 +1678,32 @@ void cmd_audible(int argc, char** argv) {
 
 void cmd_sin(int argc, char** argv) {
     float value = atof(argv[1]);
-    char resp[64];
-    int len = snprintf(resp, sizeof(resp), "sinf(%.2f) = %.5f, cordic::sinf(%.2f) = %.5f\r\n", value, sinf(value), value, cordic::sinf(value));
-    CDC_Transmit_HS((uint8_t*)resp, len);
+    usb_printf("sinf(%.2f) = %.5f, cordic::sinf(%.2f) = %.5f\r\n", value, sinf(value), value, cordic::sinf(value));
 }
 
 void cmd_cos(int argc, char** argv) {
     float value = atof(argv[1]);
-    char resp[64];
-    int len = snprintf(resp, sizeof(resp), "cosf(%.2f) = %.5f, cordic::cosf(%.2f) = %.5f\r\n", value, cosf(value), value, cordic::cosf(value));
-    CDC_Transmit_HS((uint8_t*)resp, len);
+    usb_printf("cosf(%.2f) = %.5f, cordic::cosf(%.2f) = %.5f\r\n", value, cosf(value), value, cordic::cosf(value));
 }
 
 void cmd_arctan(int argc, char** argv) {
     float y = atof(argv[1]);
     float x = atof(argv[2]);
     if (x <= 0.0f || y <= 0.0f) {
-        CDC_Transmit_HS((uint8_t*)"x and y must be positive for arctan test\r\n", 43);
+        usb_printf("x and y must be positive for arctan test\r\n");
         return;
     }
-    char resp[64];
-    int len = snprintf(resp, sizeof(resp), "atan2f(%.2f, %.2f) = %.5f, cordic::atan2f(%.2f, %.2f) = %.5f\r\n", y, x, atan2f(y, x), y, x, cordic::atan2f(y, x));
-    CDC_Transmit_HS((uint8_t*)resp, len);
+    usb_printf("atan2f(%.2f, %.2f) = %.5f, cordic::atan2f(%.2f, %.2f) = %.5f\r\n", y, x, atan2f(y, x), y, x, cordic::atan2f(y, x));
 }
 
 void cmd_hypot(int argc, char** argv) {
     float x = atof(argv[1]);
     float y = atof(argv[2]);
     if (x <= 0.0f || y <= 0.0f) {
-        CDC_Transmit_HS((uint8_t*)"x and y must be positive for hypot test\r\n", 42);
+        usb_printf("x and y must be positive for hypot test\r\n");
         return;
     }
-    char resp[64];
-    int len = snprintf(resp, sizeof(resp), "hypotf(%.2f, %.2f) = %.5f, cordic::hypotf(%.2f, %.2f) = %.5f\r\n", x, y, hypotf(x, y), x, y, cordic::hypotf(x, y));
-    CDC_Transmit_HS((uint8_t*)resp, len);
-}
-
-void cmd_sin(int argc, char** argv) {
-    float value = atof(argv[1]);
-    char resp[64];
-    int len = snprintf(resp, sizeof(resp), "sinf(%.2f) = %.5f, cordic::sinf(%.2f) = %.5f\r\n", value, sinf(value), value, cordic::sinf(value));
-    CDC_Transmit_HS((uint8_t*)resp, len);
-}
-
-void cmd_cos(int argc, char** argv) {
-    float value = atof(argv[1]);
-    char resp[64];
-    int len = snprintf(resp, sizeof(resp), "cosf(%.2f) = %.5f, cordic::cosf(%.2f) = %.5f\r\n", value, cosf(value), value, cordic::cosf(value));
-    CDC_Transmit_HS((uint8_t*)resp, len);
-}
-
-void cmd_arctan(int argc, char** argv) {
-    float y = atof(argv[1]);
-    float x = atof(argv[2]);
-    if (x <= 0.0f || y <= 0.0f) {
-        CDC_Transmit_HS((uint8_t*)"x and y must be positive for arctan test\r\n", 43);
-        return;
-    }
-    char resp[64];
-    int len = snprintf(resp, sizeof(resp), "atan2f(%.2f, %.2f) = %.5f, cordic::atan2f(%.2f, %.2f) = %.5f\r\n", y, x, atan2f(y, x), y, x, cordic::atan2f(y, x));
-    CDC_Transmit_HS((uint8_t*)resp, len);
-}
-
-void cmd_hypot(int argc, char** argv) {
-    float x = atof(argv[1]);
-    float y = atof(argv[2]);
-    if (x <= 0.0f || y <= 0.0f) {
-        CDC_Transmit_HS((uint8_t*)"x and y must be positive for hypot test\r\n", 42);
-        return;
-    }
-    char resp[64];
-    int len = snprintf(resp, sizeof(resp), "hypotf(%.2f, %.2f) = %.5f, cordic::hypotf(%.2f, %.2f) = %.5f\r\n", x, y, hypotf(x, y), x, y, cordic::hypotf(x, y));
-    CDC_Transmit_HS((uint8_t*)resp, len);
+    usb_printf("hypotf(%.2f, %.2f) = %.5f, cordic::hypotf(%.2f, %.2f) = %.5f\r\n", x, y, hypotf(x, y), x, y, cordic::hypotf(x, y));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
