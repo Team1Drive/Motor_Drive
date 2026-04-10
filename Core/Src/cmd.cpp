@@ -23,7 +23,7 @@ static const cmd_entry_t cmd_table[] = {
     { "start",       cmd_start,       1,    1,  "Usage: start\r\n"                              }, // 1 means just the command itself
     { "stop",        cmd_stop,        1,    1,  "Usage: stop\r\n"                               },
     { "reset",       cmd_reset,       1,    1,  "Usage: reset\r\n"                              },
-    { "foc",         cmd_foc,         2,    2,  "Usage: foc <rpm> or foc status\r\n"            }, // e.g., "foc 1000" = 2 tokens
+    { "foc",         cmd_foc,         2,    3,  "Usage: foc <rpm> or foc status\r\n"            }, // e.g., "foc 1000" = 2 tokens
     { "rpm",         cmd_rpm,         2,    2,  "Usage: rpm <value>\r\n"                        },
     { "sixstep",     cmd_sixstep,     1,    1,  "Usage: sixstep\r\n"                            },
     { "speed",       cmd_speed,       2,    2,  "Usage: speed <value>\r\n"                      },
