@@ -11,6 +11,7 @@
 #include "foc.h"
 #include "cmd.h"
 #include "cordic_math.h"
+#include "math_helpers.h"
 #include <cstdint>
 
 #include "usbd_cdc_if.h"
@@ -37,8 +38,11 @@ void alignRotor(void);
 void vvvfRampUp(void);
 void sixStepCommutation(void);
 
+void clearRunningFlags(void);
+
 /* Forward declaration for FOC ISR helper */
 static void foc_isr_tick(void);
+void focTick(void);
 
 void test_PWM(void);
 void test_PWM_sweep(void);
@@ -121,6 +125,8 @@ ring_buffer_t rx_ring = { .head = 0, .tail = 0 };
 
 /* FOC state — single global instance */
 FOC_State_t foc_state;
+
+RollingMax ia_max, ib_max, ic_max, ibatt_max;
 
 
 
@@ -219,7 +225,7 @@ int main(void)
 
   usb_printf("HAL Initialized\n");
   
-  if (motorPWM.setFrequency(20000) != HAL_OK) error_flag |= ERROR_PWM_CONFIG;
+  if (motorPWM.setFrequency(PWM_FREQ_DEFAULT_HZ) != HAL_OK) error_flag |= ERROR_PWM_CONFIG;
   if (motorPWM.setDeadTime(1000) != HAL_OK) error_flag |= ERROR_PWM_CONFIG;
   
   /* Initialise FOC controller */
@@ -238,6 +244,7 @@ int main(void)
   control_mode = MotorControlMode::MOTOR_STOP;
   
   usb_printf("System Initialized\n");
+  uint32_t tick_count = 0;
   /* USER CODE END 2 */
   
   /* Infinite loop */
@@ -246,6 +253,8 @@ int main(void)
     /* USER CODE BEGIN WHILE */
     char cmd_line[CMD_MAX_LEN];
     if (read_line_from_ring(&rx_ring, cmd_line, CMD_MAX_LEN)) process_command(cmd_line);
+    //if (control_mode != MotorControlMode::MOTOR_STOP && tick_count & 16384) usb_printf("Main Loop Tick: %u\r\n", tick_count);
+    tick_count++;
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE BEGIN 3 */
@@ -297,15 +306,26 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
   if (htim->Instance == TIM8) {
     // PWM update interrupt
-    if (control_mode == MotorControlMode::MOTOR_FOC_LINEAR ||
-        control_mode == MotorControlMode::MOTOR_FOC_DPWM) {
-      foc_isr_tick();
-    }
-    else if (control_mode == MotorControlMode::MOTOR_VVVF) {
-      vvvfRampUp();
-    }
-    else if (control_mode == MotorControlMode::MOTOR_ALIGN) {
-      alignRotor();
+    switch (control_mode) {
+      case MotorControlMode::MOTOR_FOC_LINEAR:
+      case MotorControlMode::MOTOR_FOC_DPWM:
+        foc_isr_tick();
+        break;
+
+      case MotorControlMode::MOTOR_FOC_MANUAL:
+        focTick();
+        break;
+
+      case MotorControlMode::MOTOR_VVVF:
+        vvvfRampUp();
+        break;
+
+      case MotorControlMode::MOTOR_ALIGN:
+        alignRotor();
+        break;
+        
+      default:
+        break;
     }
   }
   else if (htim->Instance == TIM6) {
@@ -435,7 +455,7 @@ void timer3IRQ(void) {
       break;
   }
 
-  if ((error_flag & ERROR_OVERCURRENT) == 0) {
+  if (error_flag == 0) {
     led_red.write(0);
   }
   
@@ -463,6 +483,8 @@ void printTelemetryUTF8(void) {
   uint16_t adc2_raw[2];
   uint16_t adc3_raw[2];
   float ia, ib, ic, va, vb, vbatt, ibatt;
+
+  // Construct ADC data in physical units only if at least one of the relevant print_mask bits is set
   if ((print_mask & (PRINT_IA
                    | PRINT_VB
                    | PRINT_VBATT
@@ -474,6 +496,8 @@ void printTelemetryUTF8(void) {
     ia = adcToCurrent(adc1_raw[0], 3.3f, 65536, 50.0f, 1.65f + adc_gain.ia_offset, adc_gain.ia_shunt);
     vb = adcToVoltage(adc1_raw[1], 3.3f, 65536, adc_gain.vb_gain, 1.65f + adc_gain.vb_offset);
     vbatt = adcToVoltage(adc1_raw[2], 3.3f, 65536, adc_gain.vbatt_gain, 0.0f + adc_gain.vbatt_offset);
+
+    ia_max.newValue(fabsf(ia));
   }
   if ((print_mask & (PRINT_IB
                    | PRINT_VA
@@ -483,6 +507,8 @@ void printTelemetryUTF8(void) {
 
     ib = adcToCurrent(adc2_raw[0], 3.3f, 65536, 50.0f, 1.65f + adc_gain.ib_offset, adc_gain.ib_shunt);
     va = adcToVoltage(adc2_raw[1], 3.3f, 65536, adc_gain.va_gain, 1.65f + adc_gain.va_offset);
+
+    ib_max.newValue(fabsf(ib));
   }
   if ((print_mask & (PRINT_IC
                    | PRINT_IBATT
@@ -492,22 +518,25 @@ void printTelemetryUTF8(void) {
 
     ic = adcToCurrent(adc3_raw[0], 3.3f, 4096, 50.0f, 1.65f + adc_gain.ic_offset, adc_gain.ic_shunt);
     ibatt = adcToCurrent(adc3_raw[1], 3.3f, 4096, 50.0f, 1.65f + adc_gain.ibatt_offset, adc_gain.ibatt_shunt);
+
+    ic_max.newValue(fabsf(ic));
+    ibatt_max.newValue(fabsf(ibatt));
   }
 
   // Construct a UTF-8 string, e.g. "rpm 123.45 pos 67.89\r\n"
   char buffer[128];
   int pos = 0;
-  if (print_mask & PRINT_HALLBIN) {
+  if (print_mask & PRINT_HALL) {
     pos += snprintf(buffer + pos, sizeof(buffer) - pos, "hall %u%u%u ", hallsensor.getState() >> 2 & 1, hallsensor.getState() >> 1 & 1, hallsensor.getState() & 1);
-  }
-  if (print_mask & PRINT_HALLDEC) {
-    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "hall_ %u ", hallsensor.getState());
   }
   if (print_mask & PRINT_RPM) {
     pos += snprintf(buffer + pos, sizeof(buffer) - pos, "rpm %.2f ", encoder.getRPM());
   }
   if (print_mask & PRINT_POS) {
     pos += snprintf(buffer + pos, sizeof(buffer) - pos, "pos %u ", encoder.getPos());
+  }
+  if (print_mask & PRINT_ELPOS) {
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "elpos %u ", encoder.getElecPos());
   }
   if (print_mask & PRINT_DUTY_A) {
     pos += snprintf(buffer + pos, sizeof(buffer) - pos, "duty_a %.2f ", motorPWM.getDuty(0));
@@ -560,6 +589,36 @@ void printTelemetryUTF8(void) {
   if (print_mask & PRINT_IBATT_RAW) {
     pos += snprintf(buffer + pos, sizeof(buffer) - pos, "ibatt_ %u ", adc3_raw[1]);
   }
+  if (print_mask & PRINT_IA_MAX) {
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "ia_max %.2f ", ia_max.getMax());
+  }
+  if (print_mask & PRINT_IB_MAX) {
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "ib_max %.2f ", ib_max.getMax());
+  }
+  if (print_mask & PRINT_IC_MAX) {
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "ic_max %.2f ", ic_max.getMax());
+  }
+  if (print_mask & PRINT_IBATT_MAX) {
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "ibatt_max %.2f ", ibatt_max.getMax());
+  }
+  if (print_mask & PRINT_FOC_ID) {
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "foc_id %.2f ", foc_state.Id);
+  }
+  if (print_mask & PRINT_FOC_IQ) {
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "foc_iq %.2f ", foc_state.Iq);
+  }
+  if (print_mask & PRINT_FOC_IDSP) {
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "foc_idsp %.2f ", foc_state.Id_ref);
+  }
+  if (print_mask & PRINT_FOC_IQSP) {
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "foc_iqsp %.2f ", foc_state.Iq_ref);
+  }
+  if (print_mask & PRINT_FOC_VD) {
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "foc_vd %.2f ", foc_state.Vd_cmd);
+  }
+  if (print_mask & PRINT_FOC_VQ) {
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "foc_vq %.2f ", foc_state.Vq_cmd);
+  }
   if (pos > 0) {
     buffer[pos - 1] = '\n';
     buffer[pos] = '\0';
@@ -568,6 +627,11 @@ void printTelemetryUTF8(void) {
 }
 
 /**
+ * Print telemetry data in binary format over USB.
+ * Data structure:
+ * [Header: 0xAA 0x55][4-byte print_mask][Data fields...]
+ * The data fields are included based on the print_mask bits, and are in the same order as defined in the printTelemetryUTF8 function. Each field is represented in its raw binary format (e.g., float as 4 bytes, uint16_t as 2 bytes).
+ * 
  * @brief Function to print telemetry data in binary format over USB.
  * @note The data fields to be printed are determined by the print_mask variable,with variable data packet length. The packet starts with a header (0xAA 0x55), followed by a 4-byte mask indicating which fields are included, and then the data fields in the order defined by the print_mask.
  * @note Binary data sent is parsed automatically by a script on the host computer.
@@ -590,6 +654,8 @@ void printTelemetryBinary(void) {
     ia = adcToCurrent(adc1_raw[0], 3.3f, 65536, 50.0f, 1.65f + adc_gain.ia_offset, adc_gain.ia_shunt);
     vb = adcToVoltage(adc1_raw[1], 3.3f, 65536, adc_gain.vb_gain, 1.65f + adc_gain.vb_offset);
     vbatt = adcToVoltage(adc1_raw[2], 3.3f, 65536, adc_gain.vbatt_gain, 0.0f + adc_gain.vbatt_offset);
+
+    ia_max.newValue(fabsf(ia));
   }
   if ((print_mask & (PRINT_IB
                    | PRINT_VA
@@ -599,6 +665,8 @@ void printTelemetryBinary(void) {
 
     ib = adcToCurrent(adc2_raw[0], 3.3f, 65536, 50.0f, 1.65f + adc_gain.ib_offset, adc_gain.ib_shunt);
     va = adcToVoltage(adc2_raw[1], 3.3f, 65536, adc_gain.va_gain, 1.65f + adc_gain.va_offset);
+
+    ib_max.newValue(fabsf(ib));
   }
   if ((print_mask & (PRINT_IC
                    | PRINT_IBATT
@@ -608,6 +676,9 @@ void printTelemetryBinary(void) {
 
     ic = adcToCurrent(adc3_raw[0], 3.3f, 4096, 50.0f, 1.65f + adc_gain.ic_offset, adc_gain.ic_shunt);
     ibatt = adcToCurrent(adc3_raw[1], 3.3f, 4096, 50.0f, 1.65f + adc_gain.ibatt_offset, adc_gain.ibatt_shunt);
+
+    ic_max.newValue(fabsf(ic));
+    ibatt_max.newValue(fabsf(ibatt));
   }
 
   // Construct a binary packet
@@ -621,12 +692,7 @@ void printTelemetryBinary(void) {
   memcpy(ptr, &mask, 4);
   ptr += 4;
 
-  if (print_mask & PRINT_HALLBIN) {
-    uint8_t val = hallsensor.getState() & 0x07;
-    memcpy(ptr, &val, 1);
-    ptr += 1;
-  }
-  if (print_mask & PRINT_HALLDEC) {
+  if (print_mask & PRINT_HALL) {
     uint8_t val = hallsensor.getState() & 0x07;
     memcpy(ptr, &val, 1);
     ptr += 1;
@@ -638,6 +704,11 @@ void printTelemetryBinary(void) {
   }
   if (print_mask & PRINT_POS) {
     uint16_t val = encoder.getPos();
+    memcpy(ptr, &val, 2);
+    ptr += 2;
+  }
+  if (print_mask & PRINT_ELPOS) {
+    uint16_t val = encoder.getElecPos();
     memcpy(ptr, &val, 2);
     ptr += 2;
   }
@@ -726,13 +797,79 @@ void printTelemetryBinary(void) {
     memcpy(ptr, &val, 2);
     ptr += 2;
   }
+  if (print_mask & PRINT_IA_MAX) {
+    float val = ia_max.getMax();
+    memcpy(ptr, &val, 4);
+    ptr += 4;
+  }
+  if (print_mask & PRINT_IB_MAX) {
+    float val = ib_max.getMax();
+    memcpy(ptr, &val, 4);
+    ptr += 4;
+  }
+  if (print_mask & PRINT_IC_MAX) {
+    float val = ic_max.getMax();
+    memcpy(ptr, &val, 4);
+    ptr += 4;
+  }
+  if (print_mask & PRINT_IBATT_MAX) {
+    float val = ibatt_max.getMax();
+    memcpy(ptr, &val, 4);
+    ptr += 4;
+  }
+  if (print_mask & PRINT_FOC_ID) {
+    float val = foc_state.Id;
+    memcpy(ptr, &val, 4);
+    ptr += 4;
+  }
+  if (print_mask & PRINT_FOC_IQ) {
+    float val = foc_state.Iq;
+    memcpy(ptr, &val, 4);
+    ptr += 4;
+  }
+  if (print_mask & PRINT_FOC_IDSP) {
+    float val = foc_state.Id_ref;
+    memcpy(ptr, &val, 4);
+    ptr += 4;
+  }
+  if (print_mask & PRINT_FOC_IQSP) {
+    float val = foc_state.Iq_ref;
+    memcpy(ptr, &val, 4);
+    ptr += 4;
+  }
+  if (print_mask & PRINT_FOC_VD) {
+    float val = foc_state.Vd_cmd;
+    memcpy(ptr, &val, 4);
+    ptr += 4;
+  }
+  if (print_mask & PRINT_FOC_VQ) {
+    float val = foc_state.Vq_cmd;
+    memcpy(ptr, &val, 4);
+    ptr += 4;
+  }
   if (ptr != buffer) {
       CDC_Transmit_HS(buffer, ptr - buffer);
   }
 }
 
 void speedControl(void) {
-  uint32_t rpm = encoder.getRPM();
+  // Calculate speed delta using a ramp function to limit acceleration
+  static float p_rpm = 0.0f;
+  foc_state.rpm = encoder.getRPM() * 0.2f + p_rpm * 0.8f;
+  p_rpm = foc_state.rpm;
+  float omega_m = foc_state.rpm * RPM_TO_RAD_S;
+  float omega_target = foc_state.target_rpm * RPM_TO_RAD_S;
+  const float max_step = FOC_RAMP_RATE * RPM_TO_RAD_S / (float)TIM6_FREQ_HZ;
+  float speed_delta = omega_target - foc_state.omega_ref;
+
+  // Limit the speed delta to the maximum step size to ensure smooth acceleration
+  if (speed_delta >  max_step) speed_delta =  max_step;
+  if (speed_delta < -max_step) speed_delta = -max_step;
+  foc_state.omega_ref += speed_delta;
+
+  // Update the speed PI controller to adjust Iq reference based on the speed error
+  float err_sp = foc_state.omega_ref - omega_m;
+  foc_state.Iq_ref = PI_update(&foc_state.pi_speed, err_sp, FOC_TS * (float)FOC_SPEED_DIV);
 }
 
 void alignRotor(void) {
@@ -749,7 +886,7 @@ void alignRotor(void) {
 
     float dutyA, dutyB, dutyC;
     foc_state.ts = 1.0f / (float)motorPWM.getFrequency();
-    foc_align_zero(&foc_state, MOTOR_ALIGNMENT_VOLTAGE, Vdc, &dutyA, &dutyB, &dutyC);
+    focAlignZero(&foc_state, MOTOR_ALIGNMENT_VOLTAGE, Vdc, &dutyA, &dutyB, &dutyC);
     motorPWM.setDuty(dutyA, dutyB, dutyC);
 
     system_flag |= FLAG_ROTOR_ALIGNING;
@@ -766,10 +903,6 @@ void alignRotor(void) {
     settlement_counter = 0;
   }
 
-  //char buffer[64];
-  //snprintf(buffer, sizeof(buffer), "Aligning... Pos: %u, Delta: %d, Counter: %d\n", pos, delta_pos, settlement_counter);
-  //CDC_Transmit_HS((uint8_t*)buffer, strlen(buffer));
-
   if (settlement_counter > MOTOR_ALIGNMENT_POS_WINDOW) {
     encoder.elecZeroAlign();
 
@@ -779,7 +912,7 @@ void alignRotor(void) {
     system_flag &= ~FLAG_ROTOR_ALIGNING;
     system_flag |= FLAG_ELEC_ZERO_ALIGNED;
 
-    CDC_Transmit_HS((uint8_t*)"Electrical Zero Angle Aligned\n", 33);
+    usb_printf("Electrical Zero Angle Aligned\n");
   }
 }
 
@@ -832,18 +965,51 @@ void vvvfRampUp(void) {
 
   // Audible frequency adjustment
   if (system_flag & FLAG_AUDIBLE) {
-    if (rpm < 500.0f) {
-      motorPWM.setFrequency(450);
+    if (rpm < 30.0f) {
+      motorPWM.setFrequency(293.66f);
     }
-    else if (rpm < 1000.0f) {
-      motorPWM.setFrequency(900);
+    else if (rpm < 60.0f) {
+      motorPWM.setFrequency(329.63f);
+    }
+    else if (rpm < 90.0f) {
+      motorPWM.setFrequency(349.23f);
+    }
+    else if (rpm < 120.0f) {
+      motorPWM.setFrequency(392.00f);
+    }
+    else if (rpm < 150.0f) {
+      motorPWM.setFrequency(440.00f);
+    }
+    else if (rpm < 180.0f) {
+      motorPWM.setFrequency(493.88f);
+    }
+    else if (rpm < 210.0f) {
+      motorPWM.setFrequency(523.25f);
+    }
+    else if (rpm < 240.0f) {
+      motorPWM.setFrequency(587.33f);
+    }
+    else if (rpm < 270.0f) {
+      motorPWM.setFrequency(659.26f);
+    }
+    else if (rpm < 300.0f) {
+      motorPWM.setFrequency(698.46f);
+    }
+    else if (rpm < 330.0f) {
+      motorPWM.setFrequency(783.99f);
+    }
+    else if (rpm < 360.0f) {
+      motorPWM.setFrequency(880.00f);
+    }
+    else if (rpm < 600.0f) {
+      motorPWM.setFrequency(900.00f);
     }
     else {
       motorPWM.setFrequency((uint32_t)rpm * 2);
     }
   }
   else {
-    if (motorPWM.getFrequency() != 20000) motorPWM.setFrequency(20000);
+    if (motorPWM.getFrequency() != PWM_FREQ_DEFAULT_HZ) motorPWM.setFrequency(PWM_FREQ_DEFAULT_HZ);
   }
 
   // Increment aligned with interrupt frequency
@@ -878,7 +1044,7 @@ void vvvfRampUp(void) {
   float electrical_freq = rpm / 60.0f * MOTOR_POLE_PAIRS;
 
   float delta_angle = 2.0f * M_PI * electrical_freq / frequency;
-  angle += delta_angle * MOTOR_ROTATION_DIRECTION * -1.0f;
+  angle += delta_angle * MOTOR_ROTATION_DIRECTION;
   if (angle >= 2.0f * M_PI) angle -= 2.0f * M_PI;
 
   // Calculate voltage amplitude
@@ -897,17 +1063,17 @@ void vvvfRampUp(void) {
   if (amplitude > 1.0f) amplitude = 1.0f;
 
   float dutyA = 0.5f + amplitude * 0.5f * sinf(angle);
-  float dutyB = 0.5f + amplitude * 0.5f * sinf(angle + 2.0f * M_PI / 3.0f);
-  float dutyC = 0.5f + amplitude * 0.5f * sinf(angle + 4.0f * M_PI / 3.0f);
+  float dutyB = 0.5f + amplitude * 0.5f * sinf(angle - 2.0f * M_PI / 3.0f);
+  float dutyC = 0.5f + amplitude * 0.5f * sinf(angle + 2.0f * M_PI / 3.0f);
 
   motorPWM.setDuty(dutyA, dutyB, dutyC);
 
-  if (FOC_ALLOWED && encoder.is_synchronized_ && rpm >= VVVF_THRESHOLD_RPM >> 1) {
+  if (FOC_ALLOWED && encoder.is_synchronized_ && encoder.is_zeroed_ && rpm >= VVVF_THRESHOLD_RPM >> 1) {
     system_flag &= ~FLAG_VVVF_RUNNING;
     system_flag |= FLAG_FOC_RUNNING;
     foc_state.target_rpm = FOC_INITIAL_RPM;
     control_mode = MotorControlMode::MOTOR_FOC_LINEAR;
-    CDC_Transmit_HS((uint8_t*)"Entering FOC mode\r\n", 19);
+    usb_printf("Entering FOC mode\r\n");
   }
 }
 
@@ -962,69 +1128,20 @@ const int8_t commutation_acw[8][3] = {
       c_state = commutation_acw[hall_state][2];
   }
 
+  float dutyA = (a_state == 1) ? SIXSTEP_DUTYCYCLE : (a_state == 0) ? (1.0f - SIXSTEP_DUTYCYCLE) : -1.0f;
   float dutyB = (b_state == 1) ? SIXSTEP_DUTYCYCLE : (b_state == 0) ? (1.0f - SIXSTEP_DUTYCYCLE) : -1.0f;
   float dutyC = (c_state == 1) ? SIXSTEP_DUTYCYCLE : (c_state == 0) ? (1.0f - SIXSTEP_DUTYCYCLE) : -1.0f;
-  float dutyA = (a_state == 1) ? SIXSTEP_DUTYCYCLE : (a_state == 0) ? (1.0f - SIXSTEP_DUTYCYCLE) : -1.0f;
-
+  
   motorPWM.setDuty(dutyA, dutyB, dutyC);
 }
 
-/**
- * @brief Converts a raw ADC value to a voltage in volts, applying the reference voltage, resolution, gain, and offset for calibration.
- * @param raw The raw ADC value to be converted.
- * @param vref The reference voltage for the ADC.
- * @param resolution The resolution of the ADC (e.g., 4096 for 12-bit, 65536 for 16-bit).
- * @param gain The gain factor for the ADC.
- * @param offset The offset factor for the ADC.
- * @return The converted voltage in volts.
- */
-float adcToVoltage(uint32_t raw, float vref, uint32_t resolution, float gain, float offset) {
-  return (((float)raw / (float)resolution) * vref - offset) / gain;
-}
+void clearRunningFlags(void) {
+    system_flag &= ~FLAG_ROTOR_ALIGNING;
+    system_flag &= ~FLAG_VVVF_RUNNING;
+    system_flag &= ~FLAG_SIXSTEP_RUNNING;
+    system_flag &= ~FLAG_FOC_RUNNING;
 
-/**
- * @brief Converts a raw ADC value to a current in amps, using the voltage conversion and applying the shunt resistance for current measurement.
- * @param raw The raw ADC value to be converted.
- * @param vref The reference voltage for the ADC.
- * @param resolution The resolution of the ADC (e.g., 4096 for 12-bit, 65536 for 16-bit).
- * @param gain The gain factor for the ADC.
- * @param offset The offset factor for the ADC.
- * @param shunt The shunt resistance in ohms used for current measurement.
- * @return The converted current in amps.
- */
-float adcToCurrent(uint32_t raw, float vref, uint32_t resolution, float gain, float offset, float shunt) {
-  float voltage = adcToVoltage(raw, vref, resolution, gain, offset);
-  return voltage / shunt;
-}
-
-/**
- * @brief Computes the average of an array of uint16_t values using a fast method that avoids overflow. The function sums all values in a uint32_t variable and then right shifts by the number of bits corresponding to the size of the array (assuming size is a power of 2) to get the average.
- * @param data_ptr Pointer to the array of uint16_t values.
- * @param size The number of elements in the array (must be a power of 2).
- * @return The average value as a uint16_t.
- * @attention `size` must be a power of 2, otherwise 0 will be returned.
- */
-uint16_t fastAverage(uint16_t* data_ptr, uint16_t size) {
-  if (size == 0) return 0; // Avoid division by zero
-  if (!isPowerOfTwo(size)) return 0; // Size must be a power of 2 for this method to work correctly
-
-  uint32_t sum = 0;
-  for (uint16_t i = 0; i < size; i++) {
-    sum += data_ptr[i];
-  }
-
-  uint32_t shift = 31 - __builtin_clz(size);
-
-  return (uint16_t)(sum >> shift);
-}
-
-/**
- * @brief Checks if a given uint16_t value is a power of 2.
- * @param x The value to check.
- * @return true if x is a power of 2, false otherwise.
- */
-bool isPowerOfTwo(uint16_t x) {
-  return (x != 0) && ((x & (x - 1)) == 0);
+    foc_reset(&foc_state);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1038,12 +1155,10 @@ bool isPowerOfTwo(uint16_t x) {
 void cmd_start(int argc, char** argv) {
     if (control_mode == MotorControlMode::MOTOR_PROTECTION) {protectionModePrint(); return;}
     control_mode = MotorControlMode::MOTOR_STARTUP;
-    system_flag &= ~FLAG_VVVF_RUNNING;
-    system_flag &= ~FLAG_SIXSTEP_RUNNING;
-    system_flag &= ~FLAG_FOC_RUNNING;
+    clearRunningFlags();
     relay.write(1);
     startUpSequence();
-    CDC_Transmit_HS((uint8_t*)"Starting\r\n", 10);
+    usb_printf("Starting\r\n");
 }
 
 /**
@@ -1054,17 +1169,14 @@ void cmd_start(int argc, char** argv) {
 void cmd_stop(int argc, char** argv) {
     if (control_mode == MotorControlMode::MOTOR_VVVF && system_flag & FLAG_VVVF_RAMP_UP) {
         system_flag &= ~FLAG_VVVF_RAMP_UP; // Start ramp down
-        CDC_Transmit_HS((uint8_t*)"VVVF ramping down\r\n", 21);
+        usb_printf("VVVF ramping down\r\n");
     } else {
         control_mode = MotorControlMode::MOTOR_STOP;
-        system_flag &= ~FLAG_ROTOR_ALIGNING;
-        system_flag &= ~FLAG_VVVF_RUNNING;
-        system_flag &= ~FLAG_SIXSTEP_RUNNING;
-        system_flag &= ~FLAG_FOC_RUNNING;
+        clearRunningFlags();
         motorPWM.stop();
         foc_reset(&foc_state);
         relay.write(0);
-        CDC_Transmit_HS((uint8_t*)"Stopping\r\n", 10);
+        usb_printf("Stopping\r\n");
     }
 }
 
@@ -1073,16 +1185,18 @@ void cmd_stop(int argc, char** argv) {
  * @note Resets the entire system to a known safe state, stopping the motor and clearing any active control modes or flags.
  */
 void cmd_reset(int argc, char** argv) {
+    if (strcmp(argv[1], "align") == 0) {
+        system_flag &= ~FLAG_ELEC_ZERO_ALIGNED;
+        usb_printf("Electrical zero angle reset\r\n");
+    }
     control_mode = MotorControlMode::MOTOR_STOP;
-    system_flag &= ~FLAG_VVVF_RUNNING;
-    system_flag &= ~FLAG_SIXSTEP_RUNNING;
-    system_flag &= ~FLAG_FOC_RUNNING;
+    clearRunningFlags();
     error_flag &= ~ERROR_OVERCURRENT;
     motorPWM.stop();
     led_red.write(0);
     foc_reset(&foc_state);
     relay.write(0);
-    CDC_Transmit_HS((uint8_t*)"Resetting\r\n", 11);
+    usb_printf("Resetting\r\n");
 }
 
 /**
@@ -1099,15 +1213,84 @@ void cmd_foc(int argc, char** argv) {
                   foc_state.Vdc, foc_state.u_mag,
                   (int)foc_state.fault);
     }
-    // argv[1] contains the string of the target RPM
+    else if (strcmp(argv[1], "manual") == 0) {
+        control_mode = MotorControlMode::MOTOR_FOC_MANUAL;
+        clearRunningFlags();
+        usb_printf("FOC in manual mode, use with care\r\n");
+    }
+    else if (strcmp(argv[1], "vd") == 0) {
+        if (control_mode != MotorControlMode::MOTOR_FOC_MANUAL) {
+            usb_printf("Command only valid in FOC manual mode\r\n");
+            return;
+        }
+        foc_state.Vd_cmd = atof(argv[2]);
+        if ((system_flag & FLAG_FOC_RUNNING) == 0) {
+            system_flag |= FLAG_FOC_RUNNING;
+            relay.write(1);
+            focTick();
+        }
+        usb_printf("FOC Vd set to %.2f V\r\n", foc_state.Vd_cmd);
+    }
+    else if (strcmp(argv[1], "vq") == 0) {
+        if (control_mode != MotorControlMode::MOTOR_FOC_MANUAL) {
+            usb_printf("Command only valid in FOC manual mode\r\n");
+            return;
+        }
+        foc_state.Vq_cmd = atof(argv[2]);
+        if ((system_flag & FLAG_FOC_RUNNING) == 0) {
+            system_flag |= FLAG_FOC_RUNNING;
+            relay.write(1);
+            focTick();
+        }
+        usb_printf("FOC Vq set to %.2f V\r\n", foc_state.Vq_cmd);
+    }
+    else if (strcmp(argv[1], "id") == 0) {
+        if (control_mode != MotorControlMode::MOTOR_FOC_MANUAL) {
+            usb_printf("Command only valid in FOC manual mode\r\n");
+            return;
+        }
+        foc_state.Id_ref = atof(argv[2]);
+        if ((system_flag & FLAG_FOC_RUNNING) == 0) {
+            system_flag |= FLAG_FOC_RUNNING;
+            relay.write(1);
+            focTick();
+        }
+        usb_printf("FOC Id set to %.3f A\r\n", foc_state.Id_ref);
+    }
+    else if (strcmp(argv[1], "iq") == 0) {
+        if (control_mode != MotorControlMode::MOTOR_FOC_MANUAL) {
+            usb_printf("Command only valid in FOC manual mode\r\n");
+            return;
+        }
+        foc_state.Iq_ref = atof(argv[2]);
+        if ((system_flag & FLAG_FOC_RUNNING) == 0) {
+            system_flag |= FLAG_FOC_RUNNING;
+            relay.write(1);
+            focTick();
+        }
+        usb_printf("FOC Iq set to %.3f A\r\n", foc_state.Iq_ref);
+    }
+    
+    else if (strcmp(argv[1], "speed") == 0) {
+        if (control_mode != MotorControlMode::MOTOR_FOC_MANUAL) {
+            usb_printf("Command only valid in FOC manual mode\r\n");
+            return;
+        }
+        foc_state.target_rpm = atof(argv[2]);
+        if ((system_flag & FLAG_FOC_RUNNING) == 0) {
+            system_flag |= FLAG_FOC_RUNNING;
+            relay.write(1);
+            focTick();
+        }
+        usb_printf("FOC target RPM set to %.3f\r\n", foc_state.target_rpm);
+    }
     else {
         if (control_mode == MotorControlMode::MOTOR_PROTECTION) {protectionModePrint(); return;}
         int rpm_cmd = atoi(argv[1]);
         
         foc_reset(&foc_state);
         foc_state.target_rpm = (float)rpm_cmd;
-        system_flag &= ~FLAG_VVVF_RUNNING;
-        system_flag &= ~FLAG_SIXSTEP_RUNNING;
+        clearRunningFlags();
         system_flag |= FLAG_FOC_RUNNING;
         relay.write(1);
         motorPWM.start();
@@ -1133,11 +1316,10 @@ void cmd_rpm(int argc, char** argv) {
 void cmd_sixstep(int argc, char** argv) {
     if (control_mode == MotorControlMode::MOTOR_PROTECTION) {protectionModePrint(); return;}
     control_mode = MotorControlMode::MOTOR_SIX_STEP;
-    system_flag &= ~FLAG_VVVF_RUNNING;
-    system_flag &= ~FLAG_FOC_RUNNING;
+    clearRunningFlags();
     relay.write(1);
     sixStepCommutation();
-    CDC_Transmit_HS((uint8_t*)"Six-step running\r\n", 31);
+    usb_printf("Six-step running\r\n");
 }
 
 /**
@@ -1150,11 +1332,9 @@ void cmd_speed(int argc, char** argv) {
         relay.write(1);
         target.speed = speed;
         foc_state.target_rpm = speed;
-        CDC_Transmit_HS((uint8_t*)"Speed set\r\n", 11);
-    } else {
-        const char* err = "Invalid speed\r\n";
-        CDC_Transmit_HS((uint8_t*)err, strlen(err));
+        usb_printf("Speed set\r\n");
     }
+    else usb_printf("Invalid speed value: %s\r\n", argv[1]);
 }
 
 /**
@@ -1183,18 +1363,17 @@ void cmd_duty(int argc, char** argv) {
             values[1] >= -1.0f && values[1] <= 1.0f &&
             values[2] >= -1.0f && values[2] <= 1.0f) {
             
+            control_mode = MotorControlMode::MOTOR_MANUAL;
+            clearRunningFlags();
             relay.write(1);
             motorPWM.setDuty(values[0], values[1], values[2]);
-            control_mode = MotorControlMode::MOTOR_MANUAL;
-            system_flag &= ~FLAG_VVVF_RUNNING;
-            system_flag &= ~FLAG_SIXSTEP_RUNNING;
-            system_flag &= ~FLAG_FOC_RUNNING;
-            CDC_Transmit_HS((uint8_t*)"Duty set\r\n", 10);
+
+            usb_printf("Duty set to A=%.2f B=%.2f C=%.2f\r\n", values[0], values[1], values[2]);
         } else {
-            CDC_Transmit_HS((uint8_t*)"Duty values out of range [-1,1]\r\n", 34);
+            usb_printf("Duty values out of range [-1,1]: A=%.2f B=%.2f C=%.2f\r\n", values[0], values[1], values[2]);
         }
     } else {
-        CDC_Transmit_HS((uint8_t*)"Invalid duty format. Usage: duty 0.3,0.3,0.3\r\n", 48);
+        usb_printf("Invalid duty format. Usage: duty 0.3,0.3,0.3\r\n");
     }
 }
 
@@ -1230,16 +1409,12 @@ void cmd_vec(int argc, char** argv) {
       
         motorPWM.setDuty(dutyA, dutyB, dutyC);
         control_mode = MotorControlMode::MOTOR_MANUAL;
-        system_flag &= ~FLAG_VVVF_RUNNING;
-        system_flag &= ~FLAG_SIXSTEP_RUNNING;
-        system_flag &= ~FLAG_FOC_RUNNING;
+        clearRunningFlags();
 
         uint8_t hall_state = hallsensor.getState();
-        char resp[64];
-        int len = snprintf(resp, sizeof(resp), "Vector %d applied, Hall=%d\r\n", vec_num, hall_state);
-        CDC_Transmit_HS((uint8_t*)resp, len);
+        usb_printf("Vector %d applied, Hall=%d\r\n", vec_num, hall_state);
     } else {
-        CDC_Transmit_HS((uint8_t*)"Invalid vector. Use 0-5.\r\n", 26);
+        usb_printf("Invalid vector. Use 0-5.\r\n");
     }
 }
 
@@ -1254,7 +1429,6 @@ void cmd_tune(int argc, char** argv) {
     float value = atof(argv[3]);
 
     bool success = false;
-    char resp[64];
     float original = 0.0f;
 
     if (strcmp(subsys, "speed") == 0) {
@@ -1307,9 +1481,6 @@ void cmd_tune(int argc, char** argv) {
     } 
     else if (strcmp(subsys, "flux") == 0) {
         if (strcmp(param, "p") == 0) { 
-            snprintf(resp, sizeof(resp), "Flux gain set to %.3f\r\n", value); 
-            CDC_Transmit_HS((uint8_t*)resp, strlen(resp));
-            return; 
         }
     } 
     else if (strcmp(subsys, "gain") == 0) {
@@ -1376,11 +1547,9 @@ void cmd_tune(int argc, char** argv) {
     }
 
     if (success) {
-        int len = snprintf(resp, sizeof(resp), "%s %s set to %.4f (was %.4f)\r\n", subsys, param, value, original);
-        CDC_Transmit_HS((uint8_t*)resp, len);
+        usb_printf("%s %s set to %.4f (was %.4f)\r\n", subsys, param, value, original);
     } else {
-        int len = snprintf(resp, sizeof(resp), "Unknown parameter '%s' or subsystem '%s'\r\n", param, subsys);
-        CDC_Transmit_HS((uint8_t*)resp, len);
+        usb_printf("Unknown parameter '%s' or subsystem '%s'\r\n", param, subsys);
     }
 }
 
@@ -1393,7 +1562,7 @@ void cmd_log(int argc, char** argv) {
 
     if (strcmp(action, "preset") == 0) {
         if (argc < 3) {
-            CDC_Transmit_HS((uint8_t*)"Missing preset number\r\n", 23);
+            usb_printf("Missing preset number\r\n");
             return;
         }
         
@@ -1402,21 +1571,26 @@ void cmd_log(int argc, char** argv) {
         switch (preset_id) {
             case 1: // Preset 1: FOC Tuning
                 print_mask = PRINT_RPM | PRINT_IA | PRINT_IB | PRINT_IC | PRINT_VBATT;
-                CDC_Transmit_HS((uint8_t*)"Preset 1 active\r\n", 37);
+                usb_printf("Preset %d active\r\n", preset_id);
                 break;
                 
             case 2: // Preset 2: Raw Sensor Calibration
                 print_mask = PRINT_IA | PRINT_IB | PRINT_IC | PRINT_IA_RAW | PRINT_IB_RAW | PRINT_IC_RAW;
-                CDC_Transmit_HS((uint8_t*)"Preset 2 active\r\n", 45);
+                usb_printf("Preset %d active\r\n", preset_id);
                 break;
                 
             case 3: // Preset 3: Power Monitoring
                 print_mask = PRINT_VBATT | PRINT_IBATT | PRINT_DUTY_A | PRINT_DUTY_B | PRINT_DUTY_C;
-                CDC_Transmit_HS((uint8_t*)"Preset 3 active\r\n", 40);
+                usb_printf("Preset %d active\r\n", preset_id);
+                break;
+
+            case 4:
+                print_mask = PRINT_RPM | PRINT_IA | PRINT_IB | PRINT_IC | PRINT_FOC_ID | PRINT_FOC_IQ | PRINT_FOC_VD | PRINT_FOC_VQ | PRINT_FOC_IDSP | PRINT_FOC_IQSP;
+                usb_printf("Preset %d active\r\n", preset_id);
                 break;
                 
             default:
-                CDC_Transmit_HS((uint8_t*)"Unknown preset. Try 1, 2, or 3\r\n", 32);
+                usb_printf("Unknown preset. Try 1, 2, or 3\r\n");
                 break;
         }
         return; // Exit here
@@ -1424,16 +1598,16 @@ void cmd_log(int argc, char** argv) {
 
     else if (strcmp(action, "add") == 0 || strcmp(action, "rm") == 0) {
         if (argc < 3) {
-            CDC_Transmit_HS((uint8_t*)"Missing variable name\r\n", 23);
+            usb_printf("Missing variable name\r\n");
             return;
         }
         char* token = argv[2];
         uint32_t flag = 0;
         
-        if (strcmp(token, "hall") == 0) flag = PRINT_HALLBIN;
-        else if (strcmp(token, "hall_dec") == 0) flag = PRINT_HALLDEC;
+        if (strcmp(token, "hall") == 0) flag = PRINT_HALL;
         else if (strcmp(token, "rpm") == 0) flag = PRINT_RPM;
         else if (strcmp(token, "pos") == 0) flag = PRINT_POS;
+        else if (strcmp(token, "elpos") == 0) flag = PRINT_ELPOS;
         else if (strcmp(token, "duty_a") == 0) flag = PRINT_DUTY_A;
         else if (strcmp(token, "duty_b") == 0) flag = PRINT_DUTY_B;
         else if (strcmp(token, "duty_c") == 0) flag = PRINT_DUTY_C;
@@ -1451,44 +1625,93 @@ void cmd_log(int argc, char** argv) {
         else if (strcmp(token, "vb_raw") == 0) flag = PRINT_VB_RAW;
         else if (strcmp(token, "vbatt_raw") == 0) flag = PRINT_VBATT_RAW;
         else if (strcmp(token, "ibatt_raw") == 0) flag = PRINT_IBATT_RAW;
+        else if (strcmp(token, "ia_max") == 0) flag = PRINT_IA_MAX;
+        else if (strcmp(token, "ib_max") == 0) flag = PRINT_IB_MAX;
+        else if (strcmp(token, "ic_max") == 0) flag = PRINT_IC_MAX;
+        else if (strcmp(token, "ibatt_max") == 0) flag = PRINT_IBATT_MAX;
+        else if (strcmp(token, "id") == 0) flag = PRINT_FOC_ID;
+        else if (strcmp(token, "iq") == 0) flag = PRINT_FOC_IQ;
+        else if (strcmp(token, "idsp") == 0) flag = PRINT_FOC_IDSP;
+        else if (strcmp(token, "iqsp") == 0) flag = PRINT_FOC_IQSP;
+        else if (strcmp(token, "vd") == 0) flag = PRINT_FOC_VD;
+        else if (strcmp(token, "vq") == 0) flag = PRINT_FOC_VQ;
         else if (strcmp(token, "all") == 0 && strcmp(action, "rm") == 0) {
             print_mask = 0;
-            CDC_Transmit_HS((uint8_t*)"All variables removed\r\n", 23);
+            usb_printf("All variables removed\r\n");
             return;
         } else {
-            CDC_Transmit_HS((uint8_t*)"Unknown variable\r\n", 18);
+            usb_printf("Unknown variable\r\n");
             return;
         }
 
         if (strcmp(action, "add") == 0) {
             print_mask |= flag;
-            CDC_Transmit_HS((uint8_t*)"Variable added\r\n", 16);
+            usb_printf("Variable %s added\r\n", token);
         } else {
             print_mask &= ~flag;
-            CDC_Transmit_HS((uint8_t*)"Variable removed\r\n", 18);
+            usb_printf("Variable %s removed\r\n", token);
         }
     } 
     else if (strcmp(action, "utf8") == 0) {
         print_format = PrintFormat::PRINT_UTF8;
-        CDC_Transmit_HS((uint8_t*)"Print format set to UTF8\r\n", 27);
+        usb_printf("Print format set to UTF8\r\n");
     } 
     else if (strcmp(action, "bin") == 0) {
         print_format = PrintFormat::PRINT_BINARY;
-        CDC_Transmit_HS((uint8_t*)"Print format set to BINARY\r\n", 28);
+        usb_printf("Print format set to BINARY\r\n");
     } 
     else {
-        CDC_Transmit_HS((uint8_t*)"Invalid log action\r\n", 20);
+        usb_printf("Invalid log action\r\n");
     }
 }
 
 void cmd_audible(int argc, char** argv) {
     if (system_flag & FLAG_AUDIBLE) {
         system_flag &= ~FLAG_AUDIBLE;
-        CDC_Transmit_HS((uint8_t*)"Audible frequency disabled\r\n", 28);
+        usb_printf("Audible frequency disabled\r\n");
+        motorPWM.setFrequency(PWM_FREQ_DEFAULT_HZ);
     } else {
         system_flag |= FLAG_AUDIBLE;
-        CDC_Transmit_HS((uint8_t*)"Audible frequency enabled\r\n", 27);
+        usb_printf("Audible frequency enabled\r\n");
     }
+}
+
+void cmd_sin(int argc, char** argv) {
+    float value = atof(argv[1]);
+    char resp[64];
+    int len = snprintf(resp, sizeof(resp), "sinf(%.2f) = %.5f, cordic::sinf(%.2f) = %.5f\r\n", value, sinf(value), value, cordic::sinf(value));
+    CDC_Transmit_HS((uint8_t*)resp, len);
+}
+
+void cmd_cos(int argc, char** argv) {
+    float value = atof(argv[1]);
+    char resp[64];
+    int len = snprintf(resp, sizeof(resp), "cosf(%.2f) = %.5f, cordic::cosf(%.2f) = %.5f\r\n", value, cosf(value), value, cordic::cosf(value));
+    CDC_Transmit_HS((uint8_t*)resp, len);
+}
+
+void cmd_arctan(int argc, char** argv) {
+    float y = atof(argv[1]);
+    float x = atof(argv[2]);
+    if (x <= 0.0f || y <= 0.0f) {
+        CDC_Transmit_HS((uint8_t*)"x and y must be positive for arctan test\r\n", 43);
+        return;
+    }
+    char resp[64];
+    int len = snprintf(resp, sizeof(resp), "atan2f(%.2f, %.2f) = %.5f, cordic::atan2f(%.2f, %.2f) = %.5f\r\n", y, x, atan2f(y, x), y, x, cordic::atan2f(y, x));
+    CDC_Transmit_HS((uint8_t*)resp, len);
+}
+
+void cmd_hypot(int argc, char** argv) {
+    float x = atof(argv[1]);
+    float y = atof(argv[2]);
+    if (x <= 0.0f || y <= 0.0f) {
+        CDC_Transmit_HS((uint8_t*)"x and y must be positive for hypot test\r\n", 42);
+        return;
+    }
+    char resp[64];
+    int len = snprintf(resp, sizeof(resp), "hypotf(%.2f, %.2f) = %.5f, cordic::hypotf(%.2f, %.2f) = %.5f\r\n", x, y, hypotf(x, y), x, y, cordic::hypotf(x, y));
+    CDC_Transmit_HS((uint8_t*)resp, len);
 }
 
 void cmd_sin(int argc, char** argv) {
@@ -1658,6 +1881,48 @@ static void foc_isr_tick(void)
     tick_counter++;
 }
 
+void focTick(void) {
+    if (control_mode != MotorControlMode::MOTOR_FOC_MANUAL) return;
+
+    static uint32_t tick_counter = 0;
+
+    /* uint16_t adc1_raw[3];
+    uint16_t adc2_raw[2];
+    uint16_t adc3_raw[2];
+
+    adc1.getLatestDataMean(adc1_raw, FOC_OVERSAMPLING_SIZE);
+    adc2.getLatestDataMean(adc2_raw, FOC_OVERSAMPLING_SIZE);
+    adc3.getLatestDataMean(adc3_raw, FOC_OVERSAMPLING_SIZE);
+
+    float ia = adcToCurrent(adc1_raw[0], 3.3f, 65536, 50.0f, 1.65f + adc_gain.ia_offset, adc_gain.ia_shunt);
+    float ib = adcToCurrent(adc2_raw[0], 3.3f, 65536, 50.0f, 1.65f + adc_gain.ib_offset, adc_gain.ib_shunt);
+    float ic = adcToCurrent(adc3_raw[0], 3.3f,  4096, 50.0f, 1.65f + adc_gain.ic_offset, adc_gain.ic_shunt);
+    float vdc = adcToVoltage(adc1_raw[2], 3.3f, 65536, adc_gain.vbatt_gain, adc_gain.vbatt_offset); */
+
+    float ia = adcToCurrent(adc1.getLatestChannelMean(0, FOC_OVERSAMPLING_SIZE), 3.3f, 65536, 50.0f, 1.65f + adc_gain.ia_offset, adc_gain.ia_shunt);
+    float ib = adcToCurrent(adc2.getLatestChannelMean(0, FOC_OVERSAMPLING_SIZE), 3.3f, 65536, 50.0f, 1.65f + adc_gain.ib_offset, adc_gain.ib_shunt);
+    float ic = adcToCurrent(adc3.getLatestChannelMean(0, FOC_OVERSAMPLING_SIZE), 3.3f, 4096, 50.0f, 1.65f + adc_gain.ic_offset, adc_gain.ic_shunt);
+    float vdc = adcToVoltage(adc1.getLatestChannelMean(2, FOC_OVERSAMPLING_SIZE), 3.3f, 65536, adc_gain.vbatt_gain, adc_gain.vbatt_offset);
+
+    float theta_e = encoder.getElecPos_rad();
+    float omega_m = encoder.getRPM() * RPM_TO_RAD_S;
+
+    foc_state.ts = 1.0f / (float)motorPWM.getFrequency();
+
+    float dutyA, dutyB, dutyC;
+
+    focTest(&foc_state,
+            ia, ib, ic,
+            vdc,
+            theta_e, omega_m,
+            &dutyA, &dutyB, &dutyC);
+
+    motorPWM.setDuty(dutyA, dutyB, dutyC);
+
+    //if (tick_counter & 2048) usb_printf("FOC Tick %u\r\n", tick_counter);
+    tick_counter++;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 //  Memory Protection Unit (MPU) Configuration
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1709,7 +1974,7 @@ void test_PWM(void) {
     float beta = sinf(angle);
 
     const float Ts = 1.0f / 20000.0f;
-    Modulate(ModulationType::SVPWM, alpha, beta, 2.0f, Ts, &dutyA, &dutyB, &dutyC);
+    modulate(ModulationType::SVPWM, alpha, beta, 2.0f, Ts, &dutyA, &dutyB, &dutyC);
 
     motorPWM.setDuty(dutyA, dutyB, dutyC);
 
@@ -1718,7 +1983,7 @@ void test_PWM(void) {
     if (timeElapsed++ >= 20U) timeElapsed = 0;
     //if (counter++ >= 50000) {
     //    counter = 0;
-    //    usb.printf("One Second\n");
+    //    usb.printf("One Second\n");W
     //}
 
 }
