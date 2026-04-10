@@ -153,7 +153,7 @@ uint32_t ADCSampler::getLatestData(uint16_t* data_ptr, uint32_t set_length) {
 }
 
 uint32_t ADCSampler::getLatestDataMean(uint16_t* data_ptr, uint32_t set_length) {
-    if (!isPowerOfTwo(set_length) || set_length > (half_len_ / num_channels_)) {
+    if (set_length > (half_len_ / num_channels_)) {
         // Return zeros if set_length is not a power of 2
         for (uint32_t i = 0; i < num_channels_; i++) {
             data_ptr[i] = 0;

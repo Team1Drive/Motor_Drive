@@ -31,20 +31,23 @@ void foc_init(FOC_State_t* foc)
     foc->pi_d.kp         = FOC_KP_I;
     foc->pi_d.ki         = FOC_KI_I;
     foc->pi_d.integrator = 0.0f;
-    foc->pi_d.clamp      = FOC_INT_I_CLAMP;
+    foc->pi_d.clamp_upper      = FOC_INT_I_CLAMP;
+    foc->pi_d.clamp_lower      = -FOC_INT_I_CLAMP;
     foc->pi_q = foc->pi_d;   /* same gains for both axes */
 
     /* Speed PI — outer loop. Output clamp = FOC_IMAX (A). */
     foc->pi_speed.kp         = FOC_KP_SP;
     foc->pi_speed.ki         = FOC_KI_SP;
     foc->pi_speed.integrator = 0.0f;
-    foc->pi_speed.clamp      = FOC_IMAX;
+    foc->pi_speed.clamp_upper      = FOC_I_CLAMP_UPPER_SP;
+    foc->pi_speed.clamp_lower      = FOC_I_CLAMP_LOWER_SP;
 
     /* Field-weakening PI — DISABLED (pi_fw zeroed but not used) */
     foc->pi_fw.kp         = 0.0f;
     foc->pi_fw.ki         = 0.0f;
     foc->pi_fw.integrator = 0.0f;
-    foc->pi_fw.clamp      = 0.0f;
+    foc->pi_fw.clamp_upper      = FOC_I_CLAMP_UPPER_FW;
+    foc->pi_fw.clamp_lower      = FOC_I_CLAMP_LOWER_FW;
 
     /* Setpoints */
     foc->target_rpm  = 0.0f;
@@ -275,7 +278,7 @@ void focTest(FOC_State_t* foc,
              float theta_e, float omega_m,
              float* dutyA, float* dutyB, float* dutyC) {
 
-    /* // Current Clarke Transform
+    // Current Clarke Transform
     float i_alpha, i_beta;
     clarke(ia, ib, ic, &i_alpha, &i_beta);
 
@@ -295,8 +298,8 @@ void focTest(FOC_State_t* foc,
 
     // Calculate voltage commands with decoupling feed-forward
     float omega_e  = omega_m * (float)MOTOR_POLE_PAIRS;
-    foc->Vd_cmd = vd_pi + FOC_R * id  - omega_e * FOC_L * iq;
-    foc->Vq_cmd = vq_pi + FOC_R * iq  + omega_e * FOC_L * id + omega_e * FOC_PSI_F;
+    foc->Vd_cmd = vd_pi + omega_e * FOC_L * iq;
+    foc->Vq_cmd = vq_pi + omega_e * FOC_L * id + omega_e * FOC_PSI_F;
     foc->u_mag  = hypotf(foc->Vd_cmd, foc->Vq_cmd);
 
     float v_max = vdc / SQRT3;  // Maximum voltage magnitude for SVPWM (line-line voltage limit)
@@ -304,7 +307,7 @@ void focTest(FOC_State_t* foc,
         float scale = v_max / foc->u_mag;
         foc->Vd_cmd *= scale;
         foc->Vq_cmd *= scale;
-    } */
+    }
     
     float v_alpha, v_beta;
     inv_park(foc->Vd_cmd, foc->Vq_cmd, theta_e, &v_alpha, &v_beta);     

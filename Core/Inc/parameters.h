@@ -9,6 +9,9 @@
 #define DEG_TO_RAD          (M_PI / 180.0f)
 #define RAD_TO_DEG          (180.0f / M_PI)
 
+#define FREQ_TO_OMEGA       (2.0f * M_PI)
+#define OMEGA_TO_FREQ       (1.0f / (2.0f * M_PI))
+
 #define ADC1_NUM_CHANNELS   3U
 #define ADC2_NUM_CHANNELS   2U
 #define ADC3_NUM_CHANNELS   2U
@@ -29,6 +32,8 @@
 #define ADC_VBATT_OFFSET    0.0f // Battery voltage channel offset
 
 #define TIM6_FREQ_HZ        1000U
+
+#define PWM_FREQ_DEFAULT_HZ 20000U
 
 #define MOTOR_POLE_PAIRS            4U
 

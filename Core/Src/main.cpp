@@ -223,7 +223,7 @@ int main(void)
 
   usb_printf("HAL Initialized\n");
   
-  if (motorPWM.setFrequency(20000) != HAL_OK) error_flag |= ERROR_PWM_CONFIG;
+  if (motorPWM.setFrequency(PWM_FREQ_DEFAULT_HZ) != HAL_OK) error_flag |= ERROR_PWM_CONFIG;
   if (motorPWM.setDeadTime(1000) != HAL_OK) error_flag |= ERROR_PWM_CONFIG;
   
   /* Initialise FOC controller */
@@ -242,6 +242,7 @@ int main(void)
   control_mode = MotorControlMode::MOTOR_STOP;
   
   usb_printf("System Initialized\n");
+  uint32_t tick_count = 0;
   /* USER CODE END 2 */
   
   /* Infinite loop */
@@ -250,6 +251,8 @@ int main(void)
     /* USER CODE BEGIN WHILE */
     char cmd_line[CMD_MAX_LEN];
     if (read_line_from_ring(&rx_ring, cmd_line, CMD_MAX_LEN)) process_command(cmd_line);
+    //if (control_mode != MotorControlMode::MOTOR_STOP && tick_count & 16384) usb_printf("Main Loop Tick: %u\r\n", tick_count);
+    tick_count++;
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE BEGIN 3 */
@@ -990,7 +993,7 @@ void vvvfRampUp(void) {
     }
   }
   else {
-    if (motorPWM.getFrequency() != 20000) motorPWM.setFrequency(20000);
+    if (motorPWM.getFrequency() != PWM_FREQ_DEFAULT_HZ) motorPWM.setFrequency(PWM_FREQ_DEFAULT_HZ);
   }
 
   // Increment aligned with interrupt frequency
@@ -1548,6 +1551,11 @@ void cmd_log(int argc, char** argv) {
                 print_mask = PRINT_VBATT | PRINT_IBATT | PRINT_DUTY_A | PRINT_DUTY_B | PRINT_DUTY_C;
                 usb_printf("Preset %d active\r\n", preset_id);
                 break;
+
+            case 4:
+                print_mask = PRINT_RPM | PRINT_IA | PRINT_IB | PRINT_IC | PRINT_FOC_ID | PRINT_FOC_IQ | PRINT_FOC_VD | PRINT_FOC_VQ | PRINT_FOC_IDSP | PRINT_FOC_IQSP;
+                usb_printf("Preset %d active\r\n", preset_id);
+                break;
                 
             default:
                 usb_printf("Unknown preset. Try 1, 2, or 3\r\n");
@@ -1629,6 +1637,7 @@ void cmd_audible(int argc, char** argv) {
     if (system_flag & FLAG_AUDIBLE) {
         system_flag &= ~FLAG_AUDIBLE;
         usb_printf("Audible frequency disabled\r\n");
+        motorPWM.setFrequency(PWM_FREQ_DEFAULT_HZ);
     } else {
         system_flag |= FLAG_AUDIBLE;
         usb_printf("Audible frequency enabled\r\n");
@@ -1767,7 +1776,9 @@ static void foc_isr_tick(void)
 void focTick(void) {
     if (control_mode != MotorControlMode::MOTOR_FOC_MANUAL) return;
 
-    uint16_t adc1_raw[3];
+    static uint32_t tick_counter = 0;
+
+    /* uint16_t adc1_raw[3];
     uint16_t adc2_raw[2];
     uint16_t adc3_raw[2];
 
@@ -1778,7 +1789,12 @@ void focTick(void) {
     float ia = adcToCurrent(adc1_raw[0], 3.3f, 65536, 50.0f, 1.65f + adc_gain.ia_offset, adc_gain.ia_shunt);
     float ib = adcToCurrent(adc2_raw[0], 3.3f, 65536, 50.0f, 1.65f + adc_gain.ib_offset, adc_gain.ib_shunt);
     float ic = adcToCurrent(adc3_raw[0], 3.3f,  4096, 50.0f, 1.65f + adc_gain.ic_offset, adc_gain.ic_shunt);
-    float vdc = adcToVoltage(adc1_raw[2], 3.3f, 65536, adc_gain.vbatt_gain, adc_gain.vbatt_offset);
+    float vdc = adcToVoltage(adc1_raw[2], 3.3f, 65536, adc_gain.vbatt_gain, adc_gain.vbatt_offset); */
+
+    float ia = adcToCurrent(adc1.getLatestChannelMean(0, FOC_OVERSAMPLING_SIZE), 3.3f, 65536, 50.0f, 1.65f + adc_gain.ia_offset, adc_gain.ia_shunt);
+    float ib = adcToCurrent(adc2.getLatestChannelMean(0, FOC_OVERSAMPLING_SIZE), 3.3f, 65536, 50.0f, 1.65f + adc_gain.ib_offset, adc_gain.ib_shunt);
+    float ic = adcToCurrent(adc3.getLatestChannelMean(0, FOC_OVERSAMPLING_SIZE), 3.3f, 4096, 50.0f, 1.65f + adc_gain.ic_offset, adc_gain.ic_shunt);
+    float vdc = adcToVoltage(adc1.getLatestChannelMean(2, FOC_OVERSAMPLING_SIZE), 3.3f, 65536, adc_gain.vbatt_gain, adc_gain.vbatt_offset);
 
     float theta_e = encoder.getElecPos_rad();
     float omega_m = encoder.getRPM() * RPM_TO_RAD_S;
@@ -1794,6 +1810,9 @@ void focTick(void) {
             &dutyA, &dutyB, &dutyC);
 
     motorPWM.setDuty(dutyA, dutyB, dutyC);
+
+    //if (tick_counter & 2048) usb_printf("FOC Tick %u\r\n", tick_counter);
+    tick_counter++;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1856,7 +1875,7 @@ void test_PWM(void) {
     if (timeElapsed++ >= 20U) timeElapsed = 0;
     //if (counter++ >= 50000) {
     //    counter = 0;
-    //    usb.printf("One Second\n");
+    //    usb.printf("One Second\n");W
     //}
 
 }
