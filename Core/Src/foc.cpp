@@ -89,6 +89,13 @@ void foc_reset(FOC_State_t* foc)
     foc->fault     = false;
 }
 
+void focResetPI(FOC_State_t* foc) {
+    PI_reset(&foc->pi_d);
+    PI_reset(&foc->pi_q);
+    PI_reset(&foc->pi_speed);
+    PI_reset(&foc->pi_fw);
+}
+
 /* =========================================================================
  * foc_run  — called from TIM8 update ISR at 20 kHz
  * ========================================================================= */
