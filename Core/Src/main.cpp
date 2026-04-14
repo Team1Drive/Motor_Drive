@@ -872,45 +872,94 @@ void speedControl(void) {
 
 void alignRotor(void) {
   if (control_mode != MotorControlMode::MOTOR_ALIGN) return;
-
+  
   static uint16_t p_pos = 0;
   static uint16_t settlement_counter = 0;
+  static float rpm = 0.0f;  
+  static float angle = 0.0f;
 
-  if ((system_flag & FLAG_ROTOR_ALIGNING) == 0) {
-    uint16_t vdc_sample[FOC_OVERSAMPLING_SIZE];
-    adc1.getLatestChannel(2, vdc_sample, FOC_OVERSAMPLING_SIZE);
-    float Vdc = adcToVoltage(fastAverage(vdc_sample, FOC_OVERSAMPLING_SIZE), 3.3f, 65536,
-                             adc_gain.vbatt_gain, adc_gain.vbatt_offset);
+  // Step 1: If electrical zero is not aligned, apply alignment voltage and monitor encoder position for settling
+  if ((system_flag & FLAG_ELEC_ZERO_ALIGNED) == 0) {
 
-    float dutyA, dutyB, dutyC;
-    foc_state.ts = 1.0f / (float)motorPWM.getFrequency();
-    focAlignZero(&foc_state, MOTOR_ALIGNMENT_VOLTAGE, Vdc, &dutyA, &dutyB, &dutyC);
+    if ((system_flag & FLAG_ROTOR_ALIGNING) == 0) {
+      uint16_t vdc_sample[FOC_OVERSAMPLING_SIZE];
+      adc1.getLatestChannel(2, vdc_sample, FOC_OVERSAMPLING_SIZE);
+      float Vdc = adcToVoltage(fastAverage(vdc_sample, FOC_OVERSAMPLING_SIZE), 3.3f, 65536,
+                              adc_gain.vbatt_gain, adc_gain.vbatt_offset);
+
+      float dutyA, dutyB, dutyC;
+      foc_state.ts = 1.0f / (float)motorPWM.getFrequency();
+      focAlignZero(&foc_state, MOTOR_ALIGNMENT_VOLTAGE, Vdc, &dutyA, &dutyB, &dutyC);
+      motorPWM.setDuty(dutyA, dutyB, dutyC);
+
+      system_flag |= FLAG_ROTOR_ALIGNING;
+    }
+
+    uint16_t pos = encoder.getPosBypass();
+    
+    int16_t delta_pos = (int16_t)(pos - p_pos);
+    p_pos = pos;
+    if (abs(delta_pos) <= MOTOR_ALIGNMENT_THRESHOLD) {
+      settlement_counter++;
+    }
+    else {
+      settlement_counter = 0;
+    }
+
+    if (settlement_counter > MOTOR_ALIGNMENT_POS_WINDOW) {
+      encoder.elecZeroAlign();
+
+      system_flag &= ~FLAG_ROTOR_ALIGNING;
+      system_flag |= FLAG_ELEC_ZERO_ALIGNED;
+
+      p_pos = 0;
+      settlement_counter = 0;
+
+      usb_printf("Electrical Zero Angle Aligned\n");
+    }
+  }
+
+  // Step 2: Once aligned, ramp up speed using VVVF to search for index pulse for absolute position reference
+  else if (!encoder.is_synchronized_) {
+    const uint32_t ramp_up = VVVF_RAMP_UP_SPEED; // RPM/s
+    // Increment aligned with interrupt frequency
+    uint32_t frequency = motorPWM.getFrequency();
+    float step_increment = (float)ramp_up / frequency;
+
+    // Ramp up speed
+    rpm += step_increment;
+
+    // Calculate electrical angle
+    float electrical_freq = rpm / 60.0f * MOTOR_POLE_PAIRS;
+
+    float delta_angle = 2.0f * M_PI * electrical_freq / frequency;
+    angle += delta_angle * MOTOR_ROTATION_DIRECTION;
+    if (angle >= 2.0f * M_PI) angle -= 2.0f * M_PI;
+
+    // Calculate voltage amplitude
+    float amplitude;
+    const float MIN_VOLTAGE = 0.15f;  // Boost start voltage
+    const float KNEE_RPM = 1000.0f;   // Knee point (RPM)
+    amplitude = MIN_VOLTAGE + (1.0f - MIN_VOLTAGE) * (rpm / KNEE_RPM);
+
+    // Limit output range
+    if (amplitude > 1.0f) amplitude = 1.0f;
+
+    float dutyA = 0.5f + amplitude * 0.5f * sinf(angle);
+    float dutyB = 0.5f + amplitude * 0.5f * sinf(angle - 2.0f * M_PI / 3.0f);
+    float dutyC = 0.5f + amplitude * 0.5f * sinf(angle + 2.0f * M_PI / 3.0f);
+
     motorPWM.setDuty(dutyA, dutyB, dutyC);
-
-    system_flag |= FLAG_ROTOR_ALIGNING;
   }
 
-  uint16_t pos = encoder.getPosBypass();
-  
-  int16_t delta_pos = (int16_t)(pos - p_pos);
-  p_pos = pos;
-  if (abs(delta_pos) <= MOTOR_ALIGNMENT_THRESHOLD) {
-    settlement_counter++;
-  }
   else {
-    settlement_counter = 0;
-  }
-
-  if (settlement_counter > MOTOR_ALIGNMENT_POS_WINDOW) {
-    encoder.elecZeroAlign();
-
     control_mode = MotorControlMode::MOTOR_STOP;
     motorPWM.stop();
     relay.write(0);
-    system_flag &= ~FLAG_ROTOR_ALIGNING;
-    system_flag |= FLAG_ELEC_ZERO_ALIGNED;
+    rpm = 0.0f;
+    angle = 0.0f;
 
-    usb_printf("Electrical Zero Angle Aligned\n");
+    usb_printf("Mechanical Alignment Complete\n");
   }
 }
 
@@ -927,8 +976,9 @@ void alignRotor(void) {
 void startUpSequence(void) {
   if (control_mode != MotorControlMode::MOTOR_STARTUP) return;
 
-  if ((system_flag & FLAG_ELEC_ZERO_ALIGNED) == 0) {
+  if ((system_flag & FLAG_ELEC_ZERO_ALIGNED && encoder.is_synchronized_) == 0) {
     control_mode = MotorControlMode::MOTOR_ALIGN;
+    usb_printf("Starting rotor alignment sequence...\r\n");
     alignRotor();
     return;
   }
@@ -1176,6 +1226,17 @@ void cmd_stop(int argc, char** argv) {
         relay.write(0);
         usb_printf("Stopping\r\n");
     }
+}
+
+void cmd_align(int argc, char** argv) {
+    if (control_mode == MotorControlMode::MOTOR_PROTECTION) {protectionModePrint(); return;}
+    if (system_flag & FLAG_ELEC_ZERO_ALIGNED) {usb_printf("Electrical zero already aligned\r\n"); return;}
+    if (control_mode == MotorControlMode::MOTOR_ALIGN) {usb_printf("Already aligning, please wait\r\n"); return;}
+    control_mode = MotorControlMode::MOTOR_ALIGN;
+    clearRunningFlags();
+    relay.write(1);
+    alignRotor();
+    usb_printf("Starting\r\n");
 }
 
 /**
