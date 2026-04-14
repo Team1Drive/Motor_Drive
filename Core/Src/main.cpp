@@ -867,7 +867,7 @@ void speedControl(void) {
 
   // Update the speed PI controller to adjust Iq reference based on the speed error
   float err_sp = foc_state.omega_ref - omega_m;
-  foc_state.Iq_ref = PI_update(&foc_state.pi_speed, err_sp, FOC_TS * (float)FOC_SPEED_DIV);
+  //foc_state.Iq_ref = PI_update(&foc_state.pi_speed, err_sp, FOC_TS * (float)FOC_SPEED_DIV);
 }
 
 void alignRotor(void) {
@@ -1227,6 +1227,7 @@ void cmd_foc(int argc, char** argv) {
             relay.write(1);
             focTick();
         }
+        focResetPI(&foc_state);
         usb_printf("FOC Vd set to %.2f V\r\n", foc_state.Vd_cmd);
     }
     else if (strcmp(argv[1], "vq") == 0) {
@@ -1240,6 +1241,7 @@ void cmd_foc(int argc, char** argv) {
             relay.write(1);
             focTick();
         }
+        focResetPI(&foc_state);
         usb_printf("FOC Vq set to %.2f V\r\n", foc_state.Vq_cmd);
     }
     else if (strcmp(argv[1], "id") == 0) {
@@ -1253,6 +1255,7 @@ void cmd_foc(int argc, char** argv) {
             relay.write(1);
             focTick();
         }
+        focResetPI(&foc_state);
         usb_printf("FOC Id set to %.3f A\r\n", foc_state.Id_ref);
     }
     else if (strcmp(argv[1], "iq") == 0) {
@@ -1266,6 +1269,7 @@ void cmd_foc(int argc, char** argv) {
             relay.write(1);
             focTick();
         }
+        focResetPI(&foc_state);
         usb_printf("FOC Iq set to %.3f A\r\n", foc_state.Iq_ref);
     }
     
@@ -1280,6 +1284,7 @@ void cmd_foc(int argc, char** argv) {
             relay.write(1);
             focTick();
         }
+        focResetPI(&foc_state);
         usb_printf("FOC target RPM set to %.3f\r\n", foc_state.target_rpm);
     }
     else {
