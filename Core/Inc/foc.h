@@ -163,8 +163,8 @@ typedef struct {
 static inline float PI_update(PI_t* pi, float error, float dt)
 {
     pi->integrator += pi->ki * error * dt;
-    if (pi->integrator > pi->clamp_upper) pi->integrator = pi->clamp_upper;
-    if (pi->integrator < pi->clamp_lower) pi->integrator = pi->clamp_lower;
+    //if (pi->integrator > pi->clamp_upper) pi->integrator = pi->clamp_upper;
+    //if (pi->integrator < pi->clamp_lower) pi->integrator = pi->clamp_lower;
     float out = pi->kp * error + pi->integrator;
     if (out > pi->clamp_upper) out = pi->clamp_upper;
     if (out < pi->clamp_lower) out = pi->clamp_lower;
@@ -268,6 +268,8 @@ void foc_run(FOC_State_t* foc,
  *        Call on MOTOR_STOP or when re-arming after a fault.
  */
 void foc_reset(FOC_State_t* foc);
+
+void focResetPI(FOC_State_t* foc);
 
 /**
  * @brief Apply a voltage vector along the d-axis to align the encoder zero.
