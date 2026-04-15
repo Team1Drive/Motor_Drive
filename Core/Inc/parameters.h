@@ -90,7 +90,8 @@ enum SystemFlag : uint32_t {
     FLAG_SIXSTEP_RUNNING    = 1 << 3,   // Indicates six-step mode is active, for reading encoder at stand still
     FLAG_FOC_RUNNING        = 1 << 4,   // For resetting FOC state at mode change
     FLAG_ROTOR_ALIGNING     = 1 << 5,   // For sending duty cycle at beginning of alignment
-    FLAG_ELEC_ZERO_ALIGNED  = 1 << 6    // Indicates electrical zero acquired after alignment
+    FLAG_ELEC_ZERO_ALIGNED  = 1 << 6,   // Indicates electrical zero acquired after alignment
+    FLAG_ACW                = 1 << 7    // Set for anti-clockwise rotation, reset for clockwise
 };
 
 enum ErrorFlag : uint32_t {
