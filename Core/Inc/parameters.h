@@ -26,10 +26,10 @@
 #define ADC_VB_GAIN         0.0316f // Vb channel gain (voltage divider)
 #define ADC_VA_OFFSET       0.0f // Va channel offset
 #define ADC_VB_OFFSET       0.0f // Vb channel offset
-#define ADC_IBATT_SHUNT     0.0028f // Battery current channel gain (shunt resistor)
-#define ADC_IBATT_OFFSET    0.004f // Battery current channel offset
-#define ADC_VBATT_GAIN      0.130435f // Battery voltage channel gain (voltage divider)
-#define ADC_VBATT_OFFSET    0.0f // Battery voltage channel offset
+#define ADC_IBATT_SHUNT     -0.0032f // Battery current channel gain (shunt resistor)
+#define ADC_IBATT_OFFSET    0.0035f // Battery current channel offset
+#define ADC_VBATT_GAIN      0.1282f // Battery voltage channel gain (voltage divider)
+#define ADC_VBATT_OFFSET    0.0016f // Battery voltage channel offset
 
 #define TIM6_FREQ_HZ        1000U
 
@@ -90,7 +90,8 @@ enum SystemFlag : uint32_t {
     FLAG_SIXSTEP_RUNNING    = 1 << 3,   // Indicates six-step mode is active, for reading encoder at stand still
     FLAG_FOC_RUNNING        = 1 << 4,   // For resetting FOC state at mode change
     FLAG_ROTOR_ALIGNING     = 1 << 5,   // For sending duty cycle at beginning of alignment
-    FLAG_ELEC_ZERO_ALIGNED  = 1 << 6    // Indicates electrical zero acquired after alignment
+    FLAG_ELEC_ZERO_ALIGNED  = 1 << 6,   // Indicates electrical zero acquired after alignment
+    FLAG_ACW                = 1 << 7    // Set for anti-clockwise rotation, reset for clockwise
 };
 
 enum ErrorFlag : uint32_t {
