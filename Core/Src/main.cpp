@@ -1229,6 +1229,13 @@ void cmd_stop(int argc, char** argv) {
 }
 
 void cmd_align(int argc, char** argv) {
+    if (strcmp(argv[1], "reset") == 0) {
+        system_flag &= ~FLAG_ELEC_ZERO_ALIGNED;
+        encoder.is_synchronized_ = false;
+        encoder.is_zeroed_ = false;
+        usb_printf("Alignment resetted\r\n");
+        return;
+    }
     if (control_mode == MotorControlMode::MOTOR_PROTECTION) {protectionModePrint(); return;}
     if (system_flag & FLAG_ELEC_ZERO_ALIGNED) {usb_printf("Electrical zero already aligned\r\n"); return;}
     if (control_mode == MotorControlMode::MOTOR_ALIGN) {usb_printf("Already aligning, please wait\r\n"); return;}
@@ -1244,10 +1251,6 @@ void cmd_align(int argc, char** argv) {
  * @note Resets the entire system to a known safe state, stopping the motor and clearing any active control modes or flags.
  */
 void cmd_reset(int argc, char** argv) {
-    if (strcmp(argv[1], "align") == 0) {
-        system_flag &= ~FLAG_ELEC_ZERO_ALIGNED;
-        usb_printf("Electrical zero angle reset\r\n");
-    }
     control_mode = MotorControlMode::MOTOR_STOP;
     clearRunningFlags();
     error_flag &= ~ERROR_OVERCURRENT;
