@@ -10,7 +10,6 @@ extern void cmd_stop(int argc, char** argv);
 extern void cmd_align(int argc, char** argv);
 extern void cmd_reset(int argc, char** argv);
 extern void cmd_foc(int argc, char** argv);
-extern void cmd_rpm(int argc, char** argv);
 extern void cmd_sixstep(int argc, char** argv);
 extern void cmd_speed(int argc, char** argv);
 extern void cmd_duty(int argc, char** argv);
@@ -26,7 +25,6 @@ static const cmd_entry_t cmd_table[] = {
     { "align",       cmd_align,       1,    2,  "Usage: align\r\n"                              },
     { "reset",       cmd_reset,       1,    1,  "Usage: reset\r\n"                              },
     { "foc",         cmd_foc,         2,    3,  "Usage: foc <rpm> or foc status\r\n"            }, // e.g., "foc 1000" = 2 tokens
-    { "rpm",         cmd_rpm,         2,    2,  "Usage: rpm <value>\r\n"                        },
     { "sixstep",     cmd_sixstep,     1,    1,  "Usage: sixstep\r\n"                            },
     { "speed",       cmd_speed,       2,    3,  "Usage: speed <value>\r\n"                      },
     { "duty",        cmd_duty,        2,    2,  "Usage: duty <v1>,<v2>,<v3>\r\n"                }, // Arguments can be kept comma-separated internally

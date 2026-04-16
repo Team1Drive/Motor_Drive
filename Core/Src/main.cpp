@@ -864,14 +864,23 @@ void speedControl(void) {
   static float ramp_speed_increment = 0.0f;
   static uint32_t ramp_tick = 0;
 
+  // Check if target speed has changed and update foc_state.target_rpm accordingly, with optional ramping
   if (target.speed != foc_state.target_rpm) {
+    // Check if new target contains ramp flag
     if (system_flag & FLAG_TARGET_RAMP) {
+      // Set up ramp parameters if this is the first tick of a new speed target
       if (system_flag & FLAG_SPEED_RAMP_INIT) {
         float speed_delta = target.speed - foc_state.target_rpm;
         ramp_tick = (uint32_t)(target.time * (float)SPEEDLOOP_FREQ_HZ + 0.5f) + 1;
         ramp_speed_increment = speed_delta / (float)ramp_tick;
-        if (ramp_speed_increment > (FOC_RAMP_RATE / SPEEDLOOP_FREQ_HZ)) {ramp_speed_increment = FOC_RAMP_RATE / SPEEDLOOP_FREQ_HZ; ramp_tick = (uint32_t)(fabsf(speed_delta / ramp_speed_increment)) + 1;}
-        if (ramp_speed_increment < -(FOC_RAMP_RATE / SPEEDLOOP_FREQ_HZ)) {ramp_speed_increment = -FOC_RAMP_RATE / SPEEDLOOP_FREQ_HZ; ramp_tick = (uint32_t)(fabsf(speed_delta / ramp_speed_increment)) + 1;}
+        if (ramp_speed_increment > (FOC_RAMP_RATE / SPEEDLOOP_FREQ_HZ)) {
+          ramp_speed_increment = FOC_RAMP_RATE / SPEEDLOOP_FREQ_HZ;
+          ramp_tick = (uint32_t)(fabsf(speed_delta / ramp_speed_increment)) + 1;
+        }
+        if (ramp_speed_increment < -(FOC_RAMP_RATE / SPEEDLOOP_FREQ_HZ)) {
+          ramp_speed_increment = -FOC_RAMP_RATE / SPEEDLOOP_FREQ_HZ;
+          ramp_tick = (uint32_t)(fabsf(speed_delta / ramp_speed_increment)) + 1;
+        }
         system_flag &= ~FLAG_SPEED_RAMP_INIT;
       }
       if (ramp_tick > 0) {
@@ -882,6 +891,7 @@ void speedControl(void) {
         foc_state.target_rpm = target.speed;
       }
     }
+    // If no ramping, update target RPM immediately
     else {
       foc_state.target_rpm = target.speed;
     }
@@ -907,7 +917,10 @@ void speedControl(void) {
 
   // Update the speed PI controller to adjust Iq reference based on the speed error
   float err_sp = foc_state.omega_ref - omega_m;
-  foc_state.Iq_ref = PI_update(&foc_state.pi_speed, err_sp, FOC_TS * (float)FOC_SPEED_DIV);
+  // In manual FOC mode, current setpoints are controlled directly by the user
+  if (control_mode != MotorControlMode::MOTOR_FOC_MANUAL) {
+    foc_state.Iq_ref = PI_update(&foc_state.pi_speed, err_sp, FOC_TS * (float)FOC_SPEED_DIV);
+  }
 }
 
 void alignRotor(void) {
@@ -1396,44 +1409,9 @@ void cmd_foc(int argc, char** argv) {
         focResetPI(&foc_state);
         usb_printf("FOC Iq set to %.3f A\r\n", foc_state.Iq_ref);
     }
-    
-    else if (strcmp(argv[1], "speed") == 0) {
-        if (control_mode != MotorControlMode::MOTOR_FOC_MANUAL) {
-            usb_printf("Command only valid in FOC manual mode\r\n");
-            return;
-        }
-        foc_state.target_rpm = atof(argv[2]);
-        if ((system_flag & FLAG_FOC_RUNNING) == 0) {
-            system_flag |= FLAG_FOC_RUNNING;
-            relay.write(1);
-            focTick();
-        }
-        focResetPI(&foc_state);
-        usb_printf("FOC target RPM set to %.3f\r\n", foc_state.target_rpm);
-    }
     else {
-        if (control_mode == MotorControlMode::MOTOR_PROTECTION) {protectionModePrint(); return;}
-        int rpm_cmd = atoi(argv[1]);
-        
-        foc_reset(&foc_state);
-        foc_state.target_rpm = (float)rpm_cmd;
-        clearRunningFlags();
-        system_flag |= FLAG_FOC_RUNNING;
-        relay.write(1);
-        motorPWM.start();
-        control_mode = MotorControlMode::MOTOR_FOC_LINEAR;
-        usb_printf("FOC started  target=%d RPM\r\n", rpm_cmd);
+        usb_printf("Unknown FOC command\r\n"); 
     }
-}
-
-/**
- * @brief Command handler for "rpm" command.
- * @note Sets the target RPM for the motor
- */
-void cmd_rpm(int argc, char** argv) {
-    int rpm_cmd = atoi(argv[1]);
-    foc_state.target_rpm = (float)rpm_cmd;
-    usb_printf("Target RPM set to %d\r\n", rpm_cmd);
 }
 
 /**
@@ -1450,7 +1428,7 @@ void cmd_sixstep(int argc, char** argv) {
 }
 
 /**
- * @brief Command handler for "vvvf" command.
+ * @brief Command handler for "speed" command.
  * @note Set the speed setpoint for FOC speed loop.
  */
 void cmd_speed(int argc, char** argv) {
@@ -1483,6 +1461,44 @@ void cmd_speed(int argc, char** argv) {
         system_flag &= ~FLAG_SPEED_RAMP_INIT;
         target.time = 0.0f;
         usb_printf("Speed set to %.2f\r\n", speed);
+    }
+}
+
+
+/**
+ * @brief Command handler for "torque" command.
+ * @note Set the torque setpoint for FOC control.
+ */
+void cmd_torque(int argc, char** argv) {
+    float torque = atof(argv[1]);
+    if (torque < -10.0f || torque > 10.0f) {
+        usb_printf("Invalid torque value: %s\r\n", argv[1]);
+        return;
+    }
+
+    // Handle option time parameter
+    float time = 0.0f;
+    if (argc >= 3) {
+        time = atof(argv[2]);
+        if (time <= 0.0f) {
+            usb_printf("Invalid time value (must be positive): %s\r\n", argv[2]);
+            return;
+        }
+    }
+    target.torque = torque;
+
+    // Setting system flag
+    if (argc >= 3) {
+        system_flag |= FLAG_TARGET_RAMP;
+        system_flag |= FLAG_SPEED_RAMP_INIT;
+        target.time = time;
+        usb_printf("Torque set to %.2f, reaching in %.3f seconds\r\n", torque, time);
+    } else {
+        // Disable ramping if no time parameter is provided, making the torque change instantaneous
+        system_flag &= ~FLAG_TARGET_RAMP;
+        system_flag &= ~FLAG_SPEED_RAMP_INIT;
+        target.time = 0.0f;
+        usb_printf("Torque set to %.2f\r\n", torque);
     }
 }
 
@@ -1575,128 +1591,111 @@ void cmd_tune(int argc, char** argv) {
     // "tune speed p 0.1" -> argv[1]="speed", argv[2]="p", argv[3]="0.1"
     char* subsys = argv[1];
     char* param = argv[2];
-    float value = atof(argv[3]);
+    bool is_query = (strcmp(argv[3], "?") == 0);
+    float value = is_query ? 0.0f : atof(argv[3]);
 
     bool success = false;
     float original = 0.0f;
 
+    float* target = nullptr;
+
     if (strcmp(subsys, "speed") == 0) {
         if (strcmp(param, "p") == 0) {
-            original = foc_state.pi_speed.kp;
-            foc_state.pi_speed.kp = value;
+            target = &foc_state.pi_speed.kp;
             success = true;
         }
         else if (strcmp(param, "i") == 0) {
-            original = foc_state.pi_speed.ki;
-            foc_state.pi_speed.ki = value;
+            target = &foc_state.pi_speed.kp;
             success = true;
         }
     } 
     else if (strcmp(subsys, "id") == 0) {
         if (strcmp(param, "p") == 0) {
-            original = foc_state.pi_d.kp;
-            foc_state.pi_d.kp = value;
+            target = &foc_state.pi_speed.kp;
             success = true;
         }
         else if (strcmp(param, "i") == 0) {
-            original = foc_state.pi_d.ki;
-            foc_state.pi_d.ki = value;
+            target = &foc_state.pi_speed.kp;
             success = true;
         }
     } 
     else if (strcmp(subsys, "iq") == 0) {
         if (strcmp(param, "p") == 0) {
-            original = foc_state.pi_q.kp;
-            foc_state.pi_q.kp = value;
+            target = &foc_state.pi_speed.kp;
             success = true;
         }
         else if (strcmp(param, "i") == 0) {
-            original = foc_state.pi_q.ki;
-            foc_state.pi_q.ki = value;
+            target = &foc_state.pi_speed.kp;
             success = true;
         }
     } 
     else if (strcmp(subsys, "fw") == 0) {
         if (strcmp(param, "p") == 0) {
-            original = foc_state.pi_fw.kp;
-            foc_state.pi_fw.kp = value;
+            target = &foc_state.pi_speed.kp;
             success = true;
         }
         else if (strcmp(param, "i") == 0) {
-            original = foc_state.pi_fw.ki;
-            foc_state.pi_fw.ki = value;
+            target = &foc_state.pi_speed.kp;
             success = true;
-        }
-    } 
-    else if (strcmp(subsys, "flux") == 0) {
-        if (strcmp(param, "p") == 0) { 
         }
     } 
     else if (strcmp(subsys, "gain") == 0) {
         if (strcmp(param, "ia") == 0) {
-            original = adc_gain.ia_shunt;
-            adc_gain.ia_shunt = value;
+            target = &foc_state.pi_speed.kp;
             success = true;
         } else if (strcmp(param, "ib") == 0) {
-            original = adc_gain.ib_shunt;
-            adc_gain.ib_shunt = value;
+            target = &foc_state.pi_speed.kp;
             success = true;
         } else if (strcmp(param, "ic") == 0) {
-            original = adc_gain.ic_shunt;
-            adc_gain.ic_shunt = value;
+            target = &foc_state.pi_speed.kp;
             success = true;
         } else if (strcmp(param, "va") == 0) {
-            original = adc_gain.va_gain;
-            adc_gain.va_gain = value;
+            target = &foc_state.pi_speed.kp;
             success = true;
         } else if (strcmp(param, "vb") == 0) {
-            original = adc_gain.vb_gain;
-            adc_gain.vb_gain = value;
+            target = &foc_state.pi_speed.kp;
             success = true;
         } else if (strcmp(param, "ibatt") == 0) {
-            original = adc_gain.ibatt_shunt;
-            adc_gain.ibatt_shunt = value;
+            target = &foc_state.pi_speed.kp;
             success = true;
         } else if (strcmp(param, "vbatt") == 0) {
-            original = adc_gain.vbatt_gain;
-            adc_gain.vbatt_gain = value;
+            target = &foc_state.pi_speed.kp;
             success = true;
         }
     } 
     else if (strcmp(subsys, "offset") == 0) {
         if (strcmp(param, "ia") == 0) {
-            original = adc_gain.ia_offset;
-            adc_gain.ia_offset = value;
+            target = &foc_state.pi_speed.kp;
             success = true;
         } else if (strcmp(param, "ib") == 0) {
-            original = adc_gain.ib_offset;
-            adc_gain.ib_offset = value;
+            target = &foc_state.pi_speed.kp;
             success = true;
         } else if (strcmp(param, "ic") == 0) {
-            original = adc_gain.ic_offset;
-            adc_gain.ic_offset = value;
+            target = &foc_state.pi_speed.kp;
             success = true;
         } else if (strcmp(param, "va") == 0) {
-            original = adc_gain.va_offset;
-            adc_gain.va_offset = value;
+            target = &foc_state.pi_speed.kp;
             success = true;
         } else if (strcmp(param, "vb") == 0) {
-            original = adc_gain.vb_offset;
-            adc_gain.vb_offset = value;
+            target = &foc_state.pi_speed.kp;
             success = true;
         } else if (strcmp(param, "ibatt") == 0) {
-            original = adc_gain.ibatt_offset;
-            adc_gain.ibatt_offset = value;
+            target = &foc_state.pi_speed.kp;
             success = true;
         } else if (strcmp(param, "vbatt") == 0) {
-            original = adc_gain.vbatt_offset;
-            adc_gain.vbatt_offset = value;
+            target = &foc_state.pi_speed.kp;
             success = true;
         }
     }
 
-    if (success) {
-        usb_printf("%s %s set to %.4f (was %.4f)\r\n", subsys, param, value, original);
+    if (success && target != nullptr) {
+        if (is_query) {
+            usb_printf("%s %s is %.6f\r\n", subsys, param, *target);
+        } else {
+            original = *target;
+            *target = value;
+        }
+        usb_printf("%s %s set to %.6f (was %.6f)\r\n", subsys, param, value, original);
     } else {
         usb_printf("Unknown parameter '%s' or subsystem '%s'\r\n", param, subsys);
     }
