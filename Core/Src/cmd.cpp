@@ -21,7 +21,7 @@ extern void cmd_log(int argc, char** argv);
 extern void cmd_audible(int argc, char** argv);
 
 static const cmd_entry_t cmd_table[] = {
-    { "start",       cmd_start,       1,    1,  "Usage: start\r\n"                              }, // 1 means just the command itself
+    { "start",       cmd_start,       1,    2,  "Usage: start <mode>\r\n"                       }, // 1 means just the command itself
     { "stop",        cmd_stop,        1,    1,  "Usage: stop\r\n"                               },
     { "align",       cmd_align,       1,    2,  "Usage: align\r\n"                              },
     { "reset",       cmd_reset,       1,    1,  "Usage: reset\r\n"                              },

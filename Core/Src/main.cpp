@@ -32,7 +32,7 @@ void printTelemetryBinary(void);
 
 void speedControl(void);
 
-void startUpSequence(void);
+void startUpSequence(MotorControlMode mode);
 void alignRotor(void);
 void vvvfRampUp(void);
 void sixStepCommutation(void);
@@ -310,7 +310,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
     switch (control_mode) {
       case MotorControlMode::MOTOR_FOC_LINEAR:
       case MotorControlMode::MOTOR_FOC_DPWM:
-        foc_isr_tick();
+        focTick();
         break;
 
       case MotorControlMode::MOTOR_FOC_MANUAL:
@@ -331,7 +331,12 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
   }
   else if (htim->Instance == TIM16) {
     Encoder::irqHandlerSpeed();
-    speedControl();
+    if (control_mode == MotorControlMode::MOTOR_FOC_LINEAR
+     || control_mode == MotorControlMode::MOTOR_FOC_DPWM
+     || control_mode == MotorControlMode::MOTOR_FOC_MANUAL) {
+      speedControl();
+    }
+
   }
   else if (htim->Instance == TIM6) {
     // 1 kHz control loop interrupt
@@ -1008,7 +1013,7 @@ void alignRotor(void) {
  * @note The original VVVF ramp-up is preserved in vvvfRampUp() below but is
  *       no longer called from here.
  */
-void startUpSequence(void) {
+void startUpSequence(MotorControlMode mode) {
   if (control_mode != MotorControlMode::MOTOR_STARTUP) return;
 
   if ((system_flag & FLAG_ELEC_ZERO_ALIGNED && encoder.is_synchronized_) == 0) {
@@ -1018,11 +1023,29 @@ void startUpSequence(void) {
     return;
   }
 
-  foc_reset(&foc_state);
-  hallsensor.read();
-  system_flag |= FLAG_VVVF_RAMP_UP;
-  control_mode = MotorControlMode::MOTOR_VVVF;
-  vvvfRampUp();
+  switch (mode) {
+    case MotorControlMode::MOTOR_FOC_LINEAR:
+      foc_reset(&foc_state);
+      // Set initial FOC state for linear startup
+      target.speed = FOC_INITIAL_RPM;
+      control_mode = MotorControlMode::MOTOR_FOC_LINEAR;
+      speedControl();
+      focTick();
+      usb_printf("Starting FOC linear startup sequence...\r\n");
+      break;
+    case MotorControlMode::MOTOR_VVVF:
+      foc_reset(&foc_state);
+      hallsensor.read();
+      system_flag |= FLAG_VVVF_RAMP_UP;
+      control_mode = MotorControlMode::MOTOR_VVVF;
+      vvvfRampUp();
+      usb_printf("Starting VVVF ramp-up sequence...\r\n");
+      break;
+    default:
+      usb_printf("Invalid startup mode selected. Defaulting to FOC linear startup.\r\n");
+      mode = MotorControlMode::MOTOR_FOC_LINEAR;
+      break;
+  }
 
   //usb_printf("Startup: FOC enabled, target=%u RPM\r\n", (unsigned)FOC_INITIAL_RPM);
 }
@@ -1240,7 +1263,9 @@ void cmd_start(int argc, char** argv) {
     control_mode = MotorControlMode::MOTOR_STARTUP;
     clearRunningFlags();
     relay.write(1);
-    startUpSequence();
+    if (strcmp(argv[1], "foc") == 0) startUpSequence(MotorControlMode::MOTOR_FOC_LINEAR);
+    else if (strcmp(argv[1], "vvvf") == 0) startUpSequence(MotorControlMode::MOTOR_VVVF);
+    else startUpSequence(MotorControlMode::MOTOR_FOC_LINEAR);
     usb_printf("Starting\r\n");
 }
 
@@ -2065,10 +2090,6 @@ static void foc_isr_tick(void)
 }
 
 void focTick(void) {
-    if (control_mode != MotorControlMode::MOTOR_FOC_MANUAL) return;
-
-    static uint32_t tick_counter = 0;
-
     /* uint16_t adc1_raw[3];
     uint16_t adc2_raw[2];
     uint16_t adc3_raw[2];
@@ -2101,9 +2122,6 @@ void focTick(void) {
             &dutyA, &dutyB, &dutyC);
 
     motorPWM.setDuty(dutyA, dutyB, dutyC);
-
-    //if (tick_counter & 2048) usb_printf("FOC Tick %u\r\n", tick_counter);
-    tick_counter++;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
