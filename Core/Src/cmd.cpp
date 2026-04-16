@@ -11,12 +11,12 @@ extern void cmd_align(int argc, char** argv);
 extern void cmd_reset(int argc, char** argv);
 extern void cmd_foc(int argc, char** argv);
 extern void cmd_rpm(int argc, char** argv);
-extern void cmd_foc_status(int argc, char** argv);
 extern void cmd_sixstep(int argc, char** argv);
 extern void cmd_speed(int argc, char** argv);
 extern void cmd_duty(int argc, char** argv);
 extern void cmd_vec(int argc, char** argv);
 extern void cmd_tune(int argc, char** argv);
+extern void cmd_increment(int argc, char** argv);
 extern void cmd_log(int argc, char** argv);
 extern void cmd_audible(int argc, char** argv);
 
@@ -32,6 +32,7 @@ static const cmd_entry_t cmd_table[] = {
     { "duty",        cmd_duty,        2,    2,  "Usage: duty <v1>,<v2>,<v3>\r\n"                }, // Arguments can be kept comma-separated internally
     { "vec",         cmd_vec,         2,    2,  "Usage: vec <0-5>\r\n"                          },
     { "tune",        cmd_tune,        4,    4,  "Usage: tune <subsys> <param> <value>\r\n"      }, // e.g., "tune speed p 0.1" = 4 tokens
+    { "increment",   cmd_increment,   4,    4,  "Usage: increment <subsys> <param> <value>\r\n" }, // e.g., "increment speed p 0.1" = 4 tokens
     { "log",         cmd_log,         2,    3,  "Usage: log <add|rm|preset|utf8|bin> [var]\r\n" },
     { "audible",     cmd_audible,     1,    1,  "Usage: audible\r\n"                            }
 };

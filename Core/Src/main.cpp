@@ -1621,6 +1621,141 @@ void cmd_tune(int argc, char** argv) {
 }
 
 /**
+ * @brief Command handler for "increment" command.
+ * @note Increments the specified parameter by a given value, allowing for fine-tuning without needing to know the current value. Usage: "increment speed p 0.1" to increase the speed loop P gain by 0.1.
+ */
+void cmd_increment(int argc, char** argv) {
+    // "increment speed p 0.1" -> argv[1]="speed", argv[2]="p", argv[3]="0.1"
+    char* subsys = argv[1];
+    char* param = argv[2];
+    float value = atof(argv[3]);
+
+    bool success = false;
+    float original = 0.0f;
+
+    if (strcmp(subsys, "speed") == 0) {
+        if (strcmp(param, "p") == 0) {
+            original = foc_state.pi_speed.kp;
+            foc_state.pi_speed.kp += value;
+            success = true;
+        }
+        else if (strcmp(param, "i") == 0) {
+            original = foc_state.pi_speed.ki;
+            foc_state.pi_speed.ki += value;
+            success = true;
+        }
+    } 
+    else if (strcmp(subsys, "id") == 0) {
+        if (strcmp(param, "p") == 0) {
+            original = foc_state.pi_d.kp;
+            foc_state.pi_d.kp += value;
+            success = true;
+        }
+        else if (strcmp(param, "i") == 0) {
+            original = foc_state.pi_d.ki;
+            foc_state.pi_d.ki += value;
+            success = true;
+        }
+    } 
+    else if (strcmp(subsys, "iq") == 0) {
+        if (strcmp(param, "p") == 0) {
+            original = foc_state.pi_q.kp;
+            foc_state.pi_q.kp += value;
+            success = true;
+        }
+        else if (strcmp(param, "i") == 0) {
+            original = foc_state.pi_q.ki;
+            foc_state.pi_q.ki += value;
+            success = true;
+        }
+    } 
+    else if (strcmp(subsys, "fw") == 0) {
+        if (strcmp(param, "p") == 0) {
+            original = foc_state.pi_fw.kp;
+            foc_state.pi_fw.kp += value;
+            success = true;
+        }
+        else if (strcmp(param, "i") == 0) {
+            original = foc_state.pi_fw.ki;
+            foc_state.pi_fw.ki += value;
+            success = true;
+        }
+    } 
+    else if (strcmp(subsys, "flux") == 0) {
+        if (strcmp(param, "p") == 0) { 
+        }
+    } 
+    else if (strcmp(subsys, "gain") == 0) {
+        if (strcmp(param, "ia") == 0) {
+            original = adc_gain.ia_shunt;
+            adc_gain.ia_shunt += value;
+            success = true;
+        } else if (strcmp(param, "ib") == 0) {
+            original = adc_gain.ib_shunt;
+            adc_gain.ib_shunt += value;
+            success = true;
+        } else if (strcmp(param, "ic") == 0) {
+            original = adc_gain.ic_shunt;
+            adc_gain.ic_shunt += value;
+            success = true;
+        } else if (strcmp(param, "va") == 0) {
+            original = adc_gain.va_gain;
+            adc_gain.va_gain += value;
+            success = true;
+        } else if (strcmp(param, "vb") == 0) {
+            original = adc_gain.vb_gain;
+            adc_gain.vb_gain += value;
+            success = true;
+        } else if (strcmp(param, "ibatt") == 0) {
+            original = adc_gain.ibatt_shunt;
+            adc_gain.ibatt_shunt += value;
+            success = true;
+        } else if (strcmp(param, "vbatt") == 0) {
+            original = adc_gain.vbatt_gain;
+            adc_gain.vbatt_gain += value;
+            success = true;
+        }
+    } 
+    else if (strcmp(subsys, "offset") == 0) {
+        if (strcmp(param, "ia") == 0) {
+            original = adc_gain.ia_offset;
+            adc_gain.ia_offset += value;
+            success = true;
+        } else if (strcmp(param, "ib") == 0) {
+            original = adc_gain.ib_offset;
+            adc_gain.ib_offset += value;
+            success = true;
+        } else if (strcmp(param, "ic") == 0) {
+            original = adc_gain.ic_offset;
+            adc_gain.ic_offset += value;
+            success = true;
+        } else if (strcmp(param, "va") == 0) {
+            original = adc_gain.va_offset;
+            adc_gain.va_offset += value;
+            success = true;
+        } else if (strcmp(param, "vb") == 0) {
+            original = adc_gain.vb_offset;
+            adc_gain.vb_offset += value;
+            success = true;
+        } else if (strcmp(param, "ibatt") == 0) {
+            original = adc_gain.ibatt_offset;
+            adc_gain.ibatt_offset += value;
+            success = true;
+        } else if (strcmp(param, "vbatt") == 0) {
+            original = adc_gain.vbatt_offset;
+            adc_gain.vbatt_offset += value;
+            success = true;
+        }
+    }
+
+    if (success) {
+        usb_printf("%s %s set to %.4f (was %.4f)\r\n", subsys, param, (original + value), original);
+    } else {
+        usb_printf("Unknown parameter '%s' or subsystem '%s'\r\n", param, subsys);
+    }
+}
+
+/**
  * @brief Command handler for "log" command.
  * @note Allows dynamic configuration of which variables to include in the data log output andoutput encoding.
  */

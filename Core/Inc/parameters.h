@@ -26,10 +26,10 @@
 #define ADC_VB_GAIN         0.0316f // Vb channel gain (voltage divider)
 #define ADC_VA_OFFSET       0.0f // Va channel offset
 #define ADC_VB_OFFSET       0.0f // Vb channel offset
-#define ADC_IBATT_SHUNT     0.0028f // Battery current channel gain (shunt resistor)
-#define ADC_IBATT_OFFSET    0.004f // Battery current channel offset
-#define ADC_VBATT_GAIN      0.130435f // Battery voltage channel gain (voltage divider)
-#define ADC_VBATT_OFFSET    0.0f // Battery voltage channel offset
+#define ADC_IBATT_SHUNT     -0.0032f // Battery current channel gain (shunt resistor)
+#define ADC_IBATT_OFFSET    0.0035f // Battery current channel offset
+#define ADC_VBATT_GAIN      0.1282f // Battery voltage channel gain (voltage divider)
+#define ADC_VBATT_OFFSET    0.0016f // Battery voltage channel offset
 
 #define TIM6_FREQ_HZ        1000U
 
