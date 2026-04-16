@@ -115,7 +115,7 @@ volatile ADCGain_t adc_gain = {
     .vbatt_gain = ADC_VBATT_GAIN,
     .vbatt_offset = ADC_VBATT_OFFSET
 };
-volatile Target_t target = { .speed = 0.0f, .torque = 0.0f };
+volatile Target_t target = { .speed = 0.0f, .torque = 0.0f, .time = 0.0f };
 
 volatile uint32_t print_mask = 0;
 volatile PrintFormat print_format = PrintFormat::PRINT_UTF8;
@@ -851,13 +851,43 @@ void printTelemetryBinary(void) {
 }
 
 void speedControl(void) {
+  static float ramp_speed_increment = 0.0f;
+  static uint32_t ramp_tick = 0;
+
+  if (target.speed != foc_state.target_rpm) {
+    if (system_flag & FLAG_TARGET_RAMP) {
+      if (system_flag & FLAG_SPEED_RAMP_INIT) {
+        float speed_delta = target.speed - foc_state.target_rpm;
+        ramp_tick = (uint32_t)(target.time * (float)SPEEDLOOP_FREQ_HZ + 0.5f) + 1;
+        ramp_speed_increment = speed_delta / (float)ramp_tick;
+        if (ramp_speed_increment > (FOC_RAMP_RATE / SPEEDLOOP_FREQ_HZ)) {ramp_speed_increment = FOC_RAMP_RATE / SPEEDLOOP_FREQ_HZ; ramp_tick = (uint32_t)(fabsf(speed_delta / ramp_speed_increment)) + 1;}
+        if (ramp_speed_increment < -(FOC_RAMP_RATE / SPEEDLOOP_FREQ_HZ)) {ramp_speed_increment = -FOC_RAMP_RATE / SPEEDLOOP_FREQ_HZ; ramp_tick = (uint32_t)(fabsf(speed_delta / ramp_speed_increment)) + 1;}
+        system_flag &= ~FLAG_SPEED_RAMP_INIT;
+      }
+      if (ramp_tick > 0) {
+        foc_state.target_rpm += ramp_speed_increment;
+        ramp_tick--;
+      }
+      if (ramp_tick == 0) {
+        foc_state.target_rpm = target.speed;
+      }
+    }
+    else {
+      foc_state.target_rpm = target.speed;
+    }
+  }
+  else if (system_flag & FLAG_TARGET_RAMP) {
+    ramp_speed_increment = 0.0f;
+    system_flag &= ~FLAG_TARGET_RAMP;
+  }
+
   // Calculate speed delta using a ramp function to limit acceleration
   static float p_rpm = 0.0f;
   foc_state.rpm = encoder.getRPM() * 0.2f + p_rpm * 0.8f;
   p_rpm = foc_state.rpm;
   float omega_m = foc_state.rpm * RPM_TO_RAD_S;
   float omega_target = foc_state.target_rpm * RPM_TO_RAD_S;
-  const float max_step = FOC_RAMP_RATE * RPM_TO_RAD_S / (float)TIM6_FREQ_HZ;
+  const float max_step = FOC_RAMP_RATE * RPM_TO_RAD_S / (float)SPEEDLOOP_FREQ_HZ;
   float speed_delta = omega_target - foc_state.omega_ref;
 
   // Limit the speed delta to the maximum step size to ensure smooth acceleration
@@ -1390,13 +1420,35 @@ void cmd_sixstep(int argc, char** argv) {
  */
 void cmd_speed(int argc, char** argv) {
     float speed = atof(argv[1]);
-    if (speed >= -5000.0f && speed <= 5000.0f) {
-        relay.write(1);
-        target.speed = speed;
-        foc_state.target_rpm = speed;
-        usb_printf("Speed set\r\n");
+    if (speed < -5000.0f || speed > 5000.0f) {
+        usb_printf("Invalid speed value: %s\r\n", argv[1]);
+        return;
     }
-    else usb_printf("Invalid speed value: %s\r\n", argv[1]);
+
+    // Handle option time parameter
+    float time = 0.0f;
+    if (argc >= 3) {
+        time = atof(argv[2]);
+        if (time <= 0.0f) {
+            usb_printf("Invalid time value (must be positive): %s\r\n", argv[2]);
+            return;
+        }
+    }
+    target.speed = speed;
+
+    // Setting system flag
+    if (argc >= 3) {
+        system_flag |= FLAG_TARGET_RAMP;
+        system_flag |= FLAG_SPEED_RAMP_INIT;
+        target.time = time;
+        usb_printf("Speed set to %.2f, reaching in %.3f seconds\r\n", speed, time);
+    } else {
+        // Disable ramping if no time parameter is provided, making the speed change instantaneous
+        system_flag &= ~FLAG_TARGET_RAMP;
+        system_flag &= ~FLAG_SPEED_RAMP_INIT;
+        target.time = 0.0f;
+        usb_printf("Speed set to %.2f\r\n", speed);
+    }
 }
 
 /**

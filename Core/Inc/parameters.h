@@ -32,6 +32,7 @@
 #define ADC_VBATT_OFFSET    0.0016f // Battery voltage channel offset
 
 #define TIM6_FREQ_HZ        1000U
+#define SPEEDLOOP_FREQ_HZ   1000U
 
 #define PWM_FREQ_DEFAULT_HZ 20000U
 
@@ -91,7 +92,9 @@ enum SystemFlag : uint32_t {
     FLAG_FOC_RUNNING        = 1 << 4,   // For resetting FOC state at mode change
     FLAG_ROTOR_ALIGNING     = 1 << 5,   // For sending duty cycle at beginning of alignment
     FLAG_ELEC_ZERO_ALIGNED  = 1 << 6,   // Indicates electrical zero acquired after alignment
-    FLAG_ACW                = 1 << 7    // Set for anti-clockwise rotation, reset for clockwise
+    FLAG_ACW                = 1 << 7,   // Set for anti-clockwise rotation, reset for clockwise
+    FLAG_TARGET_RAMP        = 1 << 8,   // Indicates ramping to new target in FOC mode
+    FLAG_SPEED_RAMP_INIT    = 1 << 9    // Indicates ramping speed to new target in FOC mode
 };
 
 enum ErrorFlag : uint32_t {
@@ -124,6 +127,7 @@ typedef struct {
 typedef struct {
     float speed;
     float torque;
+    float time;
 } Target_t;
 
 enum PrintData : uint32_t {
