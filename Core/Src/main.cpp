@@ -64,6 +64,7 @@ extern TIM_HandleTypeDef htim4;
 extern TIM_HandleTypeDef htim6;
 extern TIM_HandleTypeDef htim7;
 extern TIM_HandleTypeDef htim8;
+extern TIM_HandleTypeDef htim16;
 
 /* Declare ADC & DMA handles */
 extern ADC_HandleTypeDef hadc1;
@@ -82,7 +83,7 @@ ADCSampler adc1(&hadc1, &hdma_adc1, adc1_buffer, ADC1_BUF_LEN);
 ADCSampler adc2(&hadc2, &hdma_adc2, adc2_buffer, ADC2_BUF_LEN);
 ADCSampler adc3(&hadc3, &hdma_adc3, adc3_buffer, ADC3_BUF_LEN);
 
-Timer adcTimer(&htim1), printTimer(&htim2), ledTimer(&htim3), encoderTimer(&htim4), speedControlTimer(&htim6);
+Timer adcTimer(&htim1), printTimer(&htim2), ledTimer(&htim3), encoderTimer(&htim4), binaryLogTimer(&htim6), speedControlTimer(&htim16);
 
 DigitalOut pwm_ch1_dis(GPIOA, GPIO_PIN_2), pwm_ch2_dis(GPIOB, GPIO_PIN_2), pwm_ch3_dis(GPIOB, GPIO_PIN_13);
 DigitalOut led_red(GPIOC, GPIO_PIN_9), led_green(GPIOA, GPIO_PIN_8), led_yellow_1(GPIOA, GPIO_PIN_9), led_yellow_2(GPIOA, GPIO_PIN_10);
@@ -178,6 +179,7 @@ int main(void)
   MX_TIM6_Init();
   MX_TIM7_Init();
   MX_TIM8_Init();
+  MX_TIM16_Init();
 
   /* USER CODE BEGIN 2 */
   led_red.write(1);
@@ -208,6 +210,7 @@ int main(void)
   if (printTimer.startIT() != HAL_OK) error_flag |= ERROR_TIM_CONFIG;
   if (ledTimer.startIT() != HAL_OK) error_flag |= ERROR_TIM_CONFIG;
   if (encoderTimer.startIT() != HAL_OK) error_flag |= ERROR_TIM_CONFIG;
+  if (binaryLogTimer.startIT() != HAL_OK) error_flag |= ERROR_TIM_CONFIG;
   if (speedControlTimer.startIT() != HAL_OK) error_flag |= ERROR_TIM_CONFIG;
 
   if (usTimer.init() != HAL_OK) error_flag |= ERROR_TIM_CONFIG;
@@ -326,10 +329,12 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
         break;
     }
   }
-  else if (htim->Instance == TIM6) {
-    // 1 kHz control loop interrupt
+  else if (htim->Instance == TIM16) {
     Encoder::irqHandlerSpeed();
     speedControl();
+  }
+  else if (htim->Instance == TIM6) {
+    // 1 kHz control loop interrupt
     //timer6IRQ();
     printTelemetryBinary();
   }
@@ -524,11 +529,11 @@ void printTelemetryUTF8(void) {
   // Construct a UTF-8 string, e.g. "rpm 123.45 pos 67.89\r\n"
   char buffer[128];
   int pos = 0;
-  if (print_mask & PRINT_HALL) {
-    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "hall %u%u%u ", hallsensor.getState() >> 2 & 1, hallsensor.getState() >> 1 & 1, hallsensor.getState() & 1);
-  }
   if (print_mask & PRINT_RPM) {
     pos += snprintf(buffer + pos, sizeof(buffer) - pos, "rpm %.2f ", encoder.getRPM());
+  }
+  if (print_mask & PRINT_RPMSP) {
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "rpmsp %.2f ", foc_state.target_rpm);
   }
   if (print_mask & PRINT_POS) {
     pos += snprintf(buffer + pos, sizeof(buffer) - pos, "pos %u ", encoder.getPos());
@@ -690,13 +695,13 @@ void printTelemetryBinary(void) {
   memcpy(ptr, &mask, 4);
   ptr += 4;
 
-  if (print_mask & PRINT_HALL) {
-    uint8_t val = hallsensor.getState() & 0x07;
-    memcpy(ptr, &val, 1);
-    ptr += 1;
-  }
   if (print_mask & PRINT_RPM) {
     float val = encoder.getRPM();
+    memcpy(ptr, &val, 4);
+    ptr += 4;
+  }
+  if (print_mask & PRINT_RPMSP) {
+    float val = foc_state.target_rpm;
     memcpy(ptr, &val, 4);
     ptr += 4;
   }
@@ -867,7 +872,7 @@ void speedControl(void) {
 
   // Update the speed PI controller to adjust Iq reference based on the speed error
   float err_sp = foc_state.omega_ref - omega_m;
-  //foc_state.Iq_ref = PI_update(&foc_state.pi_speed, err_sp, FOC_TS * (float)FOC_SPEED_DIV);
+  foc_state.Iq_ref = PI_update(&foc_state.pi_speed, err_sp, FOC_TS * (float)FOC_SPEED_DIV);
 }
 
 void alignRotor(void) {
@@ -1806,8 +1811,8 @@ void cmd_log(int argc, char** argv) {
         char* token = argv[2];
         uint32_t flag = 0;
         
-        if (strcmp(token, "hall") == 0) flag = PRINT_HALL;
-        else if (strcmp(token, "rpm") == 0) flag = PRINT_RPM;
+        if      (strcmp(token, "rpm") == 0) flag = PRINT_RPM;
+        else if (strcmp(token, "rpmsp") == 0) flag = PRINT_RPMSP;
         else if (strcmp(token, "pos") == 0) flag = PRINT_POS;
         else if (strcmp(token, "elpos") == 0) flag = PRINT_ELPOS;
         else if (strcmp(token, "duty_a") == 0) flag = PRINT_DUTY_A;

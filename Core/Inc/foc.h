@@ -163,11 +163,15 @@ typedef struct {
 static inline float PI_update(PI_t* pi, float error, float dt)
 {
     pi->integrator += pi->ki * error * dt;
-    //if (pi->integrator > pi->clamp_upper) pi->integrator = pi->clamp_upper;
-    //if (pi->integrator < pi->clamp_lower) pi->integrator = pi->clamp_lower;
+    // Clampling the integrator
+    if (pi->integrator > pi->clamp_upper) pi->integrator = pi->clamp_upper;
+    if (pi->integrator < pi->clamp_lower) pi->integrator = pi->clamp_lower;
+    
     float out = pi->kp * error + pi->integrator;
+    // Clamping the output
     if (out > pi->clamp_upper) out = pi->clamp_upper;
     if (out < pi->clamp_lower) out = pi->clamp_lower;
+    
     return out;
 }
 

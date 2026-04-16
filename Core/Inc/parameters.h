@@ -127,8 +127,8 @@ typedef struct {
 } Target_t;
 
 enum PrintData : uint32_t {
-    PRINT_HALL      = 1 << 0,
-    PRINT_RPM       = 1 << 1,
+    PRINT_RPM       = 1 << 0,
+    PRINT_RPMSP     = 1 << 1,
     PRINT_POS       = 1 << 2,
     PRINT_ELPOS     = 1 << 3,
     PRINT_DUTY_A    = 1 << 4,
@@ -175,6 +175,7 @@ TIM4: Encoder pulse timing
 TIM6: 1000 Hz interrupt
 TIM7: Microsecond timer
 TIM8: PWM generation for motor control
+TIM6: Speed loop timer (1000 Hz)
 
 
 ADC channel allocation
