@@ -1744,7 +1744,7 @@ void cmd_increment(int argc, char** argv) {
     }
 
     if (success) {
-        usb_printf("%s %s set to %.4f (was %.4f)\r\n", subsys, param, value, original);
+        usb_printf("%s %s set to %.4f (was %.4f)\r\n", subsys, param, (original + value), original);
     } else {
         usb_printf("Unknown parameter '%s' or subsystem '%s'\r\n", param, subsys);
     }
