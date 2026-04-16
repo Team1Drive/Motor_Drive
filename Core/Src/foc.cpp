@@ -85,6 +85,10 @@ void foc_reset(FOC_State_t* foc)
     foc->omega_ref = 0.0f;
     foc->Id_ref    = 0.0f;
     foc->Iq_ref    = 0.0f;
+    foc->Id        = 0.0f;
+    foc->Iq        = 0.0f;
+    foc->Vd_cmd    = 0.0f;
+    foc->Vq_cmd    = 0.0f;
     foc->u_mag     = 0.0f;
     foc->fault     = false;
 }
@@ -305,7 +309,7 @@ void focTest(FOC_State_t* foc,
 
     // Calculate voltage commands with decoupling feed-forward
     float omega_e  = omega_m * (float)MOTOR_POLE_PAIRS;
-    foc->Vd_cmd = vd_pi + omega_e * FOC_L * iq;
+    foc->Vd_cmd = vd_pi - omega_e * FOC_L * iq;
     foc->Vq_cmd = vq_pi + omega_e * FOC_L * id + omega_e * FOC_PSI_F;
     foc->u_mag  = hypotf(foc->Vd_cmd, foc->Vq_cmd);
 
