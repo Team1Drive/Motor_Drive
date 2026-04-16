@@ -19,9 +19,9 @@
 #define ADC_IA_SHUNT        0.00368f // Ia channel gain (shunt resistor)
 #define ADC_IB_SHUNT        0.00214f // Ib channel gain (shunt resistor)
 #define ADC_IC_SHUNT        0.00181f // Ic channel gain (shunt resistor)
-#define ADC_IA_OFFSET       0.006f // Ia channel offset
-#define ADC_IB_OFFSET       0.006f // Ib channel offset
-#define ADC_IC_OFFSET       0.005f // Ic channel offset
+#define ADC_IA_OFFSET       0.0037f // Ia channel offset
+#define ADC_IB_OFFSET       0.0046f // Ib channel offset
+#define ADC_IC_OFFSET       0.0048f // Ic channel offset
 #define ADC_VA_GAIN         0.0316f // Va channel gain (voltage divider)
 #define ADC_VB_GAIN         0.0316f // Vb channel gain (voltage divider)
 #define ADC_VA_OFFSET       0.0f // Va channel offset
