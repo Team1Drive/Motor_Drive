@@ -98,9 +98,9 @@ static void svpwm_standard(float v_alpha, float v_beta, float v_dc,
     const float cos60 = 0.5f;
 
     float sin_theta_s, cos_theta_s;
-    sin_theta_s = sinf(theta_s);
-    cos_theta_s = cosf(theta_s);
-    //cordic::sincosf(theta_s, &sin_theta_s, &cos_theta_s);
+    //sin_theta_s = sinf(theta_s);
+    //cos_theta_s = cosf(theta_s);
+    cordic::sincosf(theta_s, &sin_theta_s, &cos_theta_s);
     float sin_comp_theta_s = sin60 * cos_theta_s - cos60 * sin_theta_s;   // sin(60°-θs) = √3/2·cos(θs) - 1/2·sin(θs)
 
     float d2 = sin_theta_s      * v_ratio;
