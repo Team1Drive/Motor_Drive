@@ -19,9 +19,9 @@
 #define ADC_IA_SHUNT        0.00368f // Ia channel gain (shunt resistor)
 #define ADC_IB_SHUNT        0.00214f // Ib channel gain (shunt resistor)
 #define ADC_IC_SHUNT        0.00181f // Ic channel gain (shunt resistor)
-#define ADC_IA_OFFSET       0.006f // Ia channel offset
-#define ADC_IB_OFFSET       0.006f // Ib channel offset
-#define ADC_IC_OFFSET       0.005f // Ic channel offset
+#define ADC_IA_OFFSET       0.0037f // Ia channel offset
+#define ADC_IB_OFFSET       0.0046f // Ib channel offset
+#define ADC_IC_OFFSET       0.0048f // Ic channel offset
 #define ADC_VA_GAIN         0.0316f // Va channel gain (voltage divider)
 #define ADC_VB_GAIN         0.0316f // Vb channel gain (voltage divider)
 #define ADC_VA_OFFSET       0.0f // Va channel offset
@@ -32,6 +32,7 @@
 #define ADC_VBATT_OFFSET    0.0016f // Battery voltage channel offset
 
 #define TIM6_FREQ_HZ        1000U
+#define SPEEDLOOP_FREQ_HZ   1000U
 
 #define PWM_FREQ_DEFAULT_HZ 20000U
 
@@ -52,6 +53,7 @@
 #define FOC_ALLOWED                 false // Allow FOC mode in the system (set to false to disable FOC-related code and save flash/RAM)
 #define FOC_INITIAL_RPM             1500U // Target RPM for FOC mode (used when FOC is enabled and selected)
 #define FOC_OVERSAMPLING_SIZE       16U // Number of samples to average for oversampling (must be a power of 2 for efficient averaging)
+#define FOC_RAMP_DOWN_SPEED         200U // 200 RPM/s
 
 #define MASTER_MODE                 true // Set master or slave mode in load testing
 #define BATTERY_PROTECTION          false // Set to true when powered with supply without current limit
@@ -91,7 +93,9 @@ enum SystemFlag : uint32_t {
     FLAG_FOC_RUNNING        = 1 << 4,   // For resetting FOC state at mode change
     FLAG_ROTOR_ALIGNING     = 1 << 5,   // For sending duty cycle at beginning of alignment
     FLAG_ELEC_ZERO_ALIGNED  = 1 << 6,   // Indicates electrical zero acquired after alignment
-    FLAG_ACW                = 1 << 7    // Set for anti-clockwise rotation, reset for clockwise
+    FLAG_ACW                = 1 << 7,   // Set for anti-clockwise rotation, reset for clockwise
+    FLAG_TARGET_RAMP        = 1 << 8,   // Indicates ramping to new target in FOC mode
+    FLAG_SPEED_RAMP_INIT    = 1 << 9    // Indicates ramping speed to new target in FOC mode
 };
 
 enum ErrorFlag : uint32_t {
@@ -124,11 +128,12 @@ typedef struct {
 typedef struct {
     float speed;
     float torque;
+    float time;
 } Target_t;
 
 enum PrintData : uint32_t {
-    PRINT_HALL      = 1 << 0,
-    PRINT_RPM       = 1 << 1,
+    PRINT_RPM       = 1 << 0,
+    PRINT_RPMSP     = 1 << 1,
     PRINT_POS       = 1 << 2,
     PRINT_ELPOS     = 1 << 3,
     PRINT_DUTY_A    = 1 << 4,
@@ -175,6 +180,7 @@ TIM4: Encoder pulse timing
 TIM6: 1000 Hz interrupt
 TIM7: Microsecond timer
 TIM8: PWM generation for motor control
+TIM6: Speed loop timer (1000 Hz)
 
 
 ADC channel allocation

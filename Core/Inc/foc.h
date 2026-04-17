@@ -123,15 +123,15 @@
 #define FOC_INT_I_CLAMP     6.0f
 
 /** Speed PI proportional gain. Start: 0.05, MATLAB ref: 0.15 */
-#define FOC_KP_SP           (FOC_ZETA_SP * 2 * FOC_WND_SP * FOC_J)
+#define FOC_KP_SP           0.009247 //(FOC_ZETA_SP * 2 * FOC_WND_SP * FOC_J)
 
 /** Speed PI integral gain. Start: 1.0, MATLAB ref: 3.0 */
-#define FOC_KI_SP           (FOC_WND_SP * FOC_WND_SP * FOC_J)
+#define FOC_KI_SP           0.0092 //(FOC_WND_SP * FOC_WND_SP * FOC_J)
 
 /** Speed PI output clamp (V). Symmetric ±clamp. */
 #define FOC_I_CLAMP_UPPER_SP 2.0f
 
-#define FOC_I_CLAMP_LOWER_SP 0.0f
+#define FOC_I_CLAMP_LOWER_SP -2.0f
 
 /** Field-weakening PI proportional gain (typically 0 — only integral matters) */
 #define FOC_KP_FW           0.0f
@@ -163,11 +163,15 @@ typedef struct {
 static inline float PI_update(PI_t* pi, float error, float dt)
 {
     pi->integrator += pi->ki * error * dt;
+    // Clampling the integrator
     if (pi->integrator > pi->clamp_upper) pi->integrator = pi->clamp_upper;
     if (pi->integrator < pi->clamp_lower) pi->integrator = pi->clamp_lower;
+    
     float out = pi->kp * error + pi->integrator;
+    // Clamping the output
     if (out > pi->clamp_upper) out = pi->clamp_upper;
     if (out < pi->clamp_lower) out = pi->clamp_lower;
+    
     return out;
 }
 
@@ -219,6 +223,7 @@ typedef struct {
     volatile float Vdc;
     volatile float theta_e;
     volatile float omega_e;
+    volatile float omega_m;
     volatile float rpm;
     volatile float Vd_cmd;
     volatile float Vq_cmd;
@@ -269,6 +274,8 @@ void foc_run(FOC_State_t* foc,
  */
 void foc_reset(FOC_State_t* foc);
 
+void focResetPI(FOC_State_t* foc);
+
 /**
  * @brief Apply a voltage vector along the d-axis to align the encoder zero.
  *        Call before enabling FOC to ensure correct angle tracking.
@@ -280,3 +287,7 @@ void focTest(FOC_State_t* foc,
              float vdc,
              float theta_e, float omega_m,
              float* dutyA, float* dutyB, float* dutyC);
+
+void focInjection(FOC_State_t* foc, float freq);
+
+extern volatile uint32_t system_flag;
