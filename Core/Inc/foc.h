@@ -54,6 +54,21 @@
 /** Per-phase stator inductance (H).  1.5 × 1.20e-3 H (datasheet) */
 #define FOC_L               1.80e-3f
 
+/** Rotor inertia (kg·m²) */
+#define FOC_J               4.802e-6f
+
+/** Electrical damping factor */
+#define FOC_ZETA_I          0.7f
+
+/** Speed PI damping factor */
+#define FOC_ZETA_SP         0.7f
+
+/** Field-weakening bandwidth (rad/s). */
+#define FOC_WND_FW          (500 * FREQ_TO_OMEGA)
+
+/** Speed PI bandwidth (rad/s). */
+#define FOC_WND_SP          (50 * FREQ_TO_OMEGA)
+
 /**
  * PM flux linkage (Wb).
  * Kt_SI = 5.81 oz-in/A × 0.007062 = 0.04103 Nm/A
@@ -88,7 +103,7 @@
 #define FOC_SPEED_DIV       20U
 
 /** Speed ramp rate (mechanical rad/s²). From MATLAB: 5000 RPM/s */
-#define FOC_RAMP_RATE       (1000.0f * 2.0f * M_PI / 60.0f)
+#define FOC_RAMP_RATE       1000.0f
 
 /* =========================================================================
  * PI GAINS
@@ -97,25 +112,37 @@
  * ========================================================================= */
 
 /** Current PI proportional gain. Start: 0.5, MATLAB ref: 15 */
-#define FOC_KP_I            0.5f
+//#define FOC_KP_I            0.5f
+#define FOC_KP_I            (FOC_ZETA_I * 2 * FOC_L * FOC_WND_FW - FOC_R)
 
 /** Current PI integral gain. Start: 50, MATLAB ref: 3000 */
-#define FOC_KI_I            50.0f
+//#define FOC_KI_I            50.0f
+#define FOC_KI_I            (FOC_WND_FW * FOC_WND_FW * FOC_L)
 
 /** Current PI integrator clamp (V). Symmetric ±clamp. */
 #define FOC_INT_I_CLAMP     6.0f
 
 /** Speed PI proportional gain. Start: 0.05, MATLAB ref: 0.15 */
-#define FOC_KP_SP           0.05f
+#define FOC_KP_SP           0.009247 //(FOC_ZETA_SP * 2 * FOC_WND_SP * FOC_J)
 
 /** Speed PI integral gain. Start: 1.0, MATLAB ref: 3.0 */
-#define FOC_KI_SP           1.0f
+#define FOC_KI_SP           0.0092 //(FOC_WND_SP * FOC_WND_SP * FOC_J)
+
+/** Speed PI output clamp (V). Symmetric ±clamp. */
+#define FOC_I_CLAMP_UPPER_SP 2.0f
+
+#define FOC_I_CLAMP_LOWER_SP -2.0f
 
 /** Field-weakening PI proportional gain (typically 0 — only integral matters) */
 #define FOC_KP_FW           0.0f
 
 /** Field-weakening PI integral gain. From MATLAB ref: 500 */
 #define FOC_KI_FW           500.0f
+
+/** Field-weakening PI output clamp (V). Symmetric ±clamp. */
+#define FOC_I_CLAMP_UPPER_FW 0.0f
+
+#define FOC_I_CLAMP_LOWER_FW -2.0f
 
 /* =========================================================================
  * PI CONTROLLER — inline struct and update function (ISR-safe, no malloc)
@@ -125,7 +152,8 @@ typedef struct {
     float kp;
     float ki;
     float integrator;
-    float clamp;    /* symmetric ±clamp applied to both integrator and output */
+    float clamp_upper;    /* symmetric ±clamp applied to both integrator and output */
+    float clamp_lower;    /* symmetric ±clamp applied to both integrator and output */
 } PI_t;
 
 /**
@@ -135,11 +163,30 @@ typedef struct {
 static inline float PI_update(PI_t* pi, float error, float dt)
 {
     pi->integrator += pi->ki * error * dt;
-    if (pi->integrator >  pi->clamp) pi->integrator =  pi->clamp;
-    if (pi->integrator < -pi->clamp) pi->integrator = -pi->clamp;
+    // Clampling the integrator
+    if (pi->integrator > pi->clamp_upper) pi->integrator = pi->clamp_upper;
+    if (pi->integrator < pi->clamp_lower) pi->integrator = pi->clamp_lower;
+    
     float out = pi->kp * error + pi->integrator;
-    if (out >  pi->clamp) out =  pi->clamp;
-    if (out < -pi->clamp) out = -pi->clamp;
+    // Clamping the output
+    if (out > pi->clamp_upper) out = pi->clamp_upper;
+    if (out < pi->clamp_lower) out = pi->clamp_lower;
+    
+    return out;
+}
+
+static inline float piUpdateConditionalIntegration(PI_t* pi, float error, float dt)
+{
+    float out;
+    pi->integrator += pi->ki * error * dt;
+    if (pi->integrator >  pi->clamp_upper || pi->integrator <  pi->clamp_lower) {
+        out = pi->kp * error;
+    }
+    else {
+        out = pi->kp * error + pi->integrator;
+    }
+    if (out >  pi->clamp_upper) out =  pi->clamp_upper;
+    if (out < -pi->clamp_lower) out = -pi->clamp_lower;
     return out;
 }
 
@@ -176,6 +223,7 @@ typedef struct {
     volatile float Vdc;
     volatile float theta_e;
     volatile float omega_e;
+    volatile float omega_m;
     volatile float rpm;
     volatile float Vd_cmd;
     volatile float Vq_cmd;
@@ -226,8 +274,20 @@ void foc_run(FOC_State_t* foc,
  */
 void foc_reset(FOC_State_t* foc);
 
+void focResetPI(FOC_State_t* foc);
+
 /**
  * @brief Apply a voltage vector along the d-axis to align the encoder zero.
  *        Call before enabling FOC to ensure correct angle tracking.
  */
-void foc_align_zero(FOC_State_t* foc, float Vmag, float Vdc, float* dutyA, float* dutyB, float* dutyC);
+void focAlignZero(FOC_State_t* foc, float Vmag, float Vdc, float* dutyA, float* dutyB, float* dutyC);
+
+void focTest(FOC_State_t* foc,
+             float va, float vb, float vc,
+             float vdc,
+             float theta_e, float omega_m,
+             float* dutyA, float* dutyB, float* dutyC);
+
+void focInjection(FOC_State_t* foc, float freq);
+
+extern volatile uint32_t system_flag;

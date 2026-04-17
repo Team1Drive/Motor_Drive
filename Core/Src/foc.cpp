@@ -18,7 +18,7 @@
  */
 
 #include "foc.h"
-#include "modulation.h"   /* clarke, park, inv_park, Modulate, ModulationType */
+#include "modulation.h"   /* clarke, park, inv_park, modulate, ModulationType */
 #include <cmath>
 #include <algorithm>
 
@@ -28,23 +28,26 @@
 void foc_init(FOC_State_t* foc)
 {
     /* Current PI — inner loop */
-    foc->pi_d.kp         = FOC_KP_I;
-    foc->pi_d.ki         = FOC_KI_I;
-    foc->pi_d.integrator = 0.0f;
-    foc->pi_d.clamp      = FOC_INT_I_CLAMP;
+    foc->pi_d.kp            = FOC_KP_I;
+    foc->pi_d.ki            = FOC_KI_I;
+    foc->pi_d.integrator    = 0.0f;
+    foc->pi_d.clamp_upper   = FOC_INT_I_CLAMP;
+    foc->pi_d.clamp_lower   = -FOC_INT_I_CLAMP;
     foc->pi_q = foc->pi_d;   /* same gains for both axes */
 
     /* Speed PI — outer loop. Output clamp = FOC_IMAX (A). */
-    foc->pi_speed.kp         = FOC_KP_SP;
-    foc->pi_speed.ki         = FOC_KI_SP;
-    foc->pi_speed.integrator = 0.0f;
-    foc->pi_speed.clamp      = FOC_IMAX;
+    foc->pi_speed.kp            = FOC_KP_SP;
+    foc->pi_speed.ki            = FOC_KI_SP;
+    foc->pi_speed.integrator    = 0.0f;
+    foc->pi_speed.clamp_upper   = FOC_I_CLAMP_UPPER_SP;
+    foc->pi_speed.clamp_lower   = FOC_I_CLAMP_LOWER_SP;
 
     /* Field-weakening PI — DISABLED (pi_fw zeroed but not used) */
-    foc->pi_fw.kp         = 0.0f;
-    foc->pi_fw.ki         = 0.0f;
-    foc->pi_fw.integrator = 0.0f;
-    foc->pi_fw.clamp      = 0.0f;
+    foc->pi_fw.kp           = FOC_KP_FW;
+    foc->pi_fw.ki           = FOC_KI_FW;
+    foc->pi_fw.integrator   = 0.0f;
+    foc->pi_fw.clamp_upper  = FOC_I_CLAMP_UPPER_FW;
+    foc->pi_fw.clamp_lower  = FOC_I_CLAMP_LOWER_FW;
 
     /* Setpoints */
     foc->target_rpm  = 0.0f;
@@ -82,8 +85,19 @@ void foc_reset(FOC_State_t* foc)
     foc->omega_ref = 0.0f;
     foc->Id_ref    = 0.0f;
     foc->Iq_ref    = 0.0f;
+    foc->Id        = 0.0f;
+    foc->Iq        = 0.0f;
+    foc->Vd_cmd    = 0.0f;
+    foc->Vq_cmd    = 0.0f;
     foc->u_mag     = 0.0f;
     foc->fault     = false;
+}
+
+void focResetPI(FOC_State_t* foc) {
+    PI_reset(&foc->pi_d);
+    PI_reset(&foc->pi_q);
+    PI_reset(&foc->pi_speed);
+    PI_reset(&foc->pi_fw);
 }
 
 /* =========================================================================
@@ -152,7 +166,7 @@ void foc_run(FOC_State_t* foc,
      * 4. Speed ramp: advance omega_ref toward target each tick
      * ------------------------------------------------------------------ */
     const float omega_target = foc->target_rpm * (2.0f * M_PI / 60.0f);
-    const float max_step     = FOC_RAMP_RATE * FOC_TS;
+    const float max_step     = FOC_RAMP_RATE * RPM_TO_RAD_S * FOC_TS;
     float delta = omega_target - foc->omega_ref;
     if (delta >  max_step) delta =  max_step;
     if (delta < -max_step) delta = -max_step;
@@ -253,19 +267,113 @@ void foc_run(FOC_State_t* foc,
      *     Matches 'svpwm_comp' mode in the MATLAB reference.
      *     Ts passed for compensated timing calculation.
      * ------------------------------------------------------------------ */
-    Modulate(ModulationType::SVPWM,
+    modulate(ModulationType::SVPWM,
              V_alpha, V_beta,
              Vdc,
              foc->ts,
              dutyA, dutyB, dutyC);
 }
 
-void foc_align_zero(FOC_State_t* foc, float Vmag, float Vdc, float* dutyA, float* dutyB, float* dutyC)
-{
+void focAlignZero(FOC_State_t* foc, float Vmag, float Vdc, float* dutyA, float* dutyB, float* dutyC) {
     /* Apply voltage vector along alpha axis (d-axis) to align encoder zero. */
-    Modulate(ModulationType::SVPWM,
+    modulate(ModulationType::SVPWM,
              Vmag, 0.0f,
              Vdc,
              foc->ts,
              dutyA, dutyB, dutyC);
+}
+
+void focTest(FOC_State_t* foc,
+             float ia, float ib, float ic,
+             float vdc,
+             float theta_e, float omega_m,
+             float* dutyA, float* dutyB, float* dutyC) {
+
+    foc->Ia = ia;
+    foc->Ib = ib;
+    foc->Ic = ic;
+    foc->Vdc = vdc;
+    foc->theta_e = theta_e;
+    foc->omega_m = omega_m;
+    foc->omega_e  = omega_m * (float)MOTOR_POLE_PAIRS;
+
+    // Current Clarke Transform
+    float i_alpha, i_beta;
+    clarke(ia, ib, ic, &i_alpha, &i_beta);
+
+    // Current Park Transform
+    float id, iq;
+    park(i_alpha, i_beta, theta_e, &id, &iq);
+
+    foc->Id = id;
+    foc->Iq = iq;
+
+    if (system_flag & FLAG_AUDIBLE) {
+      focInjection(foc, 500.0f);
+      //if (foc->rpm < 800.0f) focInjection(foc, 500.0f);
+      //else if (foc->rpm < 1200.0f) focInjection(foc, 1000.0f);
+    }
+    
+    // Calculate PI outputs
+    float err_id = foc->Id_ref - id;
+    float err_iq = foc->Iq_ref - iq;
+    
+    float vd_pi = PI_update(&foc->pi_d, err_id, foc->ts);
+    float vq_pi = PI_update(&foc->pi_q, err_iq, foc->ts);
+
+    // Calculate voltage commands with decoupling feed-forward
+    foc->Vd_cmd = vd_pi - foc->omega_e * FOC_L * iq;
+    foc->Vq_cmd = vq_pi + foc->omega_e * FOC_L * id + foc->omega_e * FOC_PSI_F;
+    foc->u_mag  = hypotf(foc->Vd_cmd, foc->Vq_cmd);
+
+    float v_max = vdc / SQRT3;  // Maximum voltage magnitude for SVPWM (line-line voltage limit)
+    if (foc->u_mag > v_max) {
+        float scale = v_max / foc->u_mag;
+        foc->Vd_cmd *= scale;
+        foc->Vq_cmd *= scale;
+    }
+    
+    float v_alpha, v_beta;
+    inv_park(foc->Vd_cmd, foc->Vq_cmd, theta_e, &v_alpha, &v_beta);     
+
+    modulate(ModulationType::SVPWM,
+             v_alpha, v_beta,
+             vdc,
+             foc->ts,
+             dutyA, dutyB, dutyC);
+}
+
+void focInjection(FOC_State_t* foc, float freq) {
+    const float amplitude_max = 0.005f;
+    static float inj_phase = 0.0f;
+    static float accumulated_time = 0.0f;
+
+    accumulated_time += foc->ts;
+    if (accumulated_time < 0.167f) inj_phase += 2.0f * M_PI * 783.99 * foc->ts;
+    else if (accumulated_time < 0.333f) inj_phase += 2.0f * M_PI * 698.46f * foc->ts;
+    else if (accumulated_time < 0.667f) inj_phase += 2.0f * M_PI * 440.00f * foc->ts;
+    else if (accumulated_time < 1.0f) inj_phase += 2.0f * M_PI * 493.88f * foc->ts;
+
+    else if (accumulated_time < 1.167f) inj_phase += 2.0f * M_PI * 659.26f * foc->ts;
+    else if (accumulated_time < 1.333f) inj_phase += 2.0f * M_PI * 587.33f * foc->ts;
+    else if (accumulated_time < 1.667f) inj_phase += 2.0f * M_PI * 349.23f * foc->ts;
+    else if (accumulated_time < 2.0f) inj_phase += 2.0f * M_PI * 392.00f * foc->ts;
+
+    else if (accumulated_time < 2.267f) inj_phase += 2.0f * M_PI * 587.33f * foc->ts;
+    else if (accumulated_time < 2.333f) inj_phase += 2.0f * M_PI * 523.25f * foc->ts;
+    else if (accumulated_time < 2.667f) inj_phase += 2.0f * M_PI * 329.63f * foc->ts;
+    else if (accumulated_time < 3.0f) inj_phase += 2.0f * M_PI * 392.00f * foc->ts;
+    else if (accumulated_time < 3.33f) inj_phase += 2.0f * M_PI * 523.25f * foc->ts;
+    else if (accumulated_time < 5.0f) inj_phase = 0.0f;
+    else {
+        accumulated_time = 0.0f; // Reset after one full cycle
+        inj_phase = 0.0f; // Reset phase to prevent overflow
+    }
+
+    //inj_phase += 2.0f * M_PI * freq * foc->ts;
+    if (inj_phase > 2.0f * M_PI) {
+        inj_phase -= 2.0f * M_PI;
+    }
+
+    foc->Id_ref += amplitude_max * sinf(inj_phase) * foc->Vdc;
 }

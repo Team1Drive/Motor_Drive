@@ -85,20 +85,35 @@ void inv_park(float d, float q, float theta, float* alpha, float* beta)
 //     Inputs: v_alpha, v_beta, v_dc
 // ─────────────────────────────────────────────
 static void svpwm_standard(float v_alpha, float v_beta, float v_dc,
-                            float* da, float* db, float* dc)
+                           float* da, float* db, float* dc)
 {
     int   sector;
     float theta_s;
     get_sector_and_angle(v_alpha, v_beta, sector, theta_s);
 
-    float v_ref   = cordic::hypotf(v_alpha, v_beta);
-    float v_ratio = v_ref / v_dc;                        // normalised magnitude
-    const float csc60 = 2.0f / SQRT3;
+    float v_ref   = hypotf(v_alpha, v_beta);
+    float v_ratio = v_ref * SQRT3 / v_dc;                        // normalised magnitude
+    //const float csc60 = 2.0f / SQRT3;
+    const float sin60 = SQRT3 / 2.0f;
+    const float cos60 = 0.5f;
 
-    float d2 = cordic::sinf(theta_s)               * v_ratio * csc60;
-    float d1 = cordic::sinf(M_PI / 3.0f - theta_s) * v_ratio * csc60;
+    float sin_theta_s, cos_theta_s;
+    sin_theta_s = sinf(theta_s);
+    cos_theta_s = cosf(theta_s);
+    //cordic::sincosf(theta_s, &sin_theta_s, &cos_theta_s);
+    float sin_comp_theta_s = sin60 * cos_theta_s - cos60 * sin_theta_s;   // sin(60°-θs) = √3/2·cos(θs) - 1/2·sin(θs)
+
+    float d2 = sin_theta_s      * v_ratio;
+    float d1 = sin_comp_theta_s * v_ratio;
     float d0 = 1.0f - d1 - d2;
-    if (d0 < 0.0f) d0 = 0.0f;                           // clamp before mapping
+
+    // Normalise d1 and d2 proportionally
+    if (d0 < 0.0f) {
+        float sum = d1 + d2;
+        d1 /= sum;
+        d2 /= sum;
+        d0 = 0.0f;
+    }
 
     float Ta, Tb, Tc;
     sector_to_times(sector, d0, d1, d2, Ta, Tb, Tc);
@@ -297,7 +312,7 @@ static void dpwm(float v_alpha, float v_beta, float v_dc,
 //  Master entry point
 // ═════════════════════════════════════════════════════════════════════════════
 
-void Modulate(
+void modulate(
     ModulationType type,
     float v_alpha,
     float v_beta,

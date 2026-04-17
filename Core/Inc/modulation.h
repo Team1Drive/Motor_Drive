@@ -113,7 +113,7 @@ void inv_park(float d, float q, float theta, float* alpha, float* beta);
  *   motorPWM.setDuty(dutyA, dutyB, dutyC);
  * @endcode
  */
-void Modulate(
+void modulate(
     ModulationType type,
     float v_alpha,
     float v_beta,
