@@ -46,7 +46,9 @@ void usb_printf(const char *format, ...) {
     va_end(args);
 
     if (len > 0) {
+        __disable_irq();
         CDC_Transmit_HS((uint8_t*)buffer, len);
+        __enable_irq();
     }
 }
 
