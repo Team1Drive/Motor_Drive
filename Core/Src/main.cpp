@@ -863,6 +863,16 @@ void printTelemetryBinary(void) {
 void speedControl(void) {
   static float ramp_speed_increment = 0.0f;
   static uint32_t ramp_tick = 0;
+  
+  if ((system_flag & FLAG_FOC_RUNNING) == 0) {
+    float ramp_down_step = FOC_RAMP_RATE / (float)SPEEDLOOP_FREQ_HZ;
+    target.speed -= ramp_down_step;
+    if (target.speed < 0.0f) {
+      target.speed = 0.0f;
+      motorPWM.stop();
+      relay.write(0);
+    }
+  }
 
   // Check if target speed has changed and update foc_state.target_rpm accordingly, with optional ramping
   if (target.speed != foc_state.target_rpm) {
@@ -1066,6 +1076,7 @@ void startUpSequence(MotorControlMode mode) {
       // Set initial FOC state for linear startup
       target.speed = FOC_INITIAL_RPM;
       control_mode = MotorControlMode::MOTOR_FOC_LINEAR;
+      system_flag |= FLAG_FOC_RUNNING;
       speedControl();
       focTick();
       usb_printf("Starting FOC linear startup sequence...\r\n");
@@ -1312,10 +1323,15 @@ void cmd_start(int argc, char** argv) {
  * @note If currently in VVVF ramp-up, it will start ramping down instead of an immediate stop.
  */
 void cmd_stop(int argc, char** argv) {
-    if (control_mode == MotorControlMode::MOTOR_VVVF && system_flag & FLAG_VVVF_RAMP_UP) {
+    if ((control_mode == MotorControlMode::MOTOR_FOC_DPWM || control_mode == MotorControlMode::MOTOR_FOC_LINEAR) && (system_flag & FLAG_FOC_RUNNING)) {
+        system_flag &= ~FLAG_FOC_RUNNING; // Start FOC ramp down
+        usb_printf("FOC ramping down\r\n");
+    }
+    else if (control_mode == MotorControlMode::MOTOR_VVVF && system_flag & FLAG_VVVF_RAMP_UP) {
         system_flag &= ~FLAG_VVVF_RAMP_UP; // Start ramp down
         usb_printf("VVVF ramping down\r\n");
-    } else {
+    }
+    else {
         control_mode = MotorControlMode::MOTOR_STOP;
         clearRunningFlags();
         motorPWM.stop();

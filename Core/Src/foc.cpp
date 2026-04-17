@@ -344,7 +344,7 @@ void focTest(FOC_State_t* foc,
 }
 
 void focInjection(FOC_State_t* foc, float freq) {
-    const float amplitude_max = 1.0f;
+    const float amplitude_max = 0.005f;
     static float inj_phase = 0.0f;
     static float accumulated_time = 0.0f;
 
@@ -375,5 +375,5 @@ void focInjection(FOC_State_t* foc, float freq) {
         inj_phase -= 2.0f * M_PI;
     }
 
-    foc->Id_ref += amplitude_max * sinf(inj_phase);
+    foc->Id_ref += amplitude_max * sinf(inj_phase) * foc->Vdc;
 }
