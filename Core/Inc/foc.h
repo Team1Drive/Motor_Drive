@@ -223,6 +223,7 @@ typedef struct {
     volatile float Vdc;
     volatile float theta_e;
     volatile float omega_e;
+    volatile float omega_m;
     volatile float rpm;
     volatile float Vd_cmd;
     volatile float Vq_cmd;
@@ -286,3 +287,7 @@ void focTest(FOC_State_t* foc,
              float vdc,
              float theta_e, float omega_m,
              float* dutyA, float* dutyB, float* dutyC);
+
+void focInjection(FOC_State_t* foc, float freq);
+
+extern volatile uint32_t system_flag;

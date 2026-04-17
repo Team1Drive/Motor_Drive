@@ -100,7 +100,7 @@ volatile MotorControlMode control_mode = MotorControlMode::MOTOR_STOP;
 volatile uint32_t system_flag = 0;
 volatile uint32_t error_flag = 0;
 
-volatile ADCGain_t adc_gain = {
+ADCGain_t adc_gain = {
     .ia_shunt = ADC_IA_SHUNT,
     .ib_shunt = ADC_IB_SHUNT,
     .ic_shunt = ADC_IC_SHUNT,
@@ -919,7 +919,31 @@ void speedControl(void) {
   float err_sp = foc_state.omega_ref - omega_m;
   // In manual FOC mode, current setpoints are controlled directly by the user
   if (control_mode != MotorControlMode::MOTOR_FOC_MANUAL) {
-    foc_state.Iq_ref = PI_update(&foc_state.pi_speed, err_sp, FOC_TS * (float)FOC_SPEED_DIV);
+    foc_state.Iq_ref = PI_update(&foc_state.pi_speed, err_sp, foc_state.ts * (float)FOC_SPEED_DIV);
+  }
+
+  float U_max_fw   = foc_state.Vdc / SQRT3;
+  float u_mag_prev = foc_state.u_mag;
+  if (fabsf(foc_state.omega_m) > 20.0f) {
+      float fw_error = (U_max_fw - u_mag_prev) / fabsf(foc_state.omega_m);
+      if (fw_error < 0.0f || foc_state.Id_ref < 0.0f) {
+        // Only integrates when FW is requested or is already inside FW
+        foc_state.pi_fw.integrator += foc_state.pi_fw.ki * fw_error * foc_state.ts * (float)FOC_SPEED_DIV;
+        // Clamp the integrator below 0
+        if (foc_state.pi_fw.integrator > 0.0f) foc_state.pi_fw.integrator = 0.0f;
+        if (foc_state.pi_fw.integrator < FOC_ID_FW_MIN) foc_state.pi_fw.integrator = FOC_ID_FW_MIN;
+      }
+      else {
+        // Zero the integrator if FW is not needed
+        // 方法1：直接清零（简单，退出快）
+        foc_state.pi_fw.integrator = 0.0f;
+        // 方法2：指数衰减（更平滑）
+        // foc_state.pi_fw.integral *= 0.99f;
+      }
+      foc_state.Id_ref = foc_state.pi_fw.integrator;
+  }else {
+      foc_state.Id_ref = 0.0f;
+      PI_reset(&foc_state.pi_fw);
   }
 }
 
@@ -1605,85 +1629,85 @@ void cmd_tune(int argc, char** argv) {
             success = true;
         }
         else if (strcmp(param, "i") == 0) {
-            target = &foc_state.pi_speed.kp;
+            target = &foc_state.pi_speed.ki;
             success = true;
         }
     } 
     else if (strcmp(subsys, "id") == 0) {
         if (strcmp(param, "p") == 0) {
-            target = &foc_state.pi_speed.kp;
+            target = &foc_state.pi_d.kp;
             success = true;
         }
         else if (strcmp(param, "i") == 0) {
-            target = &foc_state.pi_speed.kp;
+            target = &foc_state.pi_d.ki;
             success = true;
         }
     } 
     else if (strcmp(subsys, "iq") == 0) {
         if (strcmp(param, "p") == 0) {
-            target = &foc_state.pi_speed.kp;
+            target = &foc_state.pi_q.kp;
             success = true;
         }
         else if (strcmp(param, "i") == 0) {
-            target = &foc_state.pi_speed.kp;
+            target = &foc_state.pi_q.ki;
             success = true;
         }
     } 
     else if (strcmp(subsys, "fw") == 0) {
         if (strcmp(param, "p") == 0) {
-            target = &foc_state.pi_speed.kp;
+            target = &foc_state.pi_fw.kp;
             success = true;
         }
         else if (strcmp(param, "i") == 0) {
-            target = &foc_state.pi_speed.kp;
+            target = &foc_state.pi_fw.ki;
             success = true;
         }
     } 
     else if (strcmp(subsys, "gain") == 0) {
         if (strcmp(param, "ia") == 0) {
-            target = &foc_state.pi_speed.kp;
+            target = &adc_gain.ia_shunt;
             success = true;
         } else if (strcmp(param, "ib") == 0) {
-            target = &foc_state.pi_speed.kp;
+            target = &adc_gain.ib_shunt;
             success = true;
         } else if (strcmp(param, "ic") == 0) {
-            target = &foc_state.pi_speed.kp;
+            target = &adc_gain.ic_shunt;
             success = true;
         } else if (strcmp(param, "va") == 0) {
-            target = &foc_state.pi_speed.kp;
+            target = &adc_gain.va_gain;
             success = true;
         } else if (strcmp(param, "vb") == 0) {
-            target = &foc_state.pi_speed.kp;
+            target = &adc_gain.vb_gain;
             success = true;
         } else if (strcmp(param, "ibatt") == 0) {
-            target = &foc_state.pi_speed.kp;
+            target = &adc_gain.ibatt_shunt;
             success = true;
         } else if (strcmp(param, "vbatt") == 0) {
-            target = &foc_state.pi_speed.kp;
+            target = &adc_gain.vbatt_gain;
             success = true;
         }
     } 
     else if (strcmp(subsys, "offset") == 0) {
         if (strcmp(param, "ia") == 0) {
-            target = &foc_state.pi_speed.kp;
+            target = &adc_gain.ia_offset;
             success = true;
         } else if (strcmp(param, "ib") == 0) {
-            target = &foc_state.pi_speed.kp;
+            target = &adc_gain.ib_offset;
             success = true;
         } else if (strcmp(param, "ic") == 0) {
-            target = &foc_state.pi_speed.kp;
+            target = &adc_gain.ic_offset;
             success = true;
         } else if (strcmp(param, "va") == 0) {
-            target = &foc_state.pi_speed.kp;
+            target = &adc_gain.va_offset;
             success = true;
         } else if (strcmp(param, "vb") == 0) {
-            target = &foc_state.pi_speed.kp;
+            target = &adc_gain.vb_offset;
             success = true;
         } else if (strcmp(param, "ibatt") == 0) {
-            target = &foc_state.pi_speed.kp;
+            target = &adc_gain.ibatt_offset;
             success = true;
         } else if (strcmp(param, "vbatt") == 0) {
-            target = &foc_state.pi_speed.kp;
+            target = &adc_gain.vbatt_offset;
             success = true;
         }
     }
