@@ -1034,9 +1034,9 @@ void alignRotor(void) {
     // Limit output range
     if (amplitude > 1.0f) amplitude = 1.0f;
 
-    float dutyA = 0.5f + amplitude * 0.5f * sinf(angle);
-    float dutyB = 0.5f + amplitude * 0.5f * sinf(angle - 2.0f * M_PI / 3.0f);
-    float dutyC = 0.5f + amplitude * 0.5f * sinf(angle + 2.0f * M_PI / 3.0f);
+    float dutyA = 0.5f + amplitude * 0.5f * cordic::sinf(angle);
+    float dutyB = 0.5f + amplitude * 0.5f * cordic::sinf(angle - 2.0f * M_PI / 3.0f);
+    float dutyC = 0.5f + amplitude * 0.5f * cordic::sinf(angle + 2.0f * M_PI / 3.0f);
 
     motorPWM.setDuty(dutyA, dutyB, dutyC);
   }
@@ -1218,9 +1218,9 @@ void vvvfRampUp(void) {
   // Limit output range
   if (amplitude > 1.0f) amplitude = 1.0f;
 
-  float dutyA = 0.5f + amplitude * 0.5f * sinf(angle);
-  float dutyB = 0.5f + amplitude * 0.5f * sinf(angle - 2.0f * M_PI / 3.0f);
-  float dutyC = 0.5f + amplitude * 0.5f * sinf(angle + 2.0f * M_PI / 3.0f);
+  float dutyA = 0.5f + amplitude * 0.5f * cordic::sinf(angle);
+  float dutyB = 0.5f + amplitude * 0.5f * cordic::sinf(angle - 2.0f * M_PI / 3.0f);
+  float dutyC = 0.5f + amplitude * 0.5f * cordic::sinf(angle + 2.0f * M_PI / 3.0f);
 
   motorPWM.setDuty(dutyA, dutyB, dutyC);
 
@@ -2242,8 +2242,8 @@ void test_PWM(void) {
     float dutyB;
     float dutyC;
 
-    float alpha = cosf(angle);
-    float beta = sinf(angle);
+    float alpha, beta;
+    cordic::sincosf(angle, &beta, &alpha); // Alternative using CORDIC for potentially faster computation
 
     const float Ts = 1.0f / 20000.0f;
     modulate(ModulationType::SVPWM, alpha, beta, 2.0f, Ts, &dutyA, &dutyB, &dutyC);

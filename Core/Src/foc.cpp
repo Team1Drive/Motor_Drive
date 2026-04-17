@@ -19,6 +19,7 @@
 
 #include "foc.h"
 #include "modulation.h"   /* clarke, park, inv_park, modulate, ModulationType */
+#include "cordic_math.h" /* cordic::sinf, cordic::atan2f, etc. */
 #include <cmath>
 #include <algorithm>
 
@@ -324,7 +325,7 @@ void focTest(FOC_State_t* foc,
     // Calculate voltage commands with decoupling feed-forward
     foc->Vd_cmd = vd_pi - foc->omega_e * FOC_L * iq;
     foc->Vq_cmd = vq_pi + foc->omega_e * FOC_L * id + foc->omega_e * FOC_PSI_F;
-    foc->u_mag  = hypotf(foc->Vd_cmd, foc->Vq_cmd);
+    foc->u_mag  = cordic::hypotf(foc->Vd_cmd, foc->Vq_cmd);
 
     float v_max = vdc / SQRT3;  // Maximum voltage magnitude for SVPWM (line-line voltage limit)
     if (foc->u_mag > v_max) {
@@ -375,5 +376,5 @@ void focInjection(FOC_State_t* foc, float freq) {
         inj_phase -= 2.0f * M_PI;
     }
 
-    foc->Id_ref += amplitude_max * sinf(inj_phase) * foc->Vdc;
+    foc->Id_ref += amplitude_max * cordic::sinf(inj_phase) * foc->Vdc;
 }
