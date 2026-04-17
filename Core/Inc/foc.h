@@ -123,15 +123,15 @@
 #define FOC_INT_I_CLAMP     6.0f
 
 /** Speed PI proportional gain. Start: 0.05, MATLAB ref: 0.15 */
-#define FOC_KP_SP           (FOC_ZETA_SP * 2 * FOC_WND_SP * FOC_J)
+#define FOC_KP_SP           0.009247 //(FOC_ZETA_SP * 2 * FOC_WND_SP * FOC_J)
 
 /** Speed PI integral gain. Start: 1.0, MATLAB ref: 3.0 */
-#define FOC_KI_SP           (FOC_WND_SP * FOC_WND_SP * FOC_J)
+#define FOC_KI_SP           0.0092 //(FOC_WND_SP * FOC_WND_SP * FOC_J)
 
 /** Speed PI output clamp (V). Symmetric ±clamp. */
 #define FOC_I_CLAMP_UPPER_SP 2.0f
 
-#define FOC_I_CLAMP_LOWER_SP 0.0f
+#define FOC_I_CLAMP_LOWER_SP -2.0f
 
 /** Field-weakening PI proportional gain (typically 0 — only integral matters) */
 #define FOC_KP_FW           0.0f
