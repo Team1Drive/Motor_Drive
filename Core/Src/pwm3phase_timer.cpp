@@ -173,7 +173,9 @@ HAL_StatusTypeDef ThreePhasePWMOut::setDeadTime(uint32_t deadtime_ns) {
         return HAL_ERROR; // Desired dead time exceeds maximum representable value
     }
 
-    uint8_t dtg = 0;
+    uint32_t clock_div = LL_TIM_GetClockDivision(htim_->Instance);
+    uint32_t dtg = __LL_TIM_CALC_DEADTIME(desired_ticks, clock_div, pclk2);
+    /* uint8_t dtg = 0;
 
     if (desired_ticks <= 127) {
         dtg = desired_ticks;
@@ -192,11 +194,12 @@ HAL_StatusTypeDef ThreePhasePWMOut::setDeadTime(uint32_t deadtime_ns) {
         uint32_t target = (desired_ticks + 15) & ~15U;
         uint32_t D = (target / 16) - 32;
         dtg = 0xE0 | D;
-    }
+    } */
 
-    uint32_t bdtr = htim_->Instance->BDTR;
-    bdtr = (bdtr & ~TIM_BDTR_DTG_Msk) | (dtg << TIM_BDTR_DTG_Pos);
-    htim_->Instance->BDTR = bdtr;
+    LL_TIM_OC_SetDeadTime(htim_->Instance, dtg);
+    //uint32_t bdtr = htim_->Instance->BDTR;
+    //bdtr = (bdtr & ~TIM_BDTR_DTG_Msk) | (dtg << TIM_BDTR_DTG_Pos);
+    //htim_->Instance->BDTR = bdtr;
     
     return HAL_OK;
 }

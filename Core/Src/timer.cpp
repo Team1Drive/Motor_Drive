@@ -39,8 +39,10 @@ void Timer::updateFrequency(void) {
         if (LL_RCC_GetAPB1Prescaler() != LL_RCC_APB1_DIV_1) timer_clock *= 2;
     }
 
-    uint32_t psc = htim_->Instance->PSC;
-    uint32_t arr = htim_->Instance->ARR;
+    uint32_t psc = LL_TIM_GetPrescaler(tim);
+    uint32_t arr = LL_TIM_GetAutoReload(tim);
+    //uint32_t psc = htim_->Instance->PSC;
+    //uint32_t arr = htim_->Instance->ARR;
 
     if (psc == 0 && arr == 0) {
         frequency = 0; // Avoid division by zero
