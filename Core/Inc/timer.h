@@ -12,6 +12,8 @@ class Timer {
 
         static uint32_t getInstanceIndex(TIM_HandleTypeDef* htim);
 
+        void updateFrequency(void);
+
         void interruptHandler(void);
 
     public:
@@ -27,5 +29,5 @@ class Timer {
 
         HAL_StatusTypeDef setFrequency(uint32_t freq_Hz);
 
-        uint32_t getFrequency(void) const;
+        uint32_t getFrequency(void);
 };

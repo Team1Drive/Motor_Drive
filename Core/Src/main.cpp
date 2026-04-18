@@ -867,12 +867,22 @@ void speedControl(void) {
   foc_state.ts_speed = 1.0f / speedControlTimer.getFrequency();
   
   if ((system_flag & FLAG_FOC_RUNNING) == 0) {
-    float ramp_down_step = FOC_RAMP_RATE / (float)SPEEDLOOP_FREQ_HZ;
-    target.speed -= ramp_down_step;
-    if (target.speed < 0.0f) {
-      target.speed = 0.0f;
-      motorPWM.stop();
-      relay.write(0);
+    float ramp_down_step = FOC_RAMP_RATE * foc_state.ts_speed;
+    if (target.speed > 0.0f){
+      target.speed -= ramp_down_step;
+      if (target.speed < 0.0f) {
+        target.speed = 0.0f;
+        motorPWM.stop();
+        relay.write(0);
+      }
+    }
+    else if (target.speed < 0.0f) {
+      target.speed += ramp_down_step;
+      if (target.speed > 0.0f) {
+        target.speed = 0.0f;
+        motorPWM.stop();
+        relay.write(0);
+      }
     }
   }
 
