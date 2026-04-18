@@ -17,7 +17,7 @@ Encoder::Encoder(TIM_HandleTypeDef* htim, MicrosecondTimer timer, uint16_t index
     }
 
 void Encoder::indexRise(void) {
-    index_offset_ = (uint16_t)htim_->Instance->CNT;
+    index_offset_ = (uint16_t)__HAL_TIM_GET_COUNTER(htim_);
     if (!is_synchronized_) is_synchronized_ = true;
     if (zero_aligned_ && !is_zeroed_) {
         elec_zero_offset_ = calcElecOffset(elec_zero_pos_, index_offset_);
@@ -33,7 +33,7 @@ uint16_t Encoder::calcElecOffset(uint16_t elec_zero_pos, uint16_t index_offset) 
 }
 
 void Encoder::updateSpeed(void) {
-    uint16_t current_hw_cnt = (uint16_t)htim_->Instance->CNT;
+    uint16_t current_hw_cnt = (uint16_t)__HAL_TIM_GET_COUNTER(htim_);
     
     // 1. Handle 16-bit signed delta (Handles 0-65535 wrap automatically)
     int16_t delta = (int16_t)(current_hw_cnt - last_hw_cnt_);
@@ -88,7 +88,7 @@ HAL_StatusTypeDef Encoder::start(void) {
 }
 
 void Encoder::elecZeroAlign(void) {
-    elec_zero_pos_ = (uint16_t)htim_->Instance->CNT;
+    elec_zero_pos_ = (uint16_t)__HAL_TIM_GET_COUNTER(htim_);
     if (!zero_aligned_) zero_aligned_ = true;
     if (is_synchronized_ && !is_zeroed_) {
         elec_zero_offset_ = calcElecOffset(elec_zero_pos_, index_offset_);
@@ -126,18 +126,18 @@ void Encoder::reset(void) {
 
 uint16_t Encoder::getPos(void) const {
     if (!is_synchronized_) return 0;
-    uint16_t current_hw_cnt = (uint16_t)htim_->Instance->CNT;
+    uint16_t current_hw_cnt = (uint16_t)__HAL_TIM_GET_COUNTER(htim_);
     return (uint16_t)(current_hw_cnt - index_offset_) & (counts_per_rev_ - 1);
 }
 
 uint16_t Encoder::getPosBypass(void) const {
-    uint16_t current_hw_cnt = (uint16_t)htim_->Instance->CNT;
+    uint16_t current_hw_cnt = (uint16_t)__HAL_TIM_GET_COUNTER(htim_);
     return (uint16_t)(current_hw_cnt - index_offset_) & (counts_per_rev_ - 1);
 }
 
 uint16_t Encoder::getElecPos(void) const {
     if (!is_synchronized_ || !is_zeroed_) return 0;
-    uint16_t current_hw_cnt = (uint16_t)htim_->Instance->CNT;
+    uint16_t current_hw_cnt = (uint16_t)__HAL_TIM_GET_COUNTER(htim_);
     int32_t elec_pos = (int32_t)current_hw_cnt - (int32_t)index_offset_ - (int32_t)elec_zero_offset_;
     elec_pos %= (int32_t)elec_pos_range_;
     if (elec_pos < 0) elec_pos += (int32_t)elec_pos_range_;

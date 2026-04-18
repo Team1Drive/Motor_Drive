@@ -137,8 +137,6 @@ HAL_StatusTypeDef Timer::setFrequency(uint32_t freq_Hz) {
 
 uint32_t Timer::getFrequency(void) {
     if (!htim_) return 0;
-    if (frequency == 0) {
-        updateFrequency();
-    }
+    if (frequency == 0) updateFrequency();
     return frequency;
 }
