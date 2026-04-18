@@ -13413,7 +13413,7 @@ LOAD linker stubs
  .comment       0x00000045       0x46 cmake/stm32cubemx/CMakeFiles/USB_Device_Library.dir/__/__/Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ioreq.c.obj
  .comment       0x00000045       0x46 cmake/stm32cubemx/CMakeFiles/USB_Device_Library.dir/__/__/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Src/usbd_cdc.c.obj
 
-.debug_info     0x00000000    0x44219
+.debug_info     0x00000000    0x44217
  .debug_info    0x00000000     0x20f7 CMakeFiles/Motor_Drive.dir/USB_DEVICE/Target/usbd_conf.c.obj
  .debug_info    0x000020f7      0x725 CMakeFiles/Motor_Drive.dir/USB_DEVICE/App/usb_device.c.obj
  .debug_info    0x0000281c      0x4c5 CMakeFiles/Motor_Drive.dir/USB_DEVICE/App/usbd_desc.c.obj
@@ -13429,41 +13429,41 @@ LOAD linker stubs
  .debug_info    0x000096f1      0x168 CMakeFiles/Motor_Drive.dir/Core/Src/sysmem.c.obj
  .debug_info    0x00009859      0x6b4 CMakeFiles/Motor_Drive.dir/Core/Src/syscalls.c.obj
  .debug_info    0x00009f0d       0x30 CMakeFiles/Motor_Drive.dir/startup_stm32h725xx.s.obj
- .debug_info    0x00009f3d     0x650a CMakeFiles/Motor_Drive.dir/Core/Src/main.cpp.obj
- .debug_info    0x00010447     0x2c30 CMakeFiles/Motor_Drive.dir/Core/Src/pwm3phase_timer.cpp.obj
- .debug_info    0x00013077     0x1d1f CMakeFiles/Motor_Drive.dir/Core/Src/digitalio.cpp.obj
- .debug_info    0x00014d96     0x2a76 CMakeFiles/Motor_Drive.dir/Core/Src/encoder.cpp.obj
- .debug_info    0x0001780c     0x1fa3 CMakeFiles/Motor_Drive.dir/Core/Src/hallsensor.cpp.obj
- .debug_info    0x000197af     0x2f64 CMakeFiles/Motor_Drive.dir/Core/Src/modulation.cpp.obj
- .debug_info    0x0001c713     0x25ee CMakeFiles/Motor_Drive.dir/Core/Src/ustimer.cpp.obj
- .debug_info    0x0001ed01     0x320b CMakeFiles/Motor_Drive.dir/Core/Src/adc_sampler.cpp.obj
- .debug_info    0x00021f0c     0x24a1 CMakeFiles/Motor_Drive.dir/Core/Src/timer.cpp.obj
- .debug_info    0x000243ad     0x27df CMakeFiles/Motor_Drive.dir/Core/Src/foc.cpp.obj
- .debug_info    0x00026b8c     0x25dd CMakeFiles/Motor_Drive.dir/Core/Src/cmd.cpp.obj
- .debug_info    0x00029169     0x1a50 CMakeFiles/Motor_Drive.dir/Core/Src/cordic_math.cpp.obj
- .debug_info    0x0002abb9     0x1ccf CMakeFiles/Motor_Drive.dir/Core/Src/math_helpers.cpp.obj
- .debug_info    0x0002c888      0xbf0 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Core/Src/system_stm32h7xx.c.obj
- .debug_info    0x0002d478     0x1561 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pcd.c.obj
- .debug_info    0x0002e9d9      0x8b3 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pcd_ex.c.obj
- .debug_info    0x0002f28c     0x1a1e cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_ll_usb.c.obj
- .debug_info    0x00030caa      0xd82 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_rcc.c.obj
- .debug_info    0x00031a2c     0x120b cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_rcc_ex.c.obj
- .debug_info    0x00032c37      0xc6b cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_gpio.c.obj
- .debug_info    0x000338a2      0xb71 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_dma.c.obj
- .debug_info    0x00034413      0xdce cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pwr_ex.c.obj
- .debug_info    0x000351e1     0x10a5 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_cortex.c.obj
- .debug_info    0x00036286     0x1698 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal.c.obj
- .debug_info    0x0003791e     0x2321 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_adc.c.obj
- .debug_info    0x00039c3f     0x22fb cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_adc_ex.c.obj
- .debug_info    0x0003bf3a      0xab6 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_cordic.c.obj
- .debug_info    0x0003c9f0     0x2bae cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_tim.c.obj
- .debug_info    0x0003f59e     0x18c1 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_tim_ex.c.obj
- .debug_info    0x00040e5f      0xe20 cmake/stm32cubemx/CMakeFiles/USB_Device_Library.dir/__/__/Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_core.c.obj
- .debug_info    0x00041c7f      0xaf9 cmake/stm32cubemx/CMakeFiles/USB_Device_Library.dir/__/__/Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ctlreq.c.obj
- .debug_info    0x00042778      0x770 cmake/stm32cubemx/CMakeFiles/USB_Device_Library.dir/__/__/Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ioreq.c.obj
- .debug_info    0x00042ee8     0x1331 cmake/stm32cubemx/CMakeFiles/USB_Device_Library.dir/__/__/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Src/usbd_cdc.c.obj
+ .debug_info    0x00009f3d     0x6508 CMakeFiles/Motor_Drive.dir/Core/Src/main.cpp.obj
+ .debug_info    0x00010445     0x2c30 CMakeFiles/Motor_Drive.dir/Core/Src/pwm3phase_timer.cpp.obj
+ .debug_info    0x00013075     0x1d1f CMakeFiles/Motor_Drive.dir/Core/Src/digitalio.cpp.obj
+ .debug_info    0x00014d94     0x2a76 CMakeFiles/Motor_Drive.dir/Core/Src/encoder.cpp.obj
+ .debug_info    0x0001780a     0x1fa3 CMakeFiles/Motor_Drive.dir/Core/Src/hallsensor.cpp.obj
+ .debug_info    0x000197ad     0x2f64 CMakeFiles/Motor_Drive.dir/Core/Src/modulation.cpp.obj
+ .debug_info    0x0001c711     0x25ee CMakeFiles/Motor_Drive.dir/Core/Src/ustimer.cpp.obj
+ .debug_info    0x0001ecff     0x320b CMakeFiles/Motor_Drive.dir/Core/Src/adc_sampler.cpp.obj
+ .debug_info    0x00021f0a     0x24a1 CMakeFiles/Motor_Drive.dir/Core/Src/timer.cpp.obj
+ .debug_info    0x000243ab     0x27df CMakeFiles/Motor_Drive.dir/Core/Src/foc.cpp.obj
+ .debug_info    0x00026b8a     0x25dd CMakeFiles/Motor_Drive.dir/Core/Src/cmd.cpp.obj
+ .debug_info    0x00029167     0x1a50 CMakeFiles/Motor_Drive.dir/Core/Src/cordic_math.cpp.obj
+ .debug_info    0x0002abb7     0x1ccf CMakeFiles/Motor_Drive.dir/Core/Src/math_helpers.cpp.obj
+ .debug_info    0x0002c886      0xbf0 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Core/Src/system_stm32h7xx.c.obj
+ .debug_info    0x0002d476     0x1561 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pcd.c.obj
+ .debug_info    0x0002e9d7      0x8b3 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pcd_ex.c.obj
+ .debug_info    0x0002f28a     0x1a1e cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_ll_usb.c.obj
+ .debug_info    0x00030ca8      0xd82 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_rcc.c.obj
+ .debug_info    0x00031a2a     0x120b cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_rcc_ex.c.obj
+ .debug_info    0x00032c35      0xc6b cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_gpio.c.obj
+ .debug_info    0x000338a0      0xb71 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_dma.c.obj
+ .debug_info    0x00034411      0xdce cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pwr_ex.c.obj
+ .debug_info    0x000351df     0x10a5 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_cortex.c.obj
+ .debug_info    0x00036284     0x1698 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal.c.obj
+ .debug_info    0x0003791c     0x2321 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_adc.c.obj
+ .debug_info    0x00039c3d     0x22fb cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_adc_ex.c.obj
+ .debug_info    0x0003bf38      0xab6 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_cordic.c.obj
+ .debug_info    0x0003c9ee     0x2bae cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_tim.c.obj
+ .debug_info    0x0003f59c     0x18c1 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_tim_ex.c.obj
+ .debug_info    0x00040e5d      0xe20 cmake/stm32cubemx/CMakeFiles/USB_Device_Library.dir/__/__/Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_core.c.obj
+ .debug_info    0x00041c7d      0xaf9 cmake/stm32cubemx/CMakeFiles/USB_Device_Library.dir/__/__/Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ctlreq.c.obj
+ .debug_info    0x00042776      0x770 cmake/stm32cubemx/CMakeFiles/USB_Device_Library.dir/__/__/Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ioreq.c.obj
+ .debug_info    0x00042ee6     0x1331 cmake/stm32cubemx/CMakeFiles/USB_Device_Library.dir/__/__/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Src/usbd_cdc.c.obj
 
-.debug_abbrev   0x00000000     0x80c4
+.debug_abbrev   0x00000000     0x80c5
  .debug_abbrev  0x00000000      0x332 CMakeFiles/Motor_Drive.dir/USB_DEVICE/Target/usbd_conf.c.obj
  .debug_abbrev  0x00000332      0x1a8 CMakeFiles/Motor_Drive.dir/USB_DEVICE/App/usb_device.c.obj
  .debug_abbrev  0x000004da      0x1f5 CMakeFiles/Motor_Drive.dir/USB_DEVICE/App/usbd_desc.c.obj
@@ -13479,39 +13479,39 @@ LOAD linker stubs
  .debug_abbrev  0x000017ab       0xbc CMakeFiles/Motor_Drive.dir/Core/Src/sysmem.c.obj
  .debug_abbrev  0x00001867      0x1bc CMakeFiles/Motor_Drive.dir/Core/Src/syscalls.c.obj
  .debug_abbrev  0x00001a23       0x24 CMakeFiles/Motor_Drive.dir/startup_stm32h725xx.s.obj
- .debug_abbrev  0x00001a47      0x7de CMakeFiles/Motor_Drive.dir/Core/Src/main.cpp.obj
- .debug_abbrev  0x00002225      0x3fc CMakeFiles/Motor_Drive.dir/Core/Src/pwm3phase_timer.cpp.obj
- .debug_abbrev  0x00002621      0x310 CMakeFiles/Motor_Drive.dir/Core/Src/digitalio.cpp.obj
- .debug_abbrev  0x00002931      0x431 CMakeFiles/Motor_Drive.dir/Core/Src/encoder.cpp.obj
- .debug_abbrev  0x00002d62      0x37e CMakeFiles/Motor_Drive.dir/Core/Src/hallsensor.cpp.obj
- .debug_abbrev  0x000030e0      0x506 CMakeFiles/Motor_Drive.dir/Core/Src/modulation.cpp.obj
- .debug_abbrev  0x000035e6      0x3d1 CMakeFiles/Motor_Drive.dir/Core/Src/ustimer.cpp.obj
- .debug_abbrev  0x000039b7      0x4de CMakeFiles/Motor_Drive.dir/Core/Src/adc_sampler.cpp.obj
- .debug_abbrev  0x00003e95      0x3bd CMakeFiles/Motor_Drive.dir/Core/Src/timer.cpp.obj
- .debug_abbrev  0x00004252      0x3e2 CMakeFiles/Motor_Drive.dir/Core/Src/foc.cpp.obj
- .debug_abbrev  0x00004634      0x343 CMakeFiles/Motor_Drive.dir/Core/Src/cmd.cpp.obj
- .debug_abbrev  0x00004977      0x293 CMakeFiles/Motor_Drive.dir/Core/Src/cordic_math.cpp.obj
- .debug_abbrev  0x00004c0a      0x2d9 CMakeFiles/Motor_Drive.dir/Core/Src/math_helpers.cpp.obj
- .debug_abbrev  0x00004ee3      0x153 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Core/Src/system_stm32h7xx.c.obj
- .debug_abbrev  0x00005036      0x2dc cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pcd.c.obj
- .debug_abbrev  0x00005312      0x256 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pcd_ex.c.obj
- .debug_abbrev  0x00005568      0x2b3 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_ll_usb.c.obj
- .debug_abbrev  0x0000581b      0x2b1 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_rcc.c.obj
- .debug_abbrev  0x00005acc      0x269 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_rcc_ex.c.obj
- .debug_abbrev  0x00005d35      0x205 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_gpio.c.obj
- .debug_abbrev  0x00005f3a      0x248 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_dma.c.obj
- .debug_abbrev  0x00006182      0x295 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pwr_ex.c.obj
- .debug_abbrev  0x00006417      0x339 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_cortex.c.obj
- .debug_abbrev  0x00006750      0x29e cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal.c.obj
- .debug_abbrev  0x000069ee      0x307 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_adc.c.obj
- .debug_abbrev  0x00006cf5      0x345 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_adc_ex.c.obj
- .debug_abbrev  0x0000703a      0x227 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_cordic.c.obj
- .debug_abbrev  0x00007261      0x276 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_tim.c.obj
- .debug_abbrev  0x000074d7      0x296 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_tim_ex.c.obj
- .debug_abbrev  0x0000776d      0x27c cmake/stm32cubemx/CMakeFiles/USB_Device_Library.dir/__/__/Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_core.c.obj
- .debug_abbrev  0x000079e9      0x26f cmake/stm32cubemx/CMakeFiles/USB_Device_Library.dir/__/__/Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ctlreq.c.obj
- .debug_abbrev  0x00007c58      0x19a cmake/stm32cubemx/CMakeFiles/USB_Device_Library.dir/__/__/Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ioreq.c.obj
- .debug_abbrev  0x00007df2      0x2d2 cmake/stm32cubemx/CMakeFiles/USB_Device_Library.dir/__/__/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Src/usbd_cdc.c.obj
+ .debug_abbrev  0x00001a47      0x7df CMakeFiles/Motor_Drive.dir/Core/Src/main.cpp.obj
+ .debug_abbrev  0x00002226      0x3fc CMakeFiles/Motor_Drive.dir/Core/Src/pwm3phase_timer.cpp.obj
+ .debug_abbrev  0x00002622      0x310 CMakeFiles/Motor_Drive.dir/Core/Src/digitalio.cpp.obj
+ .debug_abbrev  0x00002932      0x431 CMakeFiles/Motor_Drive.dir/Core/Src/encoder.cpp.obj
+ .debug_abbrev  0x00002d63      0x37e CMakeFiles/Motor_Drive.dir/Core/Src/hallsensor.cpp.obj
+ .debug_abbrev  0x000030e1      0x506 CMakeFiles/Motor_Drive.dir/Core/Src/modulation.cpp.obj
+ .debug_abbrev  0x000035e7      0x3d1 CMakeFiles/Motor_Drive.dir/Core/Src/ustimer.cpp.obj
+ .debug_abbrev  0x000039b8      0x4de CMakeFiles/Motor_Drive.dir/Core/Src/adc_sampler.cpp.obj
+ .debug_abbrev  0x00003e96      0x3bd CMakeFiles/Motor_Drive.dir/Core/Src/timer.cpp.obj
+ .debug_abbrev  0x00004253      0x3e2 CMakeFiles/Motor_Drive.dir/Core/Src/foc.cpp.obj
+ .debug_abbrev  0x00004635      0x343 CMakeFiles/Motor_Drive.dir/Core/Src/cmd.cpp.obj
+ .debug_abbrev  0x00004978      0x293 CMakeFiles/Motor_Drive.dir/Core/Src/cordic_math.cpp.obj
+ .debug_abbrev  0x00004c0b      0x2d9 CMakeFiles/Motor_Drive.dir/Core/Src/math_helpers.cpp.obj
+ .debug_abbrev  0x00004ee4      0x153 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Core/Src/system_stm32h7xx.c.obj
+ .debug_abbrev  0x00005037      0x2dc cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pcd.c.obj
+ .debug_abbrev  0x00005313      0x256 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pcd_ex.c.obj
+ .debug_abbrev  0x00005569      0x2b3 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_ll_usb.c.obj
+ .debug_abbrev  0x0000581c      0x2b1 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_rcc.c.obj
+ .debug_abbrev  0x00005acd      0x269 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_rcc_ex.c.obj
+ .debug_abbrev  0x00005d36      0x205 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_gpio.c.obj
+ .debug_abbrev  0x00005f3b      0x248 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_dma.c.obj
+ .debug_abbrev  0x00006183      0x295 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pwr_ex.c.obj
+ .debug_abbrev  0x00006418      0x339 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_cortex.c.obj
+ .debug_abbrev  0x00006751      0x29e cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal.c.obj
+ .debug_abbrev  0x000069ef      0x307 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_adc.c.obj
+ .debug_abbrev  0x00006cf6      0x345 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_adc_ex.c.obj
+ .debug_abbrev  0x0000703b      0x227 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_cordic.c.obj
+ .debug_abbrev  0x00007262      0x276 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_tim.c.obj
+ .debug_abbrev  0x000074d8      0x296 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_tim_ex.c.obj
+ .debug_abbrev  0x0000776e      0x27c cmake/stm32cubemx/CMakeFiles/USB_Device_Library.dir/__/__/Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_core.c.obj
+ .debug_abbrev  0x000079ea      0x26f cmake/stm32cubemx/CMakeFiles/USB_Device_Library.dir/__/__/Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ctlreq.c.obj
+ .debug_abbrev  0x00007c59      0x19a cmake/stm32cubemx/CMakeFiles/USB_Device_Library.dir/__/__/Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ioreq.c.obj
+ .debug_abbrev  0x00007df3      0x2d2 cmake/stm32cubemx/CMakeFiles/USB_Device_Library.dir/__/__/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Src/usbd_cdc.c.obj
 
 .debug_aranges  0x00000000     0x2330
  .debug_aranges
@@ -13929,7 +13929,7 @@ LOAD linker stubs
  .debug_macro   0x000442a9      0x3bf cmake/stm32cubemx/CMakeFiles/USB_Device_Library.dir/__/__/Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ioreq.c.obj
  .debug_macro   0x00044668      0x3d2 cmake/stm32cubemx/CMakeFiles/USB_Device_Library.dir/__/__/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Src/usbd_cdc.c.obj
 
-.debug_line     0x00000000    0x336ff
+.debug_line     0x00000000    0x33701
  .debug_line    0x00000000      0xd87 CMakeFiles/Motor_Drive.dir/USB_DEVICE/Target/usbd_conf.c.obj
  .debug_line    0x00000d87      0x9ac CMakeFiles/Motor_Drive.dir/USB_DEVICE/App/usb_device.c.obj
  .debug_line    0x00001733      0xa4b CMakeFiles/Motor_Drive.dir/USB_DEVICE/App/usbd_desc.c.obj
@@ -13945,39 +13945,39 @@ LOAD linker stubs
  .debug_line    0x00007472      0x2c6 CMakeFiles/Motor_Drive.dir/Core/Src/sysmem.c.obj
  .debug_line    0x00007738      0x5ea CMakeFiles/Motor_Drive.dir/Core/Src/syscalls.c.obj
  .debug_line    0x00007d22       0x7b CMakeFiles/Motor_Drive.dir/startup_stm32h725xx.s.obj
- .debug_line    0x00007d9d     0x374b CMakeFiles/Motor_Drive.dir/Core/Src/main.cpp.obj
- .debug_line    0x0000b4e8     0x114e CMakeFiles/Motor_Drive.dir/Core/Src/pwm3phase_timer.cpp.obj
- .debug_line    0x0000c636      0xd23 CMakeFiles/Motor_Drive.dir/Core/Src/digitalio.cpp.obj
- .debug_line    0x0000d359     0x1202 CMakeFiles/Motor_Drive.dir/Core/Src/encoder.cpp.obj
- .debug_line    0x0000e55b      0xedc CMakeFiles/Motor_Drive.dir/Core/Src/hallsensor.cpp.obj
- .debug_line    0x0000f437     0x160b CMakeFiles/Motor_Drive.dir/Core/Src/modulation.cpp.obj
- .debug_line    0x00010a42      0xea3 CMakeFiles/Motor_Drive.dir/Core/Src/ustimer.cpp.obj
- .debug_line    0x000118e5     0x15a3 CMakeFiles/Motor_Drive.dir/Core/Src/adc_sampler.cpp.obj
- .debug_line    0x00012e88      0xf1c CMakeFiles/Motor_Drive.dir/Core/Src/timer.cpp.obj
- .debug_line    0x00013da4     0x1310 CMakeFiles/Motor_Drive.dir/Core/Src/foc.cpp.obj
- .debug_line    0x000150b4     0x107b CMakeFiles/Motor_Drive.dir/Core/Src/cmd.cpp.obj
- .debug_line    0x0001612f      0xeee CMakeFiles/Motor_Drive.dir/Core/Src/cordic_math.cpp.obj
- .debug_line    0x0001701d      0xe86 CMakeFiles/Motor_Drive.dir/Core/Src/math_helpers.cpp.obj
- .debug_line    0x00017ea3      0x973 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Core/Src/system_stm32h7xx.c.obj
- .debug_line    0x00018816     0x14bd cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pcd.c.obj
- .debug_line    0x00019cd3      0x983 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pcd_ex.c.obj
- .debug_line    0x0001a656     0x1d71 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_ll_usb.c.obj
- .debug_line    0x0001c3c7     0x1363 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_rcc.c.obj
- .debug_line    0x0001d72a     0x1c17 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_rcc_ex.c.obj
- .debug_line    0x0001f341      0xbca cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_gpio.c.obj
- .debug_line    0x0001ff0b     0x26d9 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_dma.c.obj
- .debug_line    0x000225e4      0xe57 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pwr_ex.c.obj
- .debug_line    0x0002343b      0xd3f cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_cortex.c.obj
- .debug_line    0x0002417a      0xde6 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal.c.obj
- .debug_line    0x00024f60     0x2678 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_adc.c.obj
- .debug_line    0x000275d8     0x2108 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_adc_ex.c.obj
- .debug_line    0x000296e0      0xc54 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_cordic.c.obj
- .debug_line    0x0002a334     0x3f35 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_tim.c.obj
- .debug_line    0x0002e269     0x1d73 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_tim_ex.c.obj
- .debug_line    0x0002ffdc      0xea5 cmake/stm32cubemx/CMakeFiles/USB_Device_Library.dir/__/__/Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_core.c.obj
- .debug_line    0x00030e81     0x109f cmake/stm32cubemx/CMakeFiles/USB_Device_Library.dir/__/__/Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ctlreq.c.obj
- .debug_line    0x00031f20      0x9bb cmake/stm32cubemx/CMakeFiles/USB_Device_Library.dir/__/__/Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ioreq.c.obj
- .debug_line    0x000328db      0xe24 cmake/stm32cubemx/CMakeFiles/USB_Device_Library.dir/__/__/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Src/usbd_cdc.c.obj
+ .debug_line    0x00007d9d     0x374d CMakeFiles/Motor_Drive.dir/Core/Src/main.cpp.obj
+ .debug_line    0x0000b4ea     0x114e CMakeFiles/Motor_Drive.dir/Core/Src/pwm3phase_timer.cpp.obj
+ .debug_line    0x0000c638      0xd23 CMakeFiles/Motor_Drive.dir/Core/Src/digitalio.cpp.obj
+ .debug_line    0x0000d35b     0x1202 CMakeFiles/Motor_Drive.dir/Core/Src/encoder.cpp.obj
+ .debug_line    0x0000e55d      0xedc CMakeFiles/Motor_Drive.dir/Core/Src/hallsensor.cpp.obj
+ .debug_line    0x0000f439     0x160b CMakeFiles/Motor_Drive.dir/Core/Src/modulation.cpp.obj
+ .debug_line    0x00010a44      0xea3 CMakeFiles/Motor_Drive.dir/Core/Src/ustimer.cpp.obj
+ .debug_line    0x000118e7     0x15a3 CMakeFiles/Motor_Drive.dir/Core/Src/adc_sampler.cpp.obj
+ .debug_line    0x00012e8a      0xf1c CMakeFiles/Motor_Drive.dir/Core/Src/timer.cpp.obj
+ .debug_line    0x00013da6     0x1310 CMakeFiles/Motor_Drive.dir/Core/Src/foc.cpp.obj
+ .debug_line    0x000150b6     0x107b CMakeFiles/Motor_Drive.dir/Core/Src/cmd.cpp.obj
+ .debug_line    0x00016131      0xeee CMakeFiles/Motor_Drive.dir/Core/Src/cordic_math.cpp.obj
+ .debug_line    0x0001701f      0xe86 CMakeFiles/Motor_Drive.dir/Core/Src/math_helpers.cpp.obj
+ .debug_line    0x00017ea5      0x973 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Core/Src/system_stm32h7xx.c.obj
+ .debug_line    0x00018818     0x14bd cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pcd.c.obj
+ .debug_line    0x00019cd5      0x983 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pcd_ex.c.obj
+ .debug_line    0x0001a658     0x1d71 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_ll_usb.c.obj
+ .debug_line    0x0001c3c9     0x1363 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_rcc.c.obj
+ .debug_line    0x0001d72c     0x1c17 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_rcc_ex.c.obj
+ .debug_line    0x0001f343      0xbca cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_gpio.c.obj
+ .debug_line    0x0001ff0d     0x26d9 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_dma.c.obj
+ .debug_line    0x000225e6      0xe57 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pwr_ex.c.obj
+ .debug_line    0x0002343d      0xd3f cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_cortex.c.obj
+ .debug_line    0x0002417c      0xde6 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal.c.obj
+ .debug_line    0x00024f62     0x2678 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_adc.c.obj
+ .debug_line    0x000275da     0x2108 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_adc_ex.c.obj
+ .debug_line    0x000296e2      0xc54 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_cordic.c.obj
+ .debug_line    0x0002a336     0x3f35 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_tim.c.obj
+ .debug_line    0x0002e26b     0x1d73 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_tim_ex.c.obj
+ .debug_line    0x0002ffde      0xea5 cmake/stm32cubemx/CMakeFiles/USB_Device_Library.dir/__/__/Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_core.c.obj
+ .debug_line    0x00030e83     0x109f cmake/stm32cubemx/CMakeFiles/USB_Device_Library.dir/__/__/Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ctlreq.c.obj
+ .debug_line    0x00031f22      0x9bb cmake/stm32cubemx/CMakeFiles/USB_Device_Library.dir/__/__/Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ioreq.c.obj
+ .debug_line    0x000328dd      0xe24 cmake/stm32cubemx/CMakeFiles/USB_Device_Library.dir/__/__/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Src/usbd_cdc.c.obj
 
 .debug_str      0x00000000   0x173892
  .debug_str     0x00000000   0x173892 CMakeFiles/Motor_Drive.dir/USB_DEVICE/Target/usbd_conf.c.obj

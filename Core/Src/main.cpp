@@ -180,8 +180,8 @@ int main(void)
   MX_TIM6_Init();
   MX_TIM7_Init();
   MX_TIM8_Init();
-  MX_CORDIC_Init();
   MX_TIM16_Init();
+  MX_CORDIC_Init();
 
   /* USER CODE BEGIN 2 */
   led_red.write(1);
@@ -202,10 +202,6 @@ int main(void)
   if (adc1.startDMA() != HAL_OK) error_flag |= ERROR_DMA_CONFIG;
   if (adc2.startDMA() != HAL_OK) error_flag |= ERROR_DMA_CONFIG;
   if (adc3.startDMA() != HAL_OK) error_flag |= ERROR_DMA_CONFIG;
-  
-  //while (adc1.startADC() != HAL_OK) usb_printf("Failed to start ADC1 Error code: 0x%lx\r\n", HAL_ADC_GetError(&hadc1));
-  //while (adc2.startADC() != HAL_OK) usb_printf("Failed to start ADC2 Error code: 0x%lx\r\n", HAL_ADC_GetError(&hadc2));
-  //while (adc3.startADC() != HAL_OK) usb_printf("Failed to start ADC3 Error code: 0x%lx\r\n", HAL_ADC_GetError(&hadc3));
   
   /* Start timers */
   if (adcTimer.start() != HAL_OK) error_flag |= ERROR_TIM_CONFIG;
