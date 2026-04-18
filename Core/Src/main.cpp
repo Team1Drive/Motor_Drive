@@ -227,7 +227,7 @@ int main(void)
   usb_printf("HAL Initialized\n");
   
   if (motorPWM.setFrequency(PWM_FREQ_DEFAULT_HZ) != HAL_OK) error_flag |= ERROR_PWM_CONFIG;
-  if (motorPWM.setDeadTime(1000) != HAL_OK) error_flag |= ERROR_PWM_CONFIG;
+  if (motorPWM.setDeadTime(PWM_DEADTIME_DEFAULT_NS) != HAL_OK) error_flag |= ERROR_PWM_CONFIG;
   
   /* Initialise FOC controller */
   foc_init(&foc_state);
@@ -863,6 +863,8 @@ void printTelemetryBinary(void) {
 void speedControl(void) {
   static float ramp_speed_increment = 0.0f;
   static uint32_t ramp_tick = 0;
+
+  foc_state.ts_speed = 1.0f / speedControlTimer.getFrequency();
   
   if ((system_flag & FLAG_FOC_RUNNING) == 0) {
     float ramp_down_step = FOC_RAMP_RATE / (float)SPEEDLOOP_FREQ_HZ;
@@ -929,7 +931,7 @@ void speedControl(void) {
   float err_sp = foc_state.omega_ref - omega_m;
   // In manual FOC mode, current setpoints are controlled directly by the user
   if (control_mode != MotorControlMode::MOTOR_FOC_MANUAL) {
-    foc_state.Iq_ref = PI_update(&foc_state.pi_speed, err_sp, foc_state.ts * (float)FOC_SPEED_DIV);
+    foc_state.Iq_ref = PI_update(&foc_state.pi_speed, err_sp, foc_state.ts_speed);
   }
 
   float U_max_fw   = foc_state.Vdc / SQRT3;
@@ -938,7 +940,7 @@ void speedControl(void) {
       float fw_error = (U_max_fw - u_mag_prev) / fabsf(foc_state.omega_m);
       if (fw_error < 0.0f || foc_state.Id_ref < 0.0f) {
         // Only integrates when FW is requested or is already inside FW
-        foc_state.pi_fw.integrator += foc_state.pi_fw.ki * fw_error * foc_state.ts * (float)FOC_SPEED_DIV;
+        foc_state.pi_fw.integrator += foc_state.pi_fw.ki * fw_error * foc_state.ts_speed;
         // Clamp the integrator below 0
         if (foc_state.pi_fw.integrator > 0.0f) foc_state.pi_fw.integrator = 0.0f;
         if (foc_state.pi_fw.integrator < FOC_ID_FW_MIN) foc_state.pi_fw.integrator = FOC_ID_FW_MIN;

@@ -163,7 +163,8 @@ float ThreePhasePWMOut::getDuty(uint8_t phase) const {
 
 HAL_StatusTypeDef ThreePhasePWMOut::setDeadTime(uint32_t deadtime_ns) {
     uint32_t pclk2 = HAL_RCC_GetPCLK2Freq();
-    if ((RCC->D2CFGR & RCC_D2CFGR_D2PPRE2) != 0) pclk2 *= 2;
+    if (LL_RCC_GetAPB2Prescaler() != LL_RCC_APB2_DIV_1) pclk2 *= 2;
+    //if ((RCC->D2CFGR & RCC_D2CFGR_D2PPRE2) != 0) pclk2 *= 2;
 
     float tick_ns = 1e9f / pclk2;  // seconds per timer tick
     uint32_t desired_ticks = (uint32_t)ceilf(deadtime_ns / tick_ns);
@@ -205,6 +206,7 @@ HAL_StatusTypeDef ThreePhasePWMOut::setFrequency(uint32_t freq_Hz) {
 
     pwm_freq_Hz = freq_Hz;
     uint32_t timer_clock = HAL_RCC_GetPCLK2Freq();
+    if (LL_RCC_GetAPB2Prescaler() != LL_RCC_APB2_DIV_1) timer_clock *= 2;
     uint32_t psc = 0;
     uint32_t arr = (uint32_t)(timer_clock / pwm_freq_Hz) - 1U;
     if (arr > 0xFFFF) {
