@@ -940,19 +940,17 @@ void speedControl(void) {
       float fw_error = (U_max_fw - u_mag_prev) / fabsf(foc_state.omega_m);
       if (fw_error < 0.0f || foc_state.Id_ref < 0.0f) {
         // Only integrates when FW is requested or is already inside FW
-        foc_state.pi_fw.integrator += foc_state.pi_fw.ki * fw_error * foc_state.ts_speed;
-        // Clamp the integrator below 0
-        if (foc_state.pi_fw.integrator > 0.0f) foc_state.pi_fw.integrator = 0.0f;
-        if (foc_state.pi_fw.integrator < FOC_ID_FW_MIN) foc_state.pi_fw.integrator = FOC_ID_FW_MIN;
+        foc_state.Id_ref = PI_update(&foc_state.pi_fw, fw_error, foc_state.ts_speed);
       }
       else {
         // Zero the integrator if FW is not needed
-        // 方法1：直接清零（简单，退出快）
-        foc_state.pi_fw.integrator = 0.0f;
-        // 方法2：指数衰减（更平滑）
-        // foc_state.pi_fw.integral *= 0.99f;
+        // Method 1：Reset PI（Simple, faster）
+        foc_state.Id_ref = 0.0f;
+        PI_reset(&foc_state.pi_fw);
+        // Method 2：Exponential decay（Smoother）
+        // foc_state.pi_fw.integrator *= 0.99f;
+        // foc_state.Id_ref = foc_state.pi_fw.integrator;
       }
-      foc_state.Id_ref = foc_state.pi_fw.integrator;
   }else {
       foc_state.Id_ref = 0.0f;
       PI_reset(&foc_state.pi_fw);

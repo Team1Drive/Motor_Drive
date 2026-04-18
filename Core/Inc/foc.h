@@ -123,7 +123,7 @@
 #define FOC_KP_FW           0.0f
 
 /** Field-weakening PI integral gain. From MATLAB ref: 500 */
-#define FOC_KI_FW           500.0f
+#define FOC_KI_FW           4000.0f
 
 /** Speed PI proportional gain. Start: 0.05, MATLAB ref: 0.15 */
 #define FOC_KP_SP           0.009247 //(FOC_ZETA_SP * 2 * FOC_WND_SP * FOC_J)

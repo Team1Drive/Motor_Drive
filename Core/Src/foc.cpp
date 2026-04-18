@@ -42,7 +42,7 @@ void foc_init(FOC_State_t* foc)
     foc->pi_speed.clamp_upper   = FOC_I_CLAMP_UPPER_SP;
     foc->pi_speed.clamp_lower   = FOC_I_CLAMP_LOWER_SP;
 
-    /* Field-weakening PI — DISABLED (pi_fw zeroed but not used) */
+    /* Field-weakening PI — outer loop. Output clamp = FOC_IMAX (A). */
     foc->pi_fw.kp           = FOC_KP_FW;
     foc->pi_fw.ki           = FOC_KI_FW;
     foc->pi_fw.integrator   = 0.0f;
