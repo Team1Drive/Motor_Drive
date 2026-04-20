@@ -9,7 +9,7 @@ class Encoder {
     private:
         static Encoder* instance_;
         TIM_HandleTypeDef* htim_;
-        MicrosecondTimer timer_;
+        TIM_HandleTypeDef* htim_t_;
         uint16_t indexPin_;
         const uint32_t counts_per_rev_;
         const float speedloop_period;
@@ -22,8 +22,10 @@ class Encoder {
         volatile uint16_t elec_zero_pos_;
         volatile uint16_t elec_zero_offset_;
         volatile uint16_t last_hw_cnt_;
+        volatile uint64_t last_ticks_;
         volatile bool zero_aligned_;
 
+        bool use_m_method_;
         float rpm;
         float filtered_rpm_;
         float rpm_buffer_[10];
@@ -39,8 +41,10 @@ class Encoder {
 
         void counterOverflow(void);
 
+        void timerOverflow(void);
+
     public:
-        Encoder(TIM_HandleTypeDef* htim, MicrosecondTimer timer, uint16_t index_pin, uint32_t pulses_per_rev, uint32_t speedloop_freq, uint8_t stall_threshold);
+        Encoder(TIM_HandleTypeDef* htim, TIM_HandleTypeDef* htim_t, uint16_t index_pin, uint32_t pulses_per_rev, uint32_t speedloop_freq, uint8_t stall_threshold);
 
         volatile bool is_synchronized_; // Indicates if the encoder has been synchronized with the index pulse
         volatile bool is_zeroed_;       // Indicates if the electrical zero position has been determined after alignment
@@ -55,7 +59,9 @@ class Encoder {
 
         static void irqHandlerSpeed(void);
 
-        static void irqHandlerOverflow(void);
+        static void irqHandlerEncoderOverflow(void);
+
+        static void irqHandlerTimerOverflow(void);
 
         void reset(void);
 

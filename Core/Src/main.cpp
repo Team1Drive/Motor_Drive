@@ -61,9 +61,11 @@ extern TIM_HandleTypeDef htim1;
 extern TIM_HandleTypeDef htim2;
 extern TIM_HandleTypeDef htim3;
 extern TIM_HandleTypeDef htim4;
+extern TIM_HandleTypeDef htim5;
 extern TIM_HandleTypeDef htim6;
-extern TIM_HandleTypeDef htim7;
 extern TIM_HandleTypeDef htim8;
+extern TIM_HandleTypeDef htim12;
+extern TIM_HandleTypeDef htim15;
 extern TIM_HandleTypeDef htim16;
 
 /* Declare ADC & DMA handles */
@@ -77,7 +79,7 @@ extern DMA_HandleTypeDef hdma_adc3;
 /* Custom Class Objects */
 ThreePhasePWMOut motorPWM(&htim8);
 
-MicrosecondTimer usTimer(&htim7);
+//MicrosecondTimer usTimer(&htim7);
 
 ADCSampler adc1(&hadc1, &hdma_adc1, adc1_buffer, ADC1_BUF_LEN);
 ADCSampler adc2(&hadc2, &hdma_adc2, adc2_buffer, ADC2_BUF_LEN);
@@ -88,7 +90,7 @@ Timer adcTimer(&htim1), printTimer(&htim2), ledTimer(&htim3), encoderTimer(&htim
 DigitalOut pwm_ch1_dis(GPIOA, GPIO_PIN_2), pwm_ch2_dis(GPIOB, GPIO_PIN_2), pwm_ch3_dis(GPIOB, GPIO_PIN_13);
 DigitalOut led_red(GPIOC, GPIO_PIN_9), led_green(GPIOA, GPIO_PIN_8), led_yellow_1(GPIOA, GPIO_PIN_9), led_yellow_2(GPIOA, GPIO_PIN_10);
 DigitalOut relay(GPIOD, GPIO_PIN_8);
-Encoder encoder(&htim4, usTimer, GPIO_PIN_9, ENCODER_PPR, TIM6_FREQ_HZ, ENCODER_STALL_THRESHOLD);
+Encoder encoder(&htim4, &htim15, GPIO_PIN_9, ENCODER_PPR, TIM6_FREQ_HZ, ENCODER_STALL_THRESHOLD);
 HallSensor hallsensor(GPIOB, GPIO_PIN_5, GPIOB, GPIO_PIN_8, GPIOE, GPIO_PIN_4);
 
 alignas(32) uint16_t adc1_proc_buffer[ADC1_BUF_LEN];
@@ -176,9 +178,11 @@ int main(void)
   MX_TIM2_Init();
   MX_TIM3_Init();
   MX_TIM4_Init();
+  MX_TIM5_Init();
   MX_TIM6_Init();
-  MX_TIM7_Init();
   MX_TIM8_Init();
+  MX_TIM12_Init();
+  MX_TIM15_Init();
   MX_TIM16_Init();
 
   /* USER CODE BEGIN 2 */
@@ -213,7 +217,7 @@ int main(void)
   if (binaryLogTimer.startIT() != HAL_OK) error_flag |= ERROR_TIM_CONFIG;
   if (speedControlTimer.startIT() != HAL_OK) error_flag |= ERROR_TIM_CONFIG;
 
-  if (usTimer.init() != HAL_OK) error_flag |= ERROR_TIM_CONFIG;
+  //if (usTimer.init() != HAL_OK) error_flag |= ERROR_TIM_CONFIG;
 
   if (encoder.start() != HAL_OK) error_flag |= ERROR_ENCODER_CONFIG;
 
@@ -353,7 +357,10 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
     printTelemetryUTF8();
   }
   else if (htim->Instance == TIM4) {
-    Encoder::irqHandlerOverflow();
+    Encoder::irqHandlerEncoderOverflow();
+  }
+  else if (htim->Instance == TIM15) {
+    Encoder::irqHandlerTimerOverflow();
   }
   else if (htim->Instance == TIM3) {
     // 2 Hz timer interrupt

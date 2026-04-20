@@ -4,9 +4,9 @@
 
 Encoder* Encoder::instance_ = nullptr;
 
-Encoder::Encoder(TIM_HandleTypeDef* htim, MicrosecondTimer timer, uint16_t index_pin, uint32_t pulses_per_rev, uint32_t speedloop_freq, uint8_t stall_threshold):
+Encoder::Encoder(TIM_HandleTypeDef* htim, TIM_HandleTypeDef* htim_t, uint16_t index_pin, uint32_t pulses_per_rev, uint32_t speedloop_freq, uint8_t stall_threshold):
     htim_(htim),
-    timer_(timer),
+    htim_t_(htim_t),
     indexPin_(index_pin),
     counts_per_rev_(pulses_per_rev * 4),
     speedloop_period(1.0f / (float)speedloop_freq),
@@ -34,10 +34,14 @@ uint16_t Encoder::calcElecOffset(uint16_t elec_zero_pos, uint16_t index_offset) 
 
 void Encoder::updateSpeed(void) {
     uint16_t current_hw_cnt = (uint16_t)htim_->Instance->CNT;
+    uint16_t t_period_ticks = (uint16_t)htim_t_->Instance->CCR1;
+    uint64_t current_ticks = HighResTimer::getTicks();
     
     // 1. Handle 16-bit signed delta (Handles 0-65535 wrap automatically)
     int16_t delta = (int16_t)(current_hw_cnt - last_hw_cnt_);
     last_hw_cnt_ = current_hw_cnt;
+    uint64_t delta_time_ticks = current_ticks - last_ticks_;
+    last_ticks_ = current_ticks;
 
     if (delta == 0) {
         stall_counter_++;
@@ -51,7 +55,18 @@ void Encoder::updateSpeed(void) {
     }
 
     // 2. RPM Calculation (Moving Average Filter)
-    float rpm_raw = ((float)delta / counts_per_rev_) * (60.0f / speedloop_period);
+    float rpm_raw;
+    if (use_m_method_) {
+        if (delta_time_ticks > 0) {
+            float dt = (float)delta_time_ticks / HighResTimer::TIMER_FREQ;
+            rpm_raw = ((float)delta / counts_per_rev_) * (60.0f / dt);
+        } else {
+            rpm_raw = 0.0f; // Avoid division by zero
+        }
+    }
+    else {
+        rpm_raw = ((float)TIM15_FREQ_HZ * 60.0f) / ((counts_per_rev_ >> 2) * (float)t_period_ticks);
+    }
         
     rpm_sum_ -= rpm_buffer_[filter_idx_];
     rpm_buffer_[filter_idx_] = rpm_raw;
@@ -62,6 +77,12 @@ void Encoder::updateSpeed(void) {
 
     //rpm = rpm_raw * 0.8f + rpm * 0.2f;
     rpm = filtered_rpm_;
+
+    if (rpm > ENCODER_MT_THRESHOLD + (ENCODER_MT_THRESHOLD * 0.2f)) {
+        use_m_method_ = true;
+    } else if (rpm < ENCODER_MT_THRESHOLD - (ENCODER_MT_THRESHOLD * 0.2f)) {
+        use_m_method_ = false;
+    }
 }
 
 void Encoder::counterOverflow(void) {
@@ -70,6 +91,10 @@ void Encoder::counterOverflow(void) {
         } else {
             overflow_count_++;
         }
+}
+
+void Encoder::timerOverflow(void) {
+    stall_counter_ = stall_threshold_;
 }
 
 void Encoder::init(void) {
@@ -83,8 +108,11 @@ void Encoder::init(void) {
     stall_counter_ = 0;
 }
 
-HAL_StatusTypeDef Encoder::start(void) {
-    return HAL_TIM_Encoder_Start(htim_, TIM_CHANNEL_ALL);
+HAL_StatusTypeDef Encoder::start(void) {    
+    HAL_StatusTypeDef status = HAL_OK;
+    if (HAL_TIM_Encoder_Start(htim_, TIM_CHANNEL_ALL) != HAL_OK) status = HAL_ERROR;
+    if (HAL_TIM_Base_Start_IT(htim_t_) != HAL_OK) status = HAL_ERROR;
+    return status;
 }
 
 void Encoder::elecZeroAlign(void) {
@@ -108,9 +136,15 @@ void Encoder::irqHandlerSpeed(void){
     }
 }
 
-void Encoder::irqHandlerOverflow(void) {
+void Encoder::irqHandlerEncoderOverflow(void) {
     if (instance_ != nullptr) {
         instance_->counterOverflow();
+    }
+}
+
+void Encoder::irqHandlerTimerOverflow(void) {
+    if (instance_ != nullptr) {
+        instance_->timerOverflow();
     }
 }
 
