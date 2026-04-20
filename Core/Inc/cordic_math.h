@@ -7,6 +7,9 @@
 #define SQRT3  1.73205080756887729352744634150587236f
 #define CORDIC_GAIN  1.64676025812107f
 
+#define CORDIC_BEGIN() uint32_t primask = __get_PRIMASK(); __disable_irq()
+#define CORDIC_END() __set_PRIMASK(primask)
+
 float normalize_rad(float angle_rad);
 
 int32_t float_to_q31(float angle_rad);

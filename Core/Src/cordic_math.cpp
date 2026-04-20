@@ -46,13 +46,14 @@ float wrap_to_pi(float angle_rad) {
 }
 
 void cordic::cordic_set_mode(uint32_t csr_value) {
-    if (current_csr != csr_value) {
+    //if (current_csr != csr_value) {
         CORDIC->CSR = csr_value;
-        current_csr = csr_value;
-    }
+        //current_csr = csr_value;
+    //}
 }
 
 void cordic::sincos(int32_t angle_q31, int32_t* sin_out, int32_t* cos_out) {
+    CORDIC_BEGIN();
     // Ensure CORDIC is in the correct mode for Cos/Sin calculations
     cordic_set_mode(CSR_COS_SIN);
     // CORDIC expects angles normalized between -1.0 and 1.0 (representing -PI to PI)
@@ -63,13 +64,14 @@ void cordic::sincos(int32_t angle_q31, int32_t* sin_out, int32_t* cos_out) {
     // Reading it pops the values out in the order they completed.
     *cos_out = CORDIC->RDATA;
     *sin_out = CORDIC->RDATA;
+    CORDIC_END();
 }
 
 void cordic::sincosf(float angle_rad, float* sin_out, float* cos_out) {
     int32_t s, c;
     cordic::sincos(float_to_q31(normalize_rad(wrap_to_pi(angle_rad))), &s, &c);
-    *sin_out = q31_to_float(*sin_out);
-    *cos_out = q31_to_float(*cos_out);
+    *sin_out = q31_to_float(s);
+    *cos_out = q31_to_float(c);
 }
 
 float cordic::sinf(float angle_rad) {
@@ -85,6 +87,7 @@ float cordic::cosf(float angle_rad) {
 }
 
 float cordic::hypotf(float x, float y) {
+    CORDIC_BEGIN();
     // Ensure CORDIC is in the correct mode for Hypotenuse calculations
     cordic_set_mode(CSR_HYPOT);
 
@@ -92,7 +95,10 @@ float cordic::hypotf(float x, float y) {
     float max_abs = fmaxf(fabsf(x), fabsf(y));
 
     // If both x and y are very close to zero, return zero to avoid division issues
-    if (max_abs < 1e-6f) return 0.0f;
+    if (max_abs < 1e-6f) {
+        CORDIC_END();
+        return 0.0f;
+    }
 
     // Scale down by max_abs * 2.5 to ensure the inputs fit well within the CORDIC range and maintain precision
     float x_norm = x / (max_abs * 2.5f);
@@ -104,10 +110,12 @@ float cordic::hypotf(float x, float y) {
 
     // Reading RDATA stalls the Cortex-M7 CPU for ~4-6 clock cycles until done.
     int32_t q31_mod = CORDIC->RDATA;
+    CORDIC_END();
     return q31_to_float(q31_mod) * (max_abs * 2.5f);
 }
 
 float cordic::atan2f(float y, float x) {
+    CORDIC_BEGIN();
     // Ensure CORDIC is in the correct mode for Atan2 calculations
     cordic_set_mode(CSR_ATAN2);
 
@@ -117,7 +125,10 @@ float cordic::atan2f(float y, float x) {
     float max_abs = (x_abs > y_abs) ? x_abs : y_abs;
 
     // If both x and y are very close to zero, return zero to avoid division issues
-    if (max_abs < 1e-6f) return 0.0f;
+    if (max_abs < 1e-6f) {
+        CORDIC_END();
+        return 0.0f;
+    }
 
     // Scale down by max_abs to ensure the inputs fit well within the CORDIC range and maintain precision
     float x_norm = x / max_abs;
@@ -129,5 +140,14 @@ float cordic::atan2f(float y, float x) {
 
     // Reading RDATA stalls the Cortex-M7 CPU for ~4-6 clock cycles until done.
     int32_t q31_angle = CORDIC->RDATA;
-    return q31_to_float(q31_angle) * M_PI;
+    CORDIC_END();
+
+    float angle = q31_to_float(q31_angle) * M_PI;
+    if (x < 0.0f) {
+        angle = (float)M_PI - angle;
+    }
+    if (y < 0.0f) {
+        angle = -angle;
+    }
+    return angle;
 }
