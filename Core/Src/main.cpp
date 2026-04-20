@@ -873,14 +873,16 @@ void speedControl(void) {
       if (target.speed < 0.0f) {
         target.speed = 0.0f;
         motorPWM.stop();
+        control_mode = MotorControlMode::MOTOR_STOP;
         relay.write(0);
       }
     }
-    else if (target.speed < 0.0f) {
+    else {
       target.speed += ramp_down_step;
       if (target.speed > 0.0f) {
         target.speed = 0.0f;
         motorPWM.stop();
+        control_mode = MotorControlMode::MOTOR_STOP;
         relay.write(0);
       }
     }
