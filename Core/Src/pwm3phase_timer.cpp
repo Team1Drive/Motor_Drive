@@ -210,13 +210,28 @@ HAL_StatusTypeDef ThreePhasePWMOut::setFrequency(uint32_t freq_Hz) {
     pwm_freq_Hz = freq_Hz;
     uint32_t timer_clock = HAL_RCC_GetPCLK2Freq();
     if (LL_RCC_GetAPB2Prescaler() != LL_RCC_APB2_DIV_1) timer_clock *= 2;
-    uint32_t psc = 0;
-    uint32_t arr = (uint32_t)(timer_clock / pwm_freq_Hz) - 1U;
-    if (arr > 0xFFFF) {
-        // Case for ARR overflow: increase prescaler to bring ARR within 16-bit range
-        psc = arr / 0xFFFF;
-        arr = (timer_clock / (pwm_freq_Hz * (psc + 1U))) - 1U;
+    uint32_t psc;
+    uint32_t arr;
+    if (LL_TIM_GetCounterMode(htim_->Instance) != LL_TIM_COUNTERMODE_UP && LL_TIM_GetCounterMode(htim_->Instance) != LL_TIM_COUNTERMODE_DOWN) {
+        timer_clock /= 2;
+        psc = 0;
+        arr = (uint32_t)(timer_clock / pwm_freq_Hz);
+        if (arr > 0xFFFF) {
+            // Case for ARR overflow: increase prescaler to bring ARR within 16-bit range
+            psc = arr / 0xFFFF;
+            arr = (timer_clock / (pwm_freq_Hz * (psc + 1U)));
+        }
     }
+    else {
+        psc = 0;
+        arr = (uint32_t)(timer_clock / pwm_freq_Hz) - 1U;
+        if (arr > 0xFFFF) {
+            // Case for ARR overflow: increase prescaler to bring ARR within 16-bit range
+            psc = arr / 0xFFFF;
+            arr = (timer_clock / (pwm_freq_Hz * (psc + 1U))) - 1U;
+        }
+    }
+    if (arr < 1) arr = 1;
     __HAL_TIM_SET_PRESCALER(htim_, psc);
     __HAL_TIM_SET_AUTORELOAD(htim_, arr);
 
