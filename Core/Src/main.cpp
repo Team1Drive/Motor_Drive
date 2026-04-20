@@ -934,13 +934,11 @@ void speedControl(void) {
 
   // Update the speed PI controller to adjust Iq reference based on the speed error
   float err_sp = foc_state.omega_ref - omega_m;
-  // In manual FOC mode, current setpoints are controlled directly by the user
-  if (control_mode != MotorControlMode::MOTOR_FOC_MANUAL) {
-    foc_state.Iq_ref = PI_update(&foc_state.pi_speed, err_sp, foc_state.ts * (float)FOC_SPEED_DIV);
-  }
+  float new_Iq_ref = PI_update(&foc_state.pi_speed, err_sp, foc_state.ts * (float)FOC_SPEED_DIV);
 
   float U_max_fw   = foc_state.Vdc / SQRT3;
   float u_mag_prev = foc_state.u_mag;
+  float new_Id_ref;
   if (fabsf(foc_state.omega_m) > 20.0f) {
       float fw_error = (U_max_fw - u_mag_prev) / fabsf(foc_state.omega_m);
       if (fw_error < 0.0f || foc_state.Id_ref < 0.0f) {
@@ -957,10 +955,18 @@ void speedControl(void) {
         // 方法2：指数衰减（更平滑）
         // foc_state.pi_fw.integral *= 0.99f;
       }
-      foc_state.Id_ref = foc_state.pi_fw.integrator;
+      new_Id_ref = foc_state.pi_fw.integrator;
   }else {
-      foc_state.Id_ref = 0.0f;
+      new_Id_ref = 0.0f;
       PI_reset(&foc_state.pi_fw);
+  }
+
+  // In manual FOC mode, current setpoints are controlled directly by the user
+  if (control_mode != MotorControlMode::MOTOR_FOC_MANUAL) {
+    __disable_irq();
+    foc_state.Iq_ref = new_Iq_ref;
+    foc_state.Id_ref = new_Id_ref;
+    __enable_irq();
   }
 }
 
