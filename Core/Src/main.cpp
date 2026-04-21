@@ -218,6 +218,7 @@ int main(void)
   if (speedControlTimer.startIT() != HAL_OK) error_flag |= ERROR_TIM_CONFIG;
 
   //if (usTimer.init() != HAL_OK) error_flag |= ERROR_TIM_CONFIG;
+  if (HighResTimer::start() != HAL_OK) error_flag |= ERROR_TIM_CONFIG;
 
   if (encoder.start() != HAL_OK) error_flag |= ERROR_ENCODER_CONFIG;
 

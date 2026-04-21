@@ -101,7 +101,7 @@ class HighResTimer {
     public:
         static constexpr uint32_t TIMER_FREQ = APB_CLOCK_FREQ_HZ;
 
-        static HAL_StatusTypeDef init(void) {
+        static HAL_StatusTypeDef start(void) {
             HAL_StatusTypeDef status = HAL_OK;
             if (HAL_TIM_Base_Start(&htim12) != HAL_OK) status = HAL_ERROR;
             if (HAL_TIM_Base_Start(&htim5) != HAL_OK) status = HAL_ERROR;
