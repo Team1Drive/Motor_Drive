@@ -38,6 +38,7 @@ void vvvfRampUp(void);
 void sixStepCommutation(void);
 
 void clearRunningFlags(void);
+void loadAdcCalibration(ADCGain_t* adc_gain, uint8_t preset_num);
 
 /* Forward declaration for FOC ISR helper */
 static void foc_isr_tick(void);
@@ -61,9 +62,11 @@ extern TIM_HandleTypeDef htim1;
 extern TIM_HandleTypeDef htim2;
 extern TIM_HandleTypeDef htim3;
 extern TIM_HandleTypeDef htim4;
+extern TIM_HandleTypeDef htim5;
 extern TIM_HandleTypeDef htim6;
-extern TIM_HandleTypeDef htim7;
 extern TIM_HandleTypeDef htim8;
+extern TIM_HandleTypeDef htim12;
+extern TIM_HandleTypeDef htim15;
 extern TIM_HandleTypeDef htim16;
 
 /* Declare ADC & DMA handles */
@@ -77,8 +80,6 @@ extern DMA_HandleTypeDef hdma_adc3;
 /* Custom Class Objects */
 ThreePhasePWMOut motorPWM(&htim8);
 
-MicrosecondTimer usTimer(&htim7);
-
 ADCSampler adc1(&hadc1, &hdma_adc1, adc1_buffer, ADC1_BUF_LEN);
 ADCSampler adc2(&hadc2, &hdma_adc2, adc2_buffer, ADC2_BUF_LEN);
 ADCSampler adc3(&hadc3, &hdma_adc3, adc3_buffer, ADC3_BUF_LEN);
@@ -88,7 +89,7 @@ Timer adcTimer(&htim1), printTimer(&htim2), ledTimer(&htim3), encoderTimer(&htim
 DigitalOut pwm_ch1_dis(GPIOA, GPIO_PIN_2), pwm_ch2_dis(GPIOB, GPIO_PIN_2), pwm_ch3_dis(GPIOB, GPIO_PIN_13);
 DigitalOut led_red(GPIOC, GPIO_PIN_9), led_green(GPIOA, GPIO_PIN_8), led_yellow_1(GPIOA, GPIO_PIN_9), led_yellow_2(GPIOA, GPIO_PIN_10);
 DigitalOut relay(GPIOD, GPIO_PIN_8);
-Encoder encoder(&htim4, usTimer, GPIO_PIN_9, ENCODER_PPR, TIM6_FREQ_HZ, ENCODER_STALL_THRESHOLD);
+Encoder encoder(&htim4, &htim15, GPIO_PIN_9, ENCODER_PPR, TIM6_FREQ_HZ, ENCODER_STALL_THRESHOLD);
 HallSensor hallsensor(GPIOB, GPIO_PIN_5, GPIOB, GPIO_PIN_8, GPIOE, GPIO_PIN_4);
 
 alignas(32) uint16_t adc1_proc_buffer[ADC1_BUF_LEN];
@@ -100,22 +101,8 @@ volatile MotorControlMode control_mode = MotorControlMode::MOTOR_STOP;
 volatile uint32_t system_flag = 0;
 volatile uint32_t error_flag = 0;
 
-ADCGain_t adc_gain = {
-    .ia_shunt = ADC_IA_SHUNT,
-    .ib_shunt = ADC_IB_SHUNT,
-    .ic_shunt = ADC_IC_SHUNT,
-    .ia_offset = ADC_IA_OFFSET,
-    .ib_offset = ADC_IB_OFFSET,
-    .ic_offset = ADC_IC_OFFSET,
-    .va_gain = ADC_VA_GAIN,
-    .vb_gain = ADC_VB_GAIN,
-    .va_offset = ADC_VA_OFFSET,
-    .vb_offset = ADC_VB_OFFSET,
-    .ibatt_shunt = ADC_IBATT_SHUNT,
-    .ibatt_offset = ADC_IBATT_OFFSET,
-    .vbatt_gain = ADC_VBATT_GAIN,
-    .vbatt_offset = ADC_VBATT_OFFSET
-};
+ADCGain_t adc_gain;
+
 volatile Target_t target = { .speed = 0.0f, .torque = 0.0f, .time = 0.0f };
 
 volatile uint32_t print_mask = 0;
@@ -176,9 +163,11 @@ int main(void)
   MX_TIM2_Init();
   MX_TIM3_Init();
   MX_TIM4_Init();
+  MX_TIM5_Init();
   MX_TIM6_Init();
-  MX_TIM7_Init();
   MX_TIM8_Init();
+  MX_TIM12_Init();
+  MX_TIM15_Init();
   MX_TIM16_Init();
 
   /* USER CODE BEGIN 2 */
@@ -213,7 +202,7 @@ int main(void)
   if (binaryLogTimer.startIT() != HAL_OK) error_flag |= ERROR_TIM_CONFIG;
   if (speedControlTimer.startIT() != HAL_OK) error_flag |= ERROR_TIM_CONFIG;
 
-  if (usTimer.init() != HAL_OK) error_flag |= ERROR_TIM_CONFIG;
+  if (HighResTimer::start() != HAL_OK) error_flag |= ERROR_TIM_CONFIG;
 
   if (encoder.start() != HAL_OK) error_flag |= ERROR_ENCODER_CONFIG;
 
@@ -225,6 +214,8 @@ int main(void)
   SCB_EnableDCache();
 
   usb_printf("HAL Initialized\n");
+
+  loadAdcCalibration(&adc_gain, 1);
   
   if (motorPWM.setFrequency(PWM_FREQ_DEFAULT_HZ) != HAL_OK) error_flag |= ERROR_PWM_CONFIG;
   if (motorPWM.setDeadTime(PWM_DEADTIME_DEFAULT_NS) != HAL_OK) error_flag |= ERROR_PWM_CONFIG;
@@ -353,7 +344,10 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
     printTelemetryUTF8();
   }
   else if (htim->Instance == TIM4) {
-    Encoder::irqHandlerOverflow();
+    Encoder::irqHandlerEncoderOverflow();
+  }
+  else if (htim->Instance == TIM15) {
+    Encoder::irqHandlerTimerOverflow();
   }
   else if (htim->Instance == TIM3) {
     // 2 Hz timer interrupt
@@ -941,31 +935,37 @@ void speedControl(void) {
 
   // Update the speed PI controller to adjust Iq reference based on the speed error
   float err_sp = foc_state.omega_ref - omega_m;
-  // In manual FOC mode, current setpoints are controlled directly by the user
-  if (control_mode != MotorControlMode::MOTOR_FOC_MANUAL) {
-    foc_state.Iq_ref = PI_update(&foc_state.pi_speed, err_sp, foc_state.ts_speed);
-  }
+  float new_Iq_ref = PI_update(&foc_state.pi_speed, err_sp, foc_state.ts_speed);
 
   float U_max_fw   = foc_state.Vdc / SQRT3;
   float u_mag_prev = foc_state.u_mag;
+  float new_Id_ref;
   if (fabsf(foc_state.omega_m) > 20.0f) {
       float fw_error = (U_max_fw - u_mag_prev) / fabsf(foc_state.omega_m);
       if (fw_error < 0.0f || foc_state.Id_ref < 0.0f) {
         // Only integrates when FW is requested or is already inside FW
-        foc_state.Id_ref = PI_update(&foc_state.pi_fw, fw_error, foc_state.ts_speed);
+        new_Id_ref = PI_update(&foc_state.pi_fw, fw_error, foc_state.ts_speed);
       }
       else {
         // Zero the integrator if FW is not needed
         // Method 1：Reset PI（Simple, faster）
-        foc_state.Id_ref = 0.0f;
+        new_Id_ref = 0.0f;
         PI_reset(&foc_state.pi_fw);
         // Method 2：Exponential decay（Smoother）
         // foc_state.pi_fw.integrator *= 0.99f;
-        // foc_state.Id_ref = foc_state.pi_fw.integrator;
+        // new_Id_ref = foc_state.pi_fw.integrator;
       }
   }else {
-      foc_state.Id_ref = 0.0f;
+      new_Id_ref = 0.0f;
       PI_reset(&foc_state.pi_fw);
+  }
+
+  // In manual FOC mode, current setpoints are controlled directly by the user
+  if (control_mode != MotorControlMode::MOTOR_FOC_MANUAL) {
+    __disable_irq();
+    foc_state.Iq_ref = new_Iq_ref;
+    foc_state.Id_ref = new_Id_ref;
+    __enable_irq();
   }
 }
 
@@ -1308,6 +1308,62 @@ void clearRunningFlags(void) {
     system_flag &= ~FLAG_FOC_RUNNING;
 
     foc_reset(&foc_state);
+}
+
+void loadAdcCalibration(ADCGain_t* adc_gain, uint8_t preset_num) {
+  switch (preset_num) {
+    case 1:
+      adc_gain->ia_shunt = ADC_IA_SHUNT_1;
+      adc_gain->ib_shunt = ADC_IB_SHUNT_1;
+      adc_gain->ic_shunt = ADC_IC_SHUNT_1;
+      adc_gain->ia_offset = ADC_IA_OFFSET_1;
+      adc_gain->ib_offset = ADC_IB_OFFSET_1;
+      adc_gain->ic_offset = ADC_IC_OFFSET_1;
+      adc_gain->va_gain = ADC_VA_GAIN_1;
+      adc_gain->vb_gain = ADC_VB_GAIN_1;
+      adc_gain->va_offset = ADC_VA_OFFSET_1;
+      adc_gain->vb_offset = ADC_VB_OFFSET_1;
+      adc_gain->ibatt_shunt = ADC_IBATT_SHUNT_1;
+      adc_gain->ibatt_offset = ADC_IBATT_OFFSET_1;
+      adc_gain->vbatt_gain = ADC_VBATT_GAIN_1;
+      adc_gain->vbatt_offset = ADC_VBATT_OFFSET_1;
+      adc_gain->preset = 1;
+      break;
+    case 2:
+      adc_gain->ia_shunt = ADC_IA_SHUNT_2;
+      adc_gain->ib_shunt = ADC_IB_SHUNT_2;
+      adc_gain->ic_shunt = ADC_IC_SHUNT_2;
+      adc_gain->ia_offset = ADC_IA_OFFSET_2;
+      adc_gain->ib_offset = ADC_IB_OFFSET_2;
+      adc_gain->ic_offset = ADC_IC_OFFSET_2;
+      adc_gain->va_gain = ADC_VA_GAIN_2;
+      adc_gain->vb_gain = ADC_VB_GAIN_2;
+      adc_gain->va_offset = ADC_VA_OFFSET_2;
+      adc_gain->vb_offset = ADC_VB_OFFSET_2;
+      adc_gain->ibatt_shunt = ADC_IBATT_SHUNT_2;
+      adc_gain->ibatt_offset = ADC_IBATT_OFFSET_2;
+      adc_gain->vbatt_gain = ADC_VBATT_GAIN_2;
+      adc_gain->vbatt_offset = ADC_VBATT_OFFSET_2;
+      adc_gain->preset = 2;
+      break;
+    default:
+      adc_gain->ia_shunt = 0.0f;
+      adc_gain->ib_shunt = 0.0f;
+      adc_gain->ic_shunt = 0.0f;
+      adc_gain->ia_offset = 0.0f;
+      adc_gain->ib_offset = 0.0f;
+      adc_gain->ic_offset = 0.0f;
+      adc_gain->va_gain = 1.0f;
+      adc_gain->vb_gain = 1.0f;
+      adc_gain->va_offset = 0.0f;
+      adc_gain->vb_offset = 0.0f;
+      adc_gain->ibatt_shunt = 0.0f;
+      adc_gain->ibatt_offset = 0.0f;
+      adc_gain->vbatt_gain = 1.0f;
+      adc_gain->vbatt_offset = 0.0f;
+      adc_gain->preset = 0;
+      break;
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1886,6 +1942,20 @@ void cmd_increment(int argc, char** argv) {
     } else {
         usb_printf("Unknown parameter '%s' or subsystem '%s'\r\n", param, subsys);
     }
+}
+
+/**
+ * @brief Command handler for "board" command.
+ * @note Loads predefined ADC calibration presets for different motor driver boards. Usage: "board 1" to load preset 1, "board 2" to load preset 2. If no argument is given, it prints the currently loaded preset number.
+ */
+void cmd_board(int argc, char** argv) {
+    if (argc != 2) {
+        usb_printf("Current ADC calibration preset: %d\r\n", adc_gain.preset);
+        return;
+    }
+    int id = atoi(argv[1]);
+    loadAdcCalibration(&adc_gain, id);
+    usb_printf("Loaded ADC calibration preset for board %d\r\n", adc_gain.preset);
 }
 
 /**

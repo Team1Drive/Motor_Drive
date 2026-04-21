@@ -2,6 +2,8 @@
 
 #include "stm32h7xx_hal.h"
 #include <cstdint>
+#include "main.h"
+#include "parameters.h"
 
 /**
  * @brief MicrosecondTimer class provides a high-resolution timer using a hardware timer peripheral. It allows tracking multiple independent timers using unique identifiers and provides functions to get elapsed time in microseconds, milliseconds, and seconds.
@@ -90,4 +92,48 @@ class MicrosecondTimer {
          * @return The elapsed time in microseconds since the last call to start() or reset() for the given identifier.
          */
         uint64_t reset(uint8_t identifier);
+};
+
+extern TIM_HandleTypeDef htim5;
+extern TIM_HandleTypeDef htim12;
+
+class HighResTimer {
+    public:
+        static constexpr uint32_t TIMER_FREQ = APB_CLOCK_FREQ_HZ;
+
+        static HAL_StatusTypeDef start(void) {
+            HAL_StatusTypeDef status = HAL_OK;
+            if (HAL_TIM_Base_Start(&htim12) != HAL_OK) status = HAL_ERROR;
+            if (HAL_TIM_Base_Start(&htim5) != HAL_OK) status = HAL_ERROR;
+            return status;
+        }
+
+        static inline uint64_t getTicks() {
+            uint32_t high1, high2, low;
+
+            // Double-read pattern to prevent race conditions during overflow
+            high1 = TIM12->CNT;
+            low   = TIM5->CNT;
+            high2 = TIM12->CNT;
+
+            if (high1 != high2) {
+                // An overflow occurred between reads; re-read low part
+                low = TIM5->CNT;
+                return (static_cast<uint64_t>(high2) << 32) | low;
+            }
+
+            return (static_cast<uint64_t>(high1) << 32) | low;
+        }
+
+        static inline uint64_t getTime_us() {
+            return (getTicks() * 1000000ULL) / TIMER_FREQ;
+        }
+
+        static inline float getTimef_us() {
+            return static_cast<float>(getTicks()) * (1000000.0f / TIMER_FREQ);
+        }
+
+        static inline uint64_t getTicksDelta(uint64_t last_ticks) {
+            return getTicks() - last_ticks;
+        }
 };
