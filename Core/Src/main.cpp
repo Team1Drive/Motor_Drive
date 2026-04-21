@@ -61,9 +61,11 @@ extern TIM_HandleTypeDef htim1;
 extern TIM_HandleTypeDef htim2;
 extern TIM_HandleTypeDef htim3;
 extern TIM_HandleTypeDef htim4;
+extern TIM_HandleTypeDef htim5;
 extern TIM_HandleTypeDef htim6;
-extern TIM_HandleTypeDef htim7;
 extern TIM_HandleTypeDef htim8;
+extern TIM_HandleTypeDef htim12;
+extern TIM_HandleTypeDef htim15;
 extern TIM_HandleTypeDef htim16;
 
 /* Declare ADC & DMA handles */
@@ -77,8 +79,6 @@ extern DMA_HandleTypeDef hdma_adc3;
 /* Custom Class Objects */
 ThreePhasePWMOut motorPWM(&htim8);
 
-MicrosecondTimer usTimer(&htim7);
-
 ADCSampler adc1(&hadc1, &hdma_adc1, adc1_buffer, ADC1_BUF_LEN);
 ADCSampler adc2(&hadc2, &hdma_adc2, adc2_buffer, ADC2_BUF_LEN);
 ADCSampler adc3(&hadc3, &hdma_adc3, adc3_buffer, ADC3_BUF_LEN);
@@ -88,7 +88,7 @@ Timer adcTimer(&htim1), printTimer(&htim2), ledTimer(&htim3), encoderTimer(&htim
 DigitalOut pwm_ch1_dis(GPIOA, GPIO_PIN_2), pwm_ch2_dis(GPIOB, GPIO_PIN_2), pwm_ch3_dis(GPIOB, GPIO_PIN_13);
 DigitalOut led_red(GPIOC, GPIO_PIN_9), led_green(GPIOA, GPIO_PIN_8), led_yellow_1(GPIOA, GPIO_PIN_9), led_yellow_2(GPIOA, GPIO_PIN_10);
 DigitalOut relay(GPIOD, GPIO_PIN_8);
-Encoder encoder(&htim4, usTimer, GPIO_PIN_9, ENCODER_PPR, TIM6_FREQ_HZ, ENCODER_STALL_THRESHOLD);
+Encoder encoder(&htim4, &htim15, GPIO_PIN_9, ENCODER_PPR, TIM6_FREQ_HZ, ENCODER_STALL_THRESHOLD);
 HallSensor hallsensor(GPIOB, GPIO_PIN_5, GPIOB, GPIO_PIN_8, GPIOE, GPIO_PIN_4);
 
 alignas(32) uint16_t adc1_proc_buffer[ADC1_BUF_LEN];
@@ -176,9 +176,11 @@ int main(void)
   MX_TIM2_Init();
   MX_TIM3_Init();
   MX_TIM4_Init();
+  MX_TIM5_Init();
   MX_TIM6_Init();
-  MX_TIM7_Init();
   MX_TIM8_Init();
+  MX_TIM12_Init();
+  MX_TIM15_Init();
   MX_TIM16_Init();
 
   /* USER CODE BEGIN 2 */
@@ -213,7 +215,7 @@ int main(void)
   if (binaryLogTimer.startIT() != HAL_OK) error_flag |= ERROR_TIM_CONFIG;
   if (speedControlTimer.startIT() != HAL_OK) error_flag |= ERROR_TIM_CONFIG;
 
-  if (usTimer.init() != HAL_OK) error_flag |= ERROR_TIM_CONFIG;
+  if (HighResTimer::start() != HAL_OK) error_flag |= ERROR_TIM_CONFIG;
 
   if (encoder.start() != HAL_OK) error_flag |= ERROR_ENCODER_CONFIG;
 
@@ -353,7 +355,10 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
     printTelemetryUTF8();
   }
   else if (htim->Instance == TIM4) {
-    Encoder::irqHandlerOverflow();
+    Encoder::irqHandlerEncoderOverflow();
+  }
+  else if (htim->Instance == TIM15) {
+    Encoder::irqHandlerTimerOverflow();
   }
   else if (htim->Instance == TIM3) {
     // 2 Hz timer interrupt
@@ -927,13 +932,11 @@ void speedControl(void) {
 
   // Update the speed PI controller to adjust Iq reference based on the speed error
   float err_sp = foc_state.omega_ref - omega_m;
-  // In manual FOC mode, current setpoints are controlled directly by the user
-  if (control_mode != MotorControlMode::MOTOR_FOC_MANUAL) {
-    foc_state.Iq_ref = PI_update(&foc_state.pi_speed, err_sp, foc_state.ts * (float)FOC_SPEED_DIV);
-  }
+  float new_Iq_ref = PI_update(&foc_state.pi_speed, err_sp, foc_state.ts * (float)FOC_SPEED_DIV);
 
   float U_max_fw   = foc_state.Vdc / SQRT3;
   float u_mag_prev = foc_state.u_mag;
+  float new_Id_ref;
   if (fabsf(foc_state.omega_m) > 20.0f) {
       float fw_error = (U_max_fw - u_mag_prev) / fabsf(foc_state.omega_m);
       if (fw_error < 0.0f || foc_state.Id_ref < 0.0f) {
@@ -950,10 +953,18 @@ void speedControl(void) {
         // 方法2：指数衰减（更平滑）
         // foc_state.pi_fw.integral *= 0.99f;
       }
-      foc_state.Id_ref = foc_state.pi_fw.integrator;
+      new_Id_ref = foc_state.pi_fw.integrator;
   }else {
-      foc_state.Id_ref = 0.0f;
+      new_Id_ref = 0.0f;
       PI_reset(&foc_state.pi_fw);
+  }
+
+  // In manual FOC mode, current setpoints are controlled directly by the user
+  if (control_mode != MotorControlMode::MOTOR_FOC_MANUAL) {
+    __disable_irq();
+    foc_state.Iq_ref = new_Iq_ref;
+    foc_state.Id_ref = new_Id_ref;
+    __enable_irq();
   }
 }
 

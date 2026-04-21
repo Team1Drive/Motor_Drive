@@ -3,6 +3,8 @@
 #define M_PI 3.14159265358979323846264338327950288f
 #define SQRT3 1.73205080756887729352744634150587236f
 
+#define APB_CLOCK_FREQ_HZ   275000000U // 275 MHz APB clock frequency (for timer calculations)
+
 #define RPM_TO_RAD_S        (2.0f * M_PI / 60.0f)
 #define RAD_S_TO_RPM        (60.0f / (2.0f * M_PI))
 
@@ -21,7 +23,7 @@
 #define ADC_IC_SHUNT        0.00181f // Ic channel gain (shunt resistor)
 #define ADC_IA_OFFSET       0.0037f // Ia channel offset
 #define ADC_IB_OFFSET       0.0046f // Ib channel offset
-#define ADC_IC_OFFSET       0.0048f // Ic channel offset
+#define ADC_IC_OFFSET       0.0042f // Ic channel offset
 #define ADC_VA_GAIN         0.0316f // Va channel gain (voltage divider)
 #define ADC_VB_GAIN         0.0316f // Vb channel gain (voltage divider)
 #define ADC_VA_OFFSET       0.0f // Va channel offset
@@ -32,6 +34,7 @@
 #define ADC_VBATT_OFFSET    0.0016f // Battery voltage channel offset
 
 #define TIM6_FREQ_HZ        1000U
+#define TIM15_FREQ_HZ       1000000U
 #define SPEEDLOOP_FREQ_HZ   1000U
 
 #define PWM_FREQ_DEFAULT_HZ 20000U
@@ -61,9 +64,10 @@
 #define BATTERY_OVERVOLTAGE_THRESHOLD   5.0f // Voltage threshold for overvoltage protection (in volts)
 
 #define ENCODER_PPR                 2048U // Pulses per revolution for the encoder
-#define ENCODER_MT_THRESHOLD        500U // Threshold in RPM for switching between M and T methods
+#define ENCODER_T_THRESHOLD         250U // Threshold in RPM for using T method (with hysteresis)
+#define ENCODER_M_THRESHOLD         700U // Threshold in RPM for using M method (with hysteresis)
 #define ENCODER_ONEPULSE_THRESHOLD  1000U // Threshold in RPM for using one pulse counting
-#define ENCODER_STALL_THRESHOLD     10U // Threshold for detecting stall
+#define ENCODER_STALL_THRESHOLD     100U // Threshold for detecting stall
 
 #define USTIMER_ENCODER_PULSE_ID    0U // Identifier for encoder pulse timing in the microsecond timer
 #define USTIMER_ENCODER_INDEX_ID    1U // Identifier for encoder index timing in the microsecond timer
@@ -177,10 +181,13 @@ TIM1: ADC trigger
 TIM2: 10 Hz interrupt
 TIM3: 4 Hz interrupt
 TIM4: Encoder pulse timing
+TIM5: Incremental counter at APB frequency
 TIM6: 1000 Hz interrupt
-TIM7: Microsecond timer
 TIM8: PWM generation for motor control
-TIM6: Speed loop timer (1000 Hz)
+TIM12: Upper 16 bits for TIM5 incremental counter (for microsecond timing)
+TIM15: Remapped TIM4 for encoder index timing
+TIM16: Speed loop timer (1000 Hz)
+
 
 
 ADC channel allocation

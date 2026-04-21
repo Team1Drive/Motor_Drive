@@ -4,9 +4,9 @@
 
 Encoder* Encoder::instance_ = nullptr;
 
-Encoder::Encoder(TIM_HandleTypeDef* htim, MicrosecondTimer timer, uint16_t index_pin, uint32_t pulses_per_rev, uint32_t speedloop_freq, uint8_t stall_threshold):
+Encoder::Encoder(TIM_HandleTypeDef* htim, TIM_HandleTypeDef* htim_t, uint16_t index_pin, uint32_t pulses_per_rev, uint32_t speedloop_freq, uint8_t stall_threshold):
     htim_(htim),
-    timer_(timer),
+    htim_t_(htim_t),
     indexPin_(index_pin),
     counts_per_rev_(pulses_per_rev * 4),
     speedloop_period(1.0f / (float)speedloop_freq),
@@ -33,12 +33,18 @@ uint16_t Encoder::calcElecOffset(uint16_t elec_zero_pos, uint16_t index_offset) 
 }
 
 void Encoder::updateSpeed(void) {
+    // ---------- 0. Read current hardware count and timer capture ----------
     uint16_t current_hw_cnt = (uint16_t)htim_->Instance->CNT;
+    uint16_t t_period_ticks = (uint16_t)htim_t_->Instance->CCR1;
+    uint64_t current_ticks = HighResTimer::getTicks();
     
-    // 1. Handle 16-bit signed delta (Handles 0-65535 wrap automatically)
+    // ---------- 1. Handle 16-bit signed delta (Handles 0-65535 wrap automatically) ----------
     int16_t delta = (int16_t)(current_hw_cnt - last_hw_cnt_);
     last_hw_cnt_ = current_hw_cnt;
+    uint64_t delta_time_ticks = current_ticks - last_ticks_;
+    last_ticks_ = current_ticks;
 
+    // ---------- 2. Stall Detection ----------
     if (delta == 0) {
         stall_counter_++;
     } else {
@@ -50,9 +56,41 @@ void Encoder::updateSpeed(void) {
         return;
     }
 
-    // 2. RPM Calculation (Moving Average Filter)
-    float rpm_raw = ((float)delta / counts_per_rev_) * (60.0f / speedloop_period);
+    // ---------- 3. RPM Calculation (Moving Average Filter) ----------
+    float rpm_raw_m, rpm_raw_t;
+
+    // 3.a M method RPM (based on pulse interval)
+    if (delta_time_ticks > 0) {
+        float dt = (float)delta_time_ticks / HighResTimer::TIMER_FREQ;
+        rpm_raw_m = ((float)delta / counts_per_rev_) * (60.0f / dt);
+    }
+    else {
+        rpm_raw_m = 0.0f; // Avoid division by zero
+    }
+
+    // 3.b T method RPM (based on timer capture)
+    if (t_period_ticks > 0) {
+        rpm_raw_t = ((float)TIM15_FREQ_HZ * 60.0f) / ((counts_per_rev_ >> 2) * (float)t_period_ticks);
+    }
+    else {
+        rpm_raw_t = 0.0f; // Avoid division by zero
+    }
+    if (__HAL_TIM_IS_TIM_COUNTING_DOWN(htim_)) rpm_raw_t = -rpm_raw_t;
+
+    // 4. Linear interpolation weights (based on the absolute speed after filtering in the previous cycle)
+    float abs_rpm = fabsf(rpm);
+    float alpha = 0.0f;  // Weight for M method
+    if (abs_rpm >= ENCODER_M_THRESHOLD) {
+        alpha = 1.0f;
+    } else if (abs_rpm <= ENCODER_T_THRESHOLD) {
+        alpha = 0.0f;
+    } else {
+        alpha = (abs_rpm - ENCODER_T_THRESHOLD) / (ENCODER_M_THRESHOLD - ENCODER_T_THRESHOLD);
+    }
+    float rpm_raw = alpha * rpm_raw_m + (1.0f - alpha) * rpm_raw_t;    
+    if (std::isnan(rpm_raw_m) || std::isinf(rpm_raw_m)) rpm_raw_m = 0.0f;
         
+    // 5. Update moving average filter
     rpm_sum_ -= rpm_buffer_[filter_idx_];
     rpm_buffer_[filter_idx_] = rpm_raw;
     rpm_sum_ += rpm_raw;
@@ -72,6 +110,10 @@ void Encoder::counterOverflow(void) {
         }
 }
 
+void Encoder::timerOverflow(void) {
+    stall_counter_ = stall_threshold_;
+}
+
 void Encoder::init(void) {
     overflow_count_ = 0;
     index_offset_ = 0;
@@ -80,11 +122,19 @@ void Encoder::init(void) {
     is_synchronized_ = false;
     is_zeroed_ = false;
     rpm = 0.0f;
+    for (uint8_t i = 0; i < 10; i++) {
+        rpm_buffer_[i] = 0.0f;
+    }
     stall_counter_ = 0;
 }
 
-HAL_StatusTypeDef Encoder::start(void) {
-    return HAL_TIM_Encoder_Start(htim_, TIM_CHANNEL_ALL);
+HAL_StatusTypeDef Encoder::start(void) {    
+    HAL_StatusTypeDef status = HAL_OK;
+    if (HAL_TIM_Encoder_Start(htim_, TIM_CHANNEL_ALL) != HAL_OK) status = HAL_ERROR;
+    __HAL_TIM_URS_ENABLE(htim_t_);
+    if (HAL_TIM_Base_Start_IT(htim_t_) != HAL_OK) status = HAL_ERROR;
+    if (HAL_TIM_IC_Start(htim_t_, TIM_CHANNEL_1) != HAL_OK) status = HAL_ERROR;
+    return status;
 }
 
 void Encoder::elecZeroAlign(void) {
@@ -108,9 +158,15 @@ void Encoder::irqHandlerSpeed(void){
     }
 }
 
-void Encoder::irqHandlerOverflow(void) {
+void Encoder::irqHandlerEncoderOverflow(void) {
     if (instance_ != nullptr) {
         instance_->counterOverflow();
+    }
+}
+
+void Encoder::irqHandlerTimerOverflow(void) {
+    if (instance_ != nullptr) {
+        instance_->timerOverflow();
     }
 }
 
@@ -121,6 +177,9 @@ void Encoder::reset(void) {
     last_hw_cnt_ = 0;
     is_synchronized_ = false;
     rpm = 0.0f;
+    for (uint8_t i = 0; i < 10; i++) {
+        rpm_buffer_[i] = 0.0f;
+    }
     stall_counter_ = 0;
 }
 
