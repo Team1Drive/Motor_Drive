@@ -79,8 +79,6 @@ extern DMA_HandleTypeDef hdma_adc3;
 /* Custom Class Objects */
 ThreePhasePWMOut motorPWM(&htim8);
 
-//MicrosecondTimer usTimer(&htim7);
-
 ADCSampler adc1(&hadc1, &hdma_adc1, adc1_buffer, ADC1_BUF_LEN);
 ADCSampler adc2(&hadc2, &hdma_adc2, adc2_buffer, ADC2_BUF_LEN);
 ADCSampler adc3(&hadc3, &hdma_adc3, adc3_buffer, ADC3_BUF_LEN);
@@ -217,7 +215,6 @@ int main(void)
   if (binaryLogTimer.startIT() != HAL_OK) error_flag |= ERROR_TIM_CONFIG;
   if (speedControlTimer.startIT() != HAL_OK) error_flag |= ERROR_TIM_CONFIG;
 
-  //if (usTimer.init() != HAL_OK) error_flag |= ERROR_TIM_CONFIG;
   if (HighResTimer::start() != HAL_OK) error_flag |= ERROR_TIM_CONFIG;
 
   if (encoder.start() != HAL_OK) error_flag |= ERROR_ENCODER_CONFIG;
