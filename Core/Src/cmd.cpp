@@ -16,6 +16,7 @@ extern void cmd_duty(int argc, char** argv);
 extern void cmd_vec(int argc, char** argv);
 extern void cmd_tune(int argc, char** argv);
 extern void cmd_increment(int argc, char** argv);
+extern void cmd_board(int argc, char** argv);
 extern void cmd_log(int argc, char** argv);
 extern void cmd_audible(int argc, char** argv);
 
@@ -32,6 +33,7 @@ static const cmd_entry_t cmd_table[] = {
     { "tune",        cmd_tune,        4,    4,  "Usage: tune <subsys> <param> <value>\r\n"      }, // e.g., "tune speed p 0.1" = 4 tokens
     { "increment",   cmd_increment,   4,    4,  "Usage: increment <subsys> <param> <value>\r\n" }, // e.g., "increment speed p 0.1" = 4 tokens
     { "log",         cmd_log,         2,    3,  "Usage: log <add|rm|preset|utf8|bin> [var]\r\n" },
+    { "board",       cmd_board,       1,    2,  "Usage: board <1|2|3>\r\n"                      },
     { "audible",     cmd_audible,     1,    1,  "Usage: audible\r\n"                            }
 };
 

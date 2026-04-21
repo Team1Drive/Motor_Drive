@@ -1315,6 +1315,7 @@ void loadAdcCalibration(ADCGain_t* adc_gain, uint8_t preset_num) {
       adc_gain->ibatt_offset = ADC_IBATT_OFFSET_1;
       adc_gain->vbatt_gain = ADC_VBATT_GAIN_1;
       adc_gain->vbatt_offset = ADC_VBATT_OFFSET_1;
+      adc_gain->preset = 1;
       break;
     case 2:
       adc_gain->ia_shunt = ADC_IA_SHUNT_2;
@@ -1331,6 +1332,7 @@ void loadAdcCalibration(ADCGain_t* adc_gain, uint8_t preset_num) {
       adc_gain->ibatt_offset = ADC_IBATT_OFFSET_2;
       adc_gain->vbatt_gain = ADC_VBATT_GAIN_2;
       adc_gain->vbatt_offset = ADC_VBATT_OFFSET_2;
+      adc_gain->preset = 2;
       break;
     default:
       adc_gain->ia_shunt = 0.0f;
@@ -1347,6 +1349,7 @@ void loadAdcCalibration(ADCGain_t* adc_gain, uint8_t preset_num) {
       adc_gain->ibatt_offset = 0.0f;
       adc_gain->vbatt_gain = 1.0f;
       adc_gain->vbatt_offset = 0.0f;
+      adc_gain->preset = 0;
       break;
   }
 }
@@ -1927,6 +1930,20 @@ void cmd_increment(int argc, char** argv) {
     } else {
         usb_printf("Unknown parameter '%s' or subsystem '%s'\r\n", param, subsys);
     }
+}
+
+/**
+ * @brief Command handler for "board" command.
+ * @note Loads predefined ADC calibration presets for different motor driver boards. Usage: "board 1" to load preset 1, "board 2" to load preset 2. If no argument is given, it prints the currently loaded preset number.
+ */
+void cmd_board(int argc, char** argv) {
+    if (argc != 2) {
+        usb_printf("Current ADC calibration preset: %d\r\n", adc_gain.preset);
+        return;
+    }
+    int id = atoi(argv[1]);
+    loadAdcCalibration(&adc_gain, id);
+    usb_printf("Loaded ADC calibration preset for board %d\r\n", adc_gain.preset);
 }
 
 /**
