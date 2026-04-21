@@ -38,6 +38,7 @@ void vvvfRampUp(void);
 void sixStepCommutation(void);
 
 void clearRunningFlags(void);
+void loadAdcCalibration(ADCGain_t* adc_gain, uint8_t preset_num);
 
 /* Forward declaration for FOC ISR helper */
 static void foc_isr_tick(void);
@@ -100,22 +101,8 @@ volatile MotorControlMode control_mode = MotorControlMode::MOTOR_STOP;
 volatile uint32_t system_flag = 0;
 volatile uint32_t error_flag = 0;
 
-ADCGain_t adc_gain = {
-    .ia_shunt = ADC_IA_SHUNT,
-    .ib_shunt = ADC_IB_SHUNT,
-    .ic_shunt = ADC_IC_SHUNT,
-    .ia_offset = ADC_IA_OFFSET,
-    .ib_offset = ADC_IB_OFFSET,
-    .ic_offset = ADC_IC_OFFSET,
-    .va_gain = ADC_VA_GAIN,
-    .vb_gain = ADC_VB_GAIN,
-    .va_offset = ADC_VA_OFFSET,
-    .vb_offset = ADC_VB_OFFSET,
-    .ibatt_shunt = ADC_IBATT_SHUNT,
-    .ibatt_offset = ADC_IBATT_OFFSET,
-    .vbatt_gain = ADC_VBATT_GAIN,
-    .vbatt_offset = ADC_VBATT_OFFSET
-};
+ADCGain_t adc_gain;
+
 volatile Target_t target = { .speed = 0.0f, .torque = 0.0f, .time = 0.0f };
 
 volatile uint32_t print_mask = 0;
@@ -227,6 +214,8 @@ int main(void)
   SCB_EnableDCache();
 
   usb_printf("HAL Initialized\n");
+
+  loadAdcCalibration(&adc_gain, 1);
   
   if (motorPWM.setFrequency(PWM_FREQ_DEFAULT_HZ) != HAL_OK) error_flag |= ERROR_PWM_CONFIG;
   if (motorPWM.setDeadTime(1000) != HAL_OK) error_flag |= ERROR_PWM_CONFIG;
@@ -1307,6 +1296,59 @@ void clearRunningFlags(void) {
     system_flag &= ~FLAG_FOC_RUNNING;
 
     foc_reset(&foc_state);
+}
+
+void loadAdcCalibration(ADCGain_t* adc_gain, uint8_t preset_num) {
+  switch (preset_num) {
+    case 1:
+      adc_gain->ia_shunt = ADC_IA_SHUNT_1;
+      adc_gain->ib_shunt = ADC_IB_SHUNT_1;
+      adc_gain->ic_shunt = ADC_IC_SHUNT_1;
+      adc_gain->ia_offset = ADC_IA_OFFSET_1;
+      adc_gain->ib_offset = ADC_IB_OFFSET_1;
+      adc_gain->ic_offset = ADC_IC_OFFSET_1;
+      adc_gain->va_gain = ADC_VA_GAIN_1;
+      adc_gain->vb_gain = ADC_VB_GAIN_1;
+      adc_gain->va_offset = ADC_VA_OFFSET_1;
+      adc_gain->vb_offset = ADC_VB_OFFSET_1;
+      adc_gain->ibatt_shunt = ADC_IBATT_SHUNT_1;
+      adc_gain->ibatt_offset = ADC_IBATT_OFFSET_1;
+      adc_gain->vbatt_gain = ADC_VBATT_GAIN_1;
+      adc_gain->vbatt_offset = ADC_VBATT_OFFSET_1;
+      break;
+    case 2:
+      adc_gain->ia_shunt = ADC_IA_SHUNT_2;
+      adc_gain->ib_shunt = ADC_IB_SHUNT_2;
+      adc_gain->ic_shunt = ADC_IC_SHUNT_2;
+      adc_gain->ia_offset = ADC_IA_OFFSET_2;
+      adc_gain->ib_offset = ADC_IB_OFFSET_2;
+      adc_gain->ic_offset = ADC_IC_OFFSET_2;
+      adc_gain->va_gain = ADC_VA_GAIN_2;
+      adc_gain->vb_gain = ADC_VB_GAIN_2;
+      adc_gain->va_offset = ADC_VA_OFFSET_2;
+      adc_gain->vb_offset = ADC_VB_OFFSET_2;
+      adc_gain->ibatt_shunt = ADC_IBATT_SHUNT_2;
+      adc_gain->ibatt_offset = ADC_IBATT_OFFSET_2;
+      adc_gain->vbatt_gain = ADC_VBATT_GAIN_2;
+      adc_gain->vbatt_offset = ADC_VBATT_OFFSET_2;
+      break;
+    default:
+      adc_gain->ia_shunt = 0.0f;
+      adc_gain->ib_shunt = 0.0f;
+      adc_gain->ic_shunt = 0.0f;
+      adc_gain->ia_offset = 0.0f;
+      adc_gain->ib_offset = 0.0f;
+      adc_gain->ic_offset = 0.0f;
+      adc_gain->va_gain = 1.0f;
+      adc_gain->vb_gain = 1.0f;
+      adc_gain->va_offset = 0.0f;
+      adc_gain->vb_offset = 0.0f;
+      adc_gain->ibatt_shunt = 0.0f;
+      adc_gain->ibatt_offset = 0.0f;
+      adc_gain->vbatt_gain = 1.0f;
+      adc_gain->vbatt_offset = 0.0f;
+      break;
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
