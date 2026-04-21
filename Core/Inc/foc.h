@@ -103,7 +103,7 @@
 #define FOC_SPEED_DIV       20U
 
 /** Speed ramp rate (mechanical rad/s²). From MATLAB: 5000 RPM/s */
-#define FOC_RAMP_RATE       1000.0f
+#define FOC_RAMP_RATE       3000.0f
 
 /* =========================================================================
  * PI GAINS
