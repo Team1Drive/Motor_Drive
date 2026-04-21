@@ -23,7 +23,7 @@
 #define ADC_IC_SHUNT        0.00181f // Ic channel gain (shunt resistor)
 #define ADC_IA_OFFSET       0.0037f // Ia channel offset
 #define ADC_IB_OFFSET       0.0046f // Ib channel offset
-#define ADC_IC_OFFSET       0.0048f // Ic channel offset
+#define ADC_IC_OFFSET       0.0042f // Ic channel offset
 #define ADC_VA_GAIN         0.0316f // Va channel gain (voltage divider)
 #define ADC_VB_GAIN         0.0316f // Vb channel gain (voltage divider)
 #define ADC_VA_OFFSET       0.0f // Va channel offset
@@ -64,7 +64,8 @@
 #define BATTERY_OVERVOLTAGE_THRESHOLD   5.0f // Voltage threshold for overvoltage protection (in volts)
 
 #define ENCODER_PPR                 2048U // Pulses per revolution for the encoder
-#define ENCODER_MT_THRESHOLD        262U // Threshold in RPM for switching between M and T methods
+#define ENCODER_T_THRESHOLD         250U // Threshold in RPM for using T method (with hysteresis)
+#define ENCODER_M_THRESHOLD         700U // Threshold in RPM for using M method (with hysteresis)
 #define ENCODER_ONEPULSE_THRESHOLD  1000U // Threshold in RPM for using one pulse counting
 #define ENCODER_STALL_THRESHOLD     100U // Threshold for detecting stall
 

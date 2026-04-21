@@ -25,7 +25,6 @@ class Encoder {
         volatile uint64_t last_ticks_;
         volatile bool zero_aligned_;
 
-        bool use_m_method_;
         float rpm;
         float filtered_rpm_;
         float rpm_buffer_[10];
