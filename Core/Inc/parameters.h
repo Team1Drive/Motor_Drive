@@ -55,7 +55,8 @@
 #define TIM15_FREQ_HZ       1000000U
 #define SPEEDLOOP_FREQ_HZ   1000U
 
-#define PWM_FREQ_DEFAULT_HZ 20000U
+#define PWM_FREQ_DEFAULT_HZ         20000U
+#define PWM_DEADTIME_DEFAULT_NS     1000U
 
 #define MOTOR_POLE_PAIRS            4U
 

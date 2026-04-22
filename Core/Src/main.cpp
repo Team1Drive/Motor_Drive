@@ -218,7 +218,7 @@ int main(void)
   loadAdcCalibration(&adc_gain, 1);
   
   if (motorPWM.setFrequency(PWM_FREQ_DEFAULT_HZ) != HAL_OK) error_flag |= ERROR_PWM_CONFIG;
-  if (motorPWM.setDeadTime(1000) != HAL_OK) error_flag |= ERROR_PWM_CONFIG;
+  if (motorPWM.setDeadTime(PWM_DEADTIME_DEFAULT_NS) != HAL_OK) error_flag |= ERROR_PWM_CONFIG;
   
   /* Initialise FOC controller */
   foc_init(&foc_state);
@@ -519,6 +519,7 @@ void printTelemetryUTF8(void) {
     adc3.getLatestDataMean(adc3_raw, FOC_OVERSAMPLING_SIZE);
 
     ic = adcToCurrent(adc3_raw[0], 3.3f, 4096, 50.0f, 1.65f + adc_gain.ic_offset, adc_gain.ic_shunt);
+    //ic = -ia - ib;
     ibatt = adcToCurrent(adc3_raw[1], 3.3f, 4096, 50.0f, 1.65f + adc_gain.ibatt_offset, adc_gain.ibatt_shunt);
 
     ic_max.newValue(fabsf(ic));
@@ -532,7 +533,10 @@ void printTelemetryUTF8(void) {
     pos += snprintf(buffer + pos, sizeof(buffer) - pos, "rpm %.2f ", encoder.getRPM());
   }
   if (print_mask & PRINT_RPMSP) {
-    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "rpmsp %.2f ", foc_state.target_rpm);
+    float val;
+    if (control_mode == MotorControlMode::MOTOR_FOC_LINEAR || control_mode == MotorControlMode::MOTOR_FOC_DPWM) val = foc_state.target_rpm;
+    else val = target.speed;
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "rpmsp %.2f ", val);
   }
   if (print_mask & PRINT_POS) {
     pos += snprintf(buffer + pos, sizeof(buffer) - pos, "pos %u ", encoder.getPos());
@@ -677,6 +681,7 @@ void printTelemetryBinary(void) {
     adc3.getLatestDataMean(adc3_raw, FOC_OVERSAMPLING_SIZE);
 
     ic = adcToCurrent(adc3_raw[0], 3.3f, 4096, 50.0f, 1.65f + adc_gain.ic_offset, adc_gain.ic_shunt);
+    //ic = -ia - ib;
     ibatt = adcToCurrent(adc3_raw[1], 3.3f, 4096, 50.0f, 1.65f + adc_gain.ibatt_offset, adc_gain.ibatt_shunt);
 
     ic_max.newValue(fabsf(ic));
@@ -700,7 +705,9 @@ void printTelemetryBinary(void) {
     ptr += 4;
   }
   if (print_mask & PRINT_RPMSP) {
-    float val = foc_state.target_rpm;
+    float val;
+    if (control_mode == MotorControlMode::MOTOR_FOC_LINEAR || control_mode == MotorControlMode::MOTOR_FOC_DPWM) val = foc_state.target_rpm;
+    else val = target.speed;
     memcpy(ptr, &val, 4);
     ptr += 4;
   }
@@ -857,14 +864,28 @@ void printTelemetryBinary(void) {
 void speedControl(void) {
   static float ramp_speed_increment = 0.0f;
   static uint32_t ramp_tick = 0;
+
+  foc_state.ts_speed = 1.0f / (float)speedControlTimer.getFrequency();
   
   if ((system_flag & FLAG_FOC_RUNNING) == 0) {
-    float ramp_down_step = FOC_RAMP_RATE / (float)SPEEDLOOP_FREQ_HZ;
-    target.speed -= ramp_down_step;
-    if (target.speed < 0.0f) {
-      target.speed = 0.0f;
-      motorPWM.stop();
-      relay.write(0);
+    float ramp_down_step = FOC_RAMP_RATE * foc_state.ts_speed;
+    if (target.speed > 0.0f){
+      target.speed -= ramp_down_step;
+      if (target.speed < 0.0f) {
+        target.speed = 0.0f;
+        motorPWM.stop();
+        control_mode = MotorControlMode::MOTOR_STOP;
+        relay.write(0);
+      }
+    }
+    else {
+      target.speed += ramp_down_step;
+      if (target.speed > 0.0f) {
+        target.speed = 0.0f;
+        motorPWM.stop();
+        control_mode = MotorControlMode::MOTOR_STOP;
+        relay.write(0);
+      }
     }
   }
 
@@ -921,7 +942,7 @@ void speedControl(void) {
 
   // Update the speed PI controller to adjust Iq reference based on the speed error
   float err_sp = foc_state.omega_ref - omega_m;
-  float new_Iq_ref = PI_update(&foc_state.pi_speed, err_sp, foc_state.ts * (float)FOC_SPEED_DIV);
+  float new_Iq_ref = PI_update(&foc_state.pi_speed, err_sp, foc_state.ts_speed);
 
   float U_max_fw   = foc_state.Vdc / SQRT3;
   float u_mag_prev = foc_state.u_mag;
@@ -930,19 +951,17 @@ void speedControl(void) {
       float fw_error = (U_max_fw - u_mag_prev) / fabsf(foc_state.omega_m);
       if (fw_error < 0.0f || foc_state.Id_ref < 0.0f) {
         // Only integrates when FW is requested or is already inside FW
-        foc_state.pi_fw.integrator += foc_state.pi_fw.ki * fw_error * foc_state.ts * (float)FOC_SPEED_DIV;
-        // Clamp the integrator below 0
-        if (foc_state.pi_fw.integrator > 0.0f) foc_state.pi_fw.integrator = 0.0f;
-        if (foc_state.pi_fw.integrator < FOC_ID_FW_MIN) foc_state.pi_fw.integrator = FOC_ID_FW_MIN;
+        new_Id_ref = PI_update(&foc_state.pi_fw, fw_error, foc_state.ts_speed);
       }
       else {
         // Zero the integrator if FW is not needed
-        // 方法1：直接清零（简单，退出快）
-        foc_state.pi_fw.integrator = 0.0f;
-        // 方法2：指数衰减（更平滑）
-        // foc_state.pi_fw.integral *= 0.99f;
+        // Method 1：Reset PI（Simple, faster）
+        new_Id_ref = 0.0f;
+        PI_reset(&foc_state.pi_fw);
+        // Method 2：Exponential decay（Smoother）
+        // foc_state.pi_fw.integrator *= 0.99f;
+        // new_Id_ref = foc_state.pi_fw.integrator;
       }
-      new_Id_ref = foc_state.pi_fw.integrator;
   }else {
       new_Id_ref = 0.0f;
       PI_reset(&foc_state.pi_fw);
@@ -1074,7 +1093,7 @@ void startUpSequence(MotorControlMode mode) {
     case MotorControlMode::MOTOR_FOC_LINEAR:
       foc_reset(&foc_state);
       // Set initial FOC state for linear startup
-      target.speed = FOC_INITIAL_RPM;
+      if (target.speed == 0.0f) target.speed = FOC_INITIAL_RPM;
       control_mode = MotorControlMode::MOTOR_FOC_LINEAR;
       system_flag |= FLAG_FOC_RUNNING;
       speedControl();
@@ -1083,6 +1102,7 @@ void startUpSequence(MotorControlMode mode) {
       break;
     case MotorControlMode::MOTOR_VVVF:
       foc_reset(&foc_state);
+      if (target.speed == 0.0f) target.speed = FOC_INITIAL_RPM;
       hallsensor.read();
       system_flag |= FLAG_VVVF_RAMP_UP;
       control_mode = MotorControlMode::MOTOR_VVVF;
@@ -1107,13 +1127,11 @@ void vvvfRampUp(void) {
   const uint32_t ramp_up = VVVF_RAMP_UP_SPEED; // RPM/s
   static float rpm;  
   static float angle;
-  static bool accelerating;
 
   // Initialize on zero speed starting
   if ((system_flag & FLAG_VVVF_RUNNING) == 0) {
     rpm = 0.0f;
     angle = 0.0f;
-    accelerating = true;
     system_flag |= FLAG_VVVF_RUNNING;
   }
 
@@ -1172,11 +1190,19 @@ void vvvfRampUp(void) {
 
   // Ramp up or down the speed
   if (system_flag & FLAG_VVVF_RAMP_UP) {
-    if (accelerating) {
+    if ((rpm < VVVF_MAX_RPM >> 1) && (rpm < target.speed / 2)) {
       rpm += step_increment;
       if (rpm >= VVVF_MAX_RPM >> 1) {
         rpm = VVVF_MAX_RPM >> 1;
-        accelerating = false;
+      }
+      else if (rpm >= (target.speed / 2)) {
+        rpm = target.speed / 2;
+      }
+    }
+    else if (rpm > (target.speed / 2)) {
+      rpm -= step_increment;
+      if (rpm <= (target.speed / 2)) {
+        rpm = target.speed / 2;
       }
     }
   }
@@ -1437,12 +1463,14 @@ void cmd_reset(int argc, char** argv) {
  */
 void cmd_foc(int argc, char** argv) {
     if (strcmp(argv[1], "status") == 0 || strcmp(argv[1], "stat") == 0) {
-        usb_printf("RPM=%.1f  Id=%.3fA  Iq=%.3fA  Vd=%.2fV  Vq=%.2fV  Vdc=%.2fV  |u|=%.2fV  fault=%d\r\n",
+        usb_printf("RPM=%.1f  Id=%.3fA  Iq=%.3fA  Vd=%.2fV  Vq=%.2fV  Vdc=%.2fV  |u|=%.2fV  fault=%d\r\nCurrent loop frequency: %.1f Hz  Speed loop frequency: %.1f Hz\r\n",
                   foc_state.rpm,
                   foc_state.Id, foc_state.Iq,
                   foc_state.Vd_cmd, foc_state.Vq_cmd,
                   foc_state.Vdc, foc_state.u_mag,
-                  (int)foc_state.fault);
+                  (int)foc_state.fault,
+                  1.0f / foc_state.ts,
+                  1.0f / foc_state.ts_speed);
     }
     else if (strcmp(argv[1], "manual") == 0) {
         control_mode = MotorControlMode::MOTOR_FOC_MANUAL;
@@ -2215,6 +2243,7 @@ void focTick(void) {
     float ia = adcToCurrent(adc1.getLatestChannelMean(0, FOC_OVERSAMPLING_SIZE), 3.3f, 65536, 50.0f, 1.65f + adc_gain.ia_offset, adc_gain.ia_shunt);
     float ib = adcToCurrent(adc2.getLatestChannelMean(0, FOC_OVERSAMPLING_SIZE), 3.3f, 65536, 50.0f, 1.65f + adc_gain.ib_offset, adc_gain.ib_shunt);
     float ic = adcToCurrent(adc3.getLatestChannelMean(0, FOC_OVERSAMPLING_SIZE), 3.3f, 4096, 50.0f, 1.65f + adc_gain.ic_offset, adc_gain.ic_shunt);
+    //float ic = -ia - ib;
     float vdc = adcToVoltage(adc1.getLatestChannelMean(2, FOC_OVERSAMPLING_SIZE), 3.3f, 65536, adc_gain.vbatt_gain, adc_gain.vbatt_offset);
 
     float theta_e = encoder.getElecPos_rad();

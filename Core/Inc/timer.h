@@ -1,6 +1,8 @@
 #pragma once
 
 #include "stm32h7xx_hal.h"
+#include "stm32h7xx_ll_rcc.h"
+#include "stm32h7xx_ll_tim.h"
 #include <cstdint>
 
 class Timer {
@@ -10,6 +12,8 @@ class Timer {
         uint32_t frequency;
 
         static uint32_t getInstanceIndex(TIM_HandleTypeDef* htim);
+
+        void updateFrequency(void);
 
         void interruptHandler(void);
 
@@ -26,5 +30,5 @@ class Timer {
 
         HAL_StatusTypeDef setFrequency(uint32_t freq_Hz);
 
-        uint32_t getFrequency(void) const;
+        uint32_t getFrequency(void);
 };
