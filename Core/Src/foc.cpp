@@ -43,7 +43,7 @@ void foc_init(FOC_State_t* foc)
     foc->pi_speed.clamp_upper   = FOC_I_CLAMP_UPPER_SP;
     foc->pi_speed.clamp_lower   = FOC_I_CLAMP_LOWER_SP;
 
-    /* Field-weakening PI — DISABLED (pi_fw zeroed but not used) */
+    /* Field-weakening PI — outer loop. Output clamp = FOC_IMAX (A). */
     foc->pi_fw.kp           = FOC_KP_FW;
     foc->pi_fw.ki           = FOC_KI_FW;
     foc->pi_fw.integrator   = 0.0f;
@@ -345,27 +345,28 @@ void focTest(FOC_State_t* foc,
 }
 
 void focInjection(FOC_State_t* foc, float freq) {
-    const float amplitude_max = 0.005f;
+    const float amplitude_max = 0.002f;
+    const float speed_multiplier = 1.5f;
     static float inj_phase = 0.0f;
     static float accumulated_time = 0.0f;
 
     accumulated_time += foc->ts;
-    if (accumulated_time < 0.167f) inj_phase += 2.0f * M_PI * 783.99 * foc->ts;
-    else if (accumulated_time < 0.333f) inj_phase += 2.0f * M_PI * 698.46f * foc->ts;
-    else if (accumulated_time < 0.667f) inj_phase += 2.0f * M_PI * 440.00f * foc->ts;
-    else if (accumulated_time < 1.0f) inj_phase += 2.0f * M_PI * 493.88f * foc->ts;
+    if (accumulated_time < 0.167f * speed_multiplier) inj_phase += 2.0f * M_PI * 783.99 * foc->ts;
+    else if (accumulated_time < 0.333f * speed_multiplier) inj_phase += 2.0f * M_PI * 698.46f * foc->ts;
+    else if (accumulated_time < 0.667f * speed_multiplier) inj_phase += 2.0f * M_PI * 440.00f * foc->ts;
+    else if (accumulated_time < 1.0f * speed_multiplier) inj_phase += 2.0f * M_PI * 493.88f * foc->ts;
 
-    else if (accumulated_time < 1.167f) inj_phase += 2.0f * M_PI * 659.26f * foc->ts;
-    else if (accumulated_time < 1.333f) inj_phase += 2.0f * M_PI * 587.33f * foc->ts;
-    else if (accumulated_time < 1.667f) inj_phase += 2.0f * M_PI * 349.23f * foc->ts;
-    else if (accumulated_time < 2.0f) inj_phase += 2.0f * M_PI * 392.00f * foc->ts;
+    else if (accumulated_time < 1.167f * speed_multiplier) inj_phase += 2.0f * M_PI * 659.26f * foc->ts;
+    else if (accumulated_time < 1.333f * speed_multiplier) inj_phase += 2.0f * M_PI * 587.33f * foc->ts;
+    else if (accumulated_time < 1.667f * speed_multiplier) inj_phase += 2.0f * M_PI * 349.23f * foc->ts;
+    else if (accumulated_time < 2.0f * speed_multiplier) inj_phase += 2.0f * M_PI * 392.00f * foc->ts;
 
-    else if (accumulated_time < 2.267f) inj_phase += 2.0f * M_PI * 587.33f * foc->ts;
-    else if (accumulated_time < 2.333f) inj_phase += 2.0f * M_PI * 523.25f * foc->ts;
-    else if (accumulated_time < 2.667f) inj_phase += 2.0f * M_PI * 329.63f * foc->ts;
-    else if (accumulated_time < 3.0f) inj_phase += 2.0f * M_PI * 392.00f * foc->ts;
-    else if (accumulated_time < 3.33f) inj_phase += 2.0f * M_PI * 523.25f * foc->ts;
-    else if (accumulated_time < 5.0f) inj_phase = 0.0f;
+    else if (accumulated_time < 2.267f * speed_multiplier) inj_phase += 2.0f * M_PI * 587.33f * foc->ts;
+    else if (accumulated_time < 2.333f * speed_multiplier) inj_phase += 2.0f * M_PI * 523.25f * foc->ts;
+    else if (accumulated_time < 2.667f * speed_multiplier) inj_phase += 2.0f * M_PI * 329.63f * foc->ts;
+    else if (accumulated_time < 3.0f * speed_multiplier) inj_phase += 2.0f * M_PI * 392.00f * foc->ts;
+    else if (accumulated_time < 3.33f * speed_multiplier) inj_phase += 2.0f * M_PI * 523.25f * foc->ts;
+    else if (accumulated_time < 5.0f * speed_multiplier) inj_phase = 0.0f;
     else {
         accumulated_time = 0.0f; // Reset after one full cycle
         inj_phase = 0.0f; // Reset phase to prevent overflow

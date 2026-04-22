@@ -24,12 +24,41 @@ uint32_t Timer::getInstanceIndex(TIM_HandleTypeDef* htim) {
     return -1; // Invalid case
 }
 
+void Timer::updateFrequency(void) {
+    if (!htim_) frequency = 0;
+
+    // Get timer clock frequency, distinguishing APB2 for TIM1/TIM8 and APB1 for others
+    uint32_t timer_clock = 0;
+    TIM_TypeDef* tim = htim_->Instance;
+    if (tim == TIM1 || tim == TIM8) {
+        timer_clock = HAL_RCC_GetPCLK2Freq();
+        if (LL_RCC_GetAPB2Prescaler() != LL_RCC_APB2_DIV_1) timer_clock *= 2;
+    }
+    else {
+        timer_clock = HAL_RCC_GetPCLK1Freq();
+        if (LL_RCC_GetAPB1Prescaler() != LL_RCC_APB1_DIV_1) timer_clock *= 2;
+    }
+
+    uint32_t psc = LL_TIM_GetPrescaler(tim);
+    uint32_t arr = LL_TIM_GetAutoReload(tim);
+    //uint32_t psc = htim_->Instance->PSC;
+    //uint32_t arr = htim_->Instance->ARR;
+
+    if (psc == 0 && arr == 0) {
+        frequency = 0; // Avoid division by zero
+    }
+    else {
+        frequency = timer_clock / ((psc + 1) * (arr + 1));
+    }
+}
+
 void Timer::interruptHandler(void) {
     // Handle timer interrupt (if needed)
 }
 
 Timer::Timer(TIM_HandleTypeDef* htim):
-    htim_(htim) {}
+    htim_(htim),
+    frequency(0) {}
 
 void Timer::irqHandler(TIM_HandleTypeDef* htim) {
     uint32_t i = getInstanceIndex(htim);
@@ -58,11 +87,19 @@ HAL_StatusTypeDef Timer::startIT(void) {
 HAL_StatusTypeDef Timer::setFrequency(uint32_t freq_Hz) {
     if (!htim_ || freq_Hz == 0) return HAL_ERROR;
 
+    frequency = freq_Hz;
+
     // Get timer clock frequency, distinguishing APB2 for TIM1/TIM8 and APB1 for others
     uint32_t timer_clock = 0;
     TIM_TypeDef* tim = htim_->Instance;
-    if (tim == TIM1 || tim == TIM8) timer_clock = HAL_RCC_GetPCLK2Freq();
-    else timer_clock = HAL_RCC_GetPCLK1Freq();
+    if (tim == TIM1 || tim == TIM8) {
+        timer_clock = HAL_RCC_GetPCLK2Freq();
+        if (LL_RCC_GetAPB2Prescaler() != LL_RCC_APB2_DIV_1) timer_clock *= 2;
+    }
+    else {
+        timer_clock = HAL_RCC_GetPCLK1Freq();
+        if (LL_RCC_GetAPB1Prescaler() != LL_RCC_APB1_DIV_1) timer_clock *= 2;
+    }
 
     // Distinguish 32-bit timers (TIM2, TIM5)
     uint32_t max_arr = 0xFFFF;
@@ -95,8 +132,11 @@ HAL_StatusTypeDef Timer::setFrequency(uint32_t freq_Hz) {
     __HAL_TIM_SET_AUTORELOAD(htim_, arr);
     __HAL_TIM_ENABLE(htim_);
 
-    htim_->Init.Prescaler = psc;
-    htim_->Init.Period = arr;
-
     return HAL_OK;
+}
+
+uint32_t Timer::getFrequency(void) {
+    if (!htim_) return 0;
+    if (frequency == 0) updateFrequency();
+    return frequency;
 }

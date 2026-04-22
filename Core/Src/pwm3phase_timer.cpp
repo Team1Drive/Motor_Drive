@@ -163,39 +163,13 @@ float ThreePhasePWMOut::getDuty(uint8_t phase) const {
 
 HAL_StatusTypeDef ThreePhasePWMOut::setDeadTime(uint32_t deadtime_ns) {
     uint32_t pclk2 = HAL_RCC_GetPCLK2Freq();
-    if ((RCC->D2CFGR & RCC_D2CFGR_D2PPRE2) != 0) pclk2 *= 2;
+    if (LL_RCC_GetAPB2Prescaler() != LL_RCC_APB2_DIV_1) pclk2 *= 2;
 
     float tick_ns = 1e9f / pclk2;  // seconds per timer tick
-    uint32_t desired_ticks = (uint32_t)ceilf(deadtime_ns / tick_ns);
+    if ((uint32_t)ceilf(deadtime_ns / tick_ns) > 1008) return HAL_ERROR; // Desired dead time exceeds maximum representable value
 
-    if (desired_ticks > 1008) {
-        return HAL_ERROR; // Desired dead time exceeds maximum representable value
-    }
-
-    uint8_t dtg = 0;
-
-    if (desired_ticks <= 127) {
-        dtg = desired_ticks;
-    }
-    else if (desired_ticks <= 254) {
-        uint32_t target = (desired_ticks + 1) & ~1U;
-        uint32_t D = (target / 2) - 64;
-        dtg = 0x80 | D;
-    }
-    else if (desired_ticks <= 504) {
-        uint32_t target = (desired_ticks + 7) & ~7U;
-        uint32_t D = (target / 8) - 32;
-        dtg = 0xC0 | D;
-    }
-    else { // desired_ticks <= 1008
-        uint32_t target = (desired_ticks + 15) & ~15U;
-        uint32_t D = (target / 16) - 32;
-        dtg = 0xE0 | D;
-    }
-
-    uint32_t bdtr = htim_->Instance->BDTR;
-    bdtr = (bdtr & ~TIM_BDTR_DTG_Msk) | (dtg << TIM_BDTR_DTG_Pos);
-    htim_->Instance->BDTR = bdtr;
+    uint32_t dtg = __LL_TIM_CALC_DEADTIME(pclk2, LL_TIM_GetClockDivision(htim_->Instance), deadtime_ns);
+    LL_TIM_OC_SetDeadTime(htim_->Instance, dtg);
     
     return HAL_OK;
 }
@@ -205,13 +179,29 @@ HAL_StatusTypeDef ThreePhasePWMOut::setFrequency(uint32_t freq_Hz) {
 
     pwm_freq_Hz = freq_Hz;
     uint32_t timer_clock = HAL_RCC_GetPCLK2Freq();
-    uint32_t psc = 0;
-    uint32_t arr = (uint32_t)(timer_clock / pwm_freq_Hz) - 1U;
-    if (arr > 0xFFFF) {
-        // Case for ARR overflow: increase prescaler to bring ARR within 16-bit range
-        psc = arr / 0xFFFF;
-        arr = (timer_clock / (pwm_freq_Hz * (psc + 1U))) - 1U;
+    if (LL_RCC_GetAPB2Prescaler() != LL_RCC_APB2_DIV_1) timer_clock *= 2;
+    uint32_t psc;
+    uint32_t arr;
+    if (LL_TIM_GetCounterMode(htim_->Instance) != LL_TIM_COUNTERMODE_UP && LL_TIM_GetCounterMode(htim_->Instance) != LL_TIM_COUNTERMODE_DOWN) {
+        timer_clock /= 2;
+        psc = 0;
+        arr = (uint32_t)(timer_clock / pwm_freq_Hz);
+        if (arr > 0xFFFF) {
+            // Case for ARR overflow: increase prescaler to bring ARR within 16-bit range
+            psc = arr / 0xFFFF;
+            arr = (timer_clock / (pwm_freq_Hz * (psc + 1U)));
+        }
     }
+    else {
+        psc = 0;
+        arr = (uint32_t)(timer_clock / pwm_freq_Hz) - 1U;
+        if (arr > 0xFFFF) {
+            // Case for ARR overflow: increase prescaler to bring ARR within 16-bit range
+            psc = arr / 0xFFFF;
+            arr = (timer_clock / (pwm_freq_Hz * (psc + 1U))) - 1U;
+        }
+    }
+    if (arr < 1) arr = 1;
     __HAL_TIM_SET_PRESCALER(htim_, psc);
     __HAL_TIM_SET_AUTORELOAD(htim_, arr);
 
