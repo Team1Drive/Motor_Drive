@@ -518,7 +518,8 @@ void printTelemetryUTF8(void) {
                    | PRINT_IBATT_RAW)) != 0) {
     adc3.getLatestDataMean(adc3_raw, FOC_OVERSAMPLING_SIZE);
 
-    ic = adcToCurrent(adc3_raw[0], 3.3f, 4096, 50.0f, 1.65f + adc_gain.ic_offset, adc_gain.ic_shunt);
+    //ic = adcToCurrent(adc3_raw[0], 3.3f, 4096, 50.0f, 1.65f + adc_gain.ic_offset, adc_gain.ic_shunt);
+    ic = -ia - ib;
     ibatt = adcToCurrent(adc3_raw[1], 3.3f, 4096, 50.0f, 1.65f + adc_gain.ibatt_offset, adc_gain.ibatt_shunt);
 
     ic_max.newValue(fabsf(ic));
@@ -676,7 +677,8 @@ void printTelemetryBinary(void) {
                    | PRINT_IBATT_RAW)) != 0) {
     adc3.getLatestDataMean(adc3_raw, FOC_OVERSAMPLING_SIZE);
 
-    ic = adcToCurrent(adc3_raw[0], 3.3f, 4096, 50.0f, 1.65f + adc_gain.ic_offset, adc_gain.ic_shunt);
+    //ic = adcToCurrent(adc3_raw[0], 3.3f, 4096, 50.0f, 1.65f + adc_gain.ic_offset, adc_gain.ic_shunt);
+    ic = -ia - ib;
     ibatt = adcToCurrent(adc3_raw[1], 3.3f, 4096, 50.0f, 1.65f + adc_gain.ibatt_offset, adc_gain.ibatt_shunt);
 
     ic_max.newValue(fabsf(ic));
@@ -964,7 +966,7 @@ void speedControl(void) {
   if (control_mode != MotorControlMode::MOTOR_FOC_MANUAL) {
     __disable_irq();
     foc_state.Iq_ref = new_Iq_ref;
-    foc_state.Id_ref = new_Id_ref;
+    //foc_state.Id_ref = new_Id_ref;
     __enable_irq();
   }
 }
@@ -2226,7 +2228,8 @@ void focTick(void) {
 
     float ia = adcToCurrent(adc1.getLatestChannelMean(0, FOC_OVERSAMPLING_SIZE), 3.3f, 65536, 50.0f, 1.65f + adc_gain.ia_offset, adc_gain.ia_shunt);
     float ib = adcToCurrent(adc2.getLatestChannelMean(0, FOC_OVERSAMPLING_SIZE), 3.3f, 65536, 50.0f, 1.65f + adc_gain.ib_offset, adc_gain.ib_shunt);
-    float ic = adcToCurrent(adc3.getLatestChannelMean(0, FOC_OVERSAMPLING_SIZE), 3.3f, 4096, 50.0f, 1.65f + adc_gain.ic_offset, adc_gain.ic_shunt);
+    //float ic = adcToCurrent(adc3.getLatestChannelMean(0, FOC_OVERSAMPLING_SIZE), 3.3f, 4096, 50.0f, 1.65f + adc_gain.ic_offset, adc_gain.ic_shunt);
+    float ic = -ia - ib;
     float vdc = adcToVoltage(adc1.getLatestChannelMean(2, FOC_OVERSAMPLING_SIZE), 3.3f, 65536, adc_gain.vbatt_gain, adc_gain.vbatt_offset);
 
     float theta_e = encoder.getElecPos_rad();

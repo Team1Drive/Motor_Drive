@@ -34,8 +34,8 @@ uint16_t Encoder::calcElecOffset(uint16_t elec_zero_pos, uint16_t index_offset) 
 
 void Encoder::updateSpeed(void) {
     // ---------- 0. Read current hardware count and timer capture ----------
-    uint16_t current_hw_cnt = (uint16_t)htim_->Instance->CNT;
-    uint16_t t_period_ticks = (uint16_t)htim_t_->Instance->CCR1;
+    uint16_t current_hw_cnt = __HAL_TIM_GET_COUNTER(htim_);
+    uint16_t t_period_ticks = __HAL_TIM_GET_COMPARE(htim_t_, TIM_CHANNEL_1);
     uint64_t current_ticks = HighResTimer::getTicks();
     
     // ---------- 1. Handle 16-bit signed delta (Handles 0-65535 wrap automatically) ----------
