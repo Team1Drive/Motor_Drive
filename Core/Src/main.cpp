@@ -865,7 +865,7 @@ void speedControl(void) {
   static float ramp_speed_increment = 0.0f;
   static uint32_t ramp_tick = 0;
 
-  foc_state.ts_speed = 1.0f / speedControlTimer.getFrequency();
+  foc_state.ts_speed = 1.0f / (float)speedControlTimer.getFrequency();
   
   if ((system_flag & FLAG_FOC_RUNNING) == 0) {
     float ramp_down_step = FOC_RAMP_RATE * foc_state.ts_speed;
@@ -971,7 +971,7 @@ void speedControl(void) {
   if (control_mode != MotorControlMode::MOTOR_FOC_MANUAL) {
     __disable_irq();
     foc_state.Iq_ref = new_Iq_ref;
-    //foc_state.Id_ref = new_Id_ref;
+    foc_state.Id_ref = new_Id_ref;
     __enable_irq();
   }
 }
@@ -1463,12 +1463,14 @@ void cmd_reset(int argc, char** argv) {
  */
 void cmd_foc(int argc, char** argv) {
     if (strcmp(argv[1], "status") == 0 || strcmp(argv[1], "stat") == 0) {
-        usb_printf("RPM=%.1f  Id=%.3fA  Iq=%.3fA  Vd=%.2fV  Vq=%.2fV  Vdc=%.2fV  |u|=%.2fV  fault=%d\r\n",
+        usb_printf("RPM=%.1f  Id=%.3fA  Iq=%.3fA  Vd=%.2fV  Vq=%.2fV  Vdc=%.2fV  |u|=%.2fV  fault=%d\r\nCurrent loop frequency: %.1f Hz  Speed loop frequency: %.1f Hz\r\n",
                   foc_state.rpm,
                   foc_state.Id, foc_state.Iq,
                   foc_state.Vd_cmd, foc_state.Vq_cmd,
                   foc_state.Vdc, foc_state.u_mag,
-                  (int)foc_state.fault);
+                  (int)foc_state.fault,
+                  1.0f / foc_state.ts,
+                  1.0f / foc_state.ts_speed);
     }
     else if (strcmp(argv[1], "manual") == 0) {
         control_mode = MotorControlMode::MOTOR_FOC_MANUAL;
