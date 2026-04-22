@@ -100,6 +100,7 @@ extern TIM_HandleTypeDef htim12;
 class HighResTimer {
     public:
         static constexpr uint32_t TIMER_FREQ = APB_CLOCK_FREQ_HZ;
+        static constexpr float TICK_PERIOD = 1.0f / (float)TIMER_FREQ;
 
         static HAL_StatusTypeDef start(void) {
             HAL_StatusTypeDef status = HAL_OK;
@@ -126,14 +127,18 @@ class HighResTimer {
         }
 
         static inline uint64_t getTime_us() {
-            return (getTicks() * 1000000ULL) / TIMER_FREQ;
+            return (getTicks() * 1000000ULL) * TICK_PERIOD;
         }
 
         static inline float getTimef_us() {
-            return static_cast<float>(getTicks()) * (1000000.0f / TIMER_FREQ);
+            return static_cast<float>(getTicks()) * (1000000.0f * TICK_PERIOD);
         }
 
         static inline uint64_t getTicksDelta(uint64_t last_ticks) {
             return getTicks() - last_ticks;
+        }
+
+        static inline float getTimeDelta_us(uint64_t last_ticks) {
+            return static_cast<float>(getTicks() - last_ticks) * (1000000.0f * TICK_PERIOD);
         }
 };

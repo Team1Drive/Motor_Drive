@@ -518,8 +518,8 @@ void printTelemetryUTF8(void) {
                    | PRINT_IBATT_RAW)) != 0) {
     adc3.getLatestDataMean(adc3_raw, FOC_OVERSAMPLING_SIZE);
 
-    //ic = adcToCurrent(adc3_raw[0], 3.3f, 4096, 50.0f, 1.65f + adc_gain.ic_offset, adc_gain.ic_shunt);
-    ic = -ia - ib;
+    ic = adcToCurrent(adc3_raw[0], 3.3f, 4096, 50.0f, 1.65f + adc_gain.ic_offset, adc_gain.ic_shunt);
+    //ic = -ia - ib;
     ibatt = adcToCurrent(adc3_raw[1], 3.3f, 4096, 50.0f, 1.65f + adc_gain.ibatt_offset, adc_gain.ibatt_shunt);
 
     ic_max.newValue(fabsf(ic));
@@ -533,7 +533,10 @@ void printTelemetryUTF8(void) {
     pos += snprintf(buffer + pos, sizeof(buffer) - pos, "rpm %.2f ", encoder.getRPM());
   }
   if (print_mask & PRINT_RPMSP) {
-    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "rpmsp %.2f ", foc_state.target_rpm);
+    float val;
+    if (control_mode == MotorControlMode::MOTOR_FOC_LINEAR || control_mode == MotorControlMode::MOTOR_FOC_DPWM) val = foc_state.target_rpm;
+    else val = target.speed;
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "rpmsp %.2f ", val);
   }
   if (print_mask & PRINT_POS) {
     pos += snprintf(buffer + pos, sizeof(buffer) - pos, "pos %u ", encoder.getPos());
@@ -677,8 +680,8 @@ void printTelemetryBinary(void) {
                    | PRINT_IBATT_RAW)) != 0) {
     adc3.getLatestDataMean(adc3_raw, FOC_OVERSAMPLING_SIZE);
 
-    //ic = adcToCurrent(adc3_raw[0], 3.3f, 4096, 50.0f, 1.65f + adc_gain.ic_offset, adc_gain.ic_shunt);
-    ic = -ia - ib;
+    ic = adcToCurrent(adc3_raw[0], 3.3f, 4096, 50.0f, 1.65f + adc_gain.ic_offset, adc_gain.ic_shunt);
+    //ic = -ia - ib;
     ibatt = adcToCurrent(adc3_raw[1], 3.3f, 4096, 50.0f, 1.65f + adc_gain.ibatt_offset, adc_gain.ibatt_shunt);
 
     ic_max.newValue(fabsf(ic));
@@ -702,7 +705,9 @@ void printTelemetryBinary(void) {
     ptr += 4;
   }
   if (print_mask & PRINT_RPMSP) {
-    float val = foc_state.target_rpm;
+    float val;
+    if (control_mode == MotorControlMode::MOTOR_FOC_LINEAR || control_mode == MotorControlMode::MOTOR_FOC_DPWM) val = foc_state.target_rpm;
+    else val = target.speed;
     memcpy(ptr, &val, 4);
     ptr += 4;
   }
@@ -1088,7 +1093,7 @@ void startUpSequence(MotorControlMode mode) {
     case MotorControlMode::MOTOR_FOC_LINEAR:
       foc_reset(&foc_state);
       // Set initial FOC state for linear startup
-      target.speed = FOC_INITIAL_RPM;
+      if (target.speed == 0.0f) target.speed = FOC_INITIAL_RPM;
       control_mode = MotorControlMode::MOTOR_FOC_LINEAR;
       system_flag |= FLAG_FOC_RUNNING;
       speedControl();
@@ -1097,6 +1102,7 @@ void startUpSequence(MotorControlMode mode) {
       break;
     case MotorControlMode::MOTOR_VVVF:
       foc_reset(&foc_state);
+      if (target.speed == 0.0f) target.speed = FOC_INITIAL_RPM;
       hallsensor.read();
       system_flag |= FLAG_VVVF_RAMP_UP;
       control_mode = MotorControlMode::MOTOR_VVVF;
@@ -1121,13 +1127,11 @@ void vvvfRampUp(void) {
   const uint32_t ramp_up = VVVF_RAMP_UP_SPEED; // RPM/s
   static float rpm;  
   static float angle;
-  static bool accelerating;
 
   // Initialize on zero speed starting
   if ((system_flag & FLAG_VVVF_RUNNING) == 0) {
     rpm = 0.0f;
     angle = 0.0f;
-    accelerating = true;
     system_flag |= FLAG_VVVF_RUNNING;
   }
 
@@ -1186,11 +1190,19 @@ void vvvfRampUp(void) {
 
   // Ramp up or down the speed
   if (system_flag & FLAG_VVVF_RAMP_UP) {
-    if (accelerating) {
+    if ((rpm < VVVF_MAX_RPM >> 1) && (rpm < target.speed / 2)) {
       rpm += step_increment;
       if (rpm >= VVVF_MAX_RPM >> 1) {
         rpm = VVVF_MAX_RPM >> 1;
-        accelerating = false;
+      }
+      else if (rpm >= (target.speed / 2)) {
+        rpm = target.speed / 2;
+      }
+    }
+    else if (rpm > (target.speed / 2)) {
+      rpm -= step_increment;
+      if (rpm <= (target.speed / 2)) {
+        rpm = target.speed / 2;
       }
     }
   }
@@ -2228,8 +2240,8 @@ void focTick(void) {
 
     float ia = adcToCurrent(adc1.getLatestChannelMean(0, FOC_OVERSAMPLING_SIZE), 3.3f, 65536, 50.0f, 1.65f + adc_gain.ia_offset, adc_gain.ia_shunt);
     float ib = adcToCurrent(adc2.getLatestChannelMean(0, FOC_OVERSAMPLING_SIZE), 3.3f, 65536, 50.0f, 1.65f + adc_gain.ib_offset, adc_gain.ib_shunt);
-    //float ic = adcToCurrent(adc3.getLatestChannelMean(0, FOC_OVERSAMPLING_SIZE), 3.3f, 4096, 50.0f, 1.65f + adc_gain.ic_offset, adc_gain.ic_shunt);
-    float ic = -ia - ib;
+    float ic = adcToCurrent(adc3.getLatestChannelMean(0, FOC_OVERSAMPLING_SIZE), 3.3f, 4096, 50.0f, 1.65f + adc_gain.ic_offset, adc_gain.ic_shunt);
+    //float ic = -ia - ib;
     float vdc = adcToVoltage(adc1.getLatestChannelMean(2, FOC_OVERSAMPLING_SIZE), 3.3f, 65536, adc_gain.vbatt_gain, adc_gain.vbatt_offset);
 
     float theta_e = encoder.getElecPos_rad();
