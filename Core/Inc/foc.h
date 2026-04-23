@@ -63,8 +63,8 @@
 /** Speed PI damping factor */
 #define FOC_ZETA_SP         0.7f
 
-/** Field-weakening bandwidth (rad/s). */
-#define FOC_WND_FW          (500 * FREQ_TO_OMEGA)
+/** Current PI bandwidth (rad/s). */
+#define FOC_WND_I           (500 * FREQ_TO_OMEGA)
 
 /** Speed PI bandwidth (rad/s). */
 #define FOC_WND_SP          (50 * FREQ_TO_OMEGA)
@@ -103,7 +103,7 @@
 #define FOC_SPEED_DIV       20U
 
 /** Speed ramp rate (mechanical rad/s²). From MATLAB: 5000 RPM/s */
-#define FOC_RAMP_RATE       1000.0f
+#define FOC_RAMP_RATE       3000.0f
 
 /* =========================================================================
  * PI GAINS
@@ -113,31 +113,35 @@
 
 /** Current PI proportional gain. Start: 0.5, MATLAB ref: 15 */
 //#define FOC_KP_I            0.5f
-#define FOC_KP_I            (FOC_ZETA_I * 2 * FOC_L * FOC_WND_FW - FOC_R)
+#define FOC_KP_I            (FOC_ZETA_I * 2 * FOC_L * FOC_WND_I - FOC_R)
 
 /** Current PI integral gain. Start: 50, MATLAB ref: 3000 */
 //#define FOC_KI_I            50.0f
-#define FOC_KI_I            (FOC_WND_FW * FOC_WND_FW * FOC_L)
-
-/** Current PI integrator clamp (V). Symmetric ±clamp. */
-#define FOC_INT_I_CLAMP     6.0f
-
-/** Speed PI proportional gain. Start: 0.05, MATLAB ref: 0.15 */
-#define FOC_KP_SP           (FOC_ZETA_SP * 2 * FOC_WND_SP * FOC_J)
-
-/** Speed PI integral gain. Start: 1.0, MATLAB ref: 3.0 */
-#define FOC_KI_SP           (FOC_WND_SP * FOC_WND_SP * FOC_J)
-
-/** Speed PI output clamp (V). Symmetric ±clamp. */
-#define FOC_I_CLAMP_UPPER_SP 2.0f
-
-#define FOC_I_CLAMP_LOWER_SP 0.0f
+#define FOC_KI_I            (FOC_WND_I * FOC_WND_I * FOC_L)
 
 /** Field-weakening PI proportional gain (typically 0 — only integral matters) */
 #define FOC_KP_FW           0.0f
 
 /** Field-weakening PI integral gain. From MATLAB ref: 500 */
-#define FOC_KI_FW           500.0f
+#define FOC_KI_FW           4000.0f
+
+/** Speed PI proportional gain. Start: 0.05, MATLAB ref: 0.15 */
+#define FOC_KP_SP           0.009247 //(FOC_ZETA_SP * 2 * FOC_WND_SP * FOC_J)
+
+/** Speed PI integral gain. Start: 1.0, MATLAB ref: 3.0 */
+#define FOC_KI_SP           0.0092 //(FOC_WND_SP * FOC_WND_SP * FOC_J)
+
+/* =========================================================================
+ * PI CLAMPS
+ * ========================================================================= */
+
+/** Current PI integrator clamp (V). Symmetric ±clamp. */
+#define FOC_INT_I_CLAMP     6.0f
+
+/** Speed PI output clamp (V). Symmetric ±clamp. */
+#define FOC_I_CLAMP_UPPER_SP 2.0f
+
+#define FOC_I_CLAMP_LOWER_SP -2.0f
 
 /** Field-weakening PI output clamp (V). Symmetric ±clamp. */
 #define FOC_I_CLAMP_UPPER_FW 0.0f
@@ -163,11 +167,15 @@ typedef struct {
 static inline float PI_update(PI_t* pi, float error, float dt)
 {
     pi->integrator += pi->ki * error * dt;
+    // Clampling the integrator
     if (pi->integrator > pi->clamp_upper) pi->integrator = pi->clamp_upper;
     if (pi->integrator < pi->clamp_lower) pi->integrator = pi->clamp_lower;
+    
     float out = pi->kp * error + pi->integrator;
+    // Clamping the output
     if (out > pi->clamp_upper) out = pi->clamp_upper;
     if (out < pi->clamp_lower) out = pi->clamp_lower;
+    
     return out;
 }
 
@@ -209,6 +217,7 @@ typedef struct {
 
     /* --- System parameters --- */
     float ts;           /* FOC / PWM period (s). Must match motorPWM.setFrequency() */
+    float ts_speed;     /* Speed control period (s) */
 
     /* --- Observables — written each tick, read by main loop / telemetry --- */
     volatile float Id;
@@ -219,6 +228,7 @@ typedef struct {
     volatile float Vdc;
     volatile float theta_e;
     volatile float omega_e;
+    volatile float omega_m;
     volatile float rpm;
     volatile float Vd_cmd;
     volatile float Vq_cmd;
@@ -269,6 +279,8 @@ void foc_run(FOC_State_t* foc,
  */
 void foc_reset(FOC_State_t* foc);
 
+void focResetPI(FOC_State_t* foc);
+
 /**
  * @brief Apply a voltage vector along the d-axis to align the encoder zero.
  *        Call before enabling FOC to ensure correct angle tracking.
@@ -280,3 +292,7 @@ void focTest(FOC_State_t* foc,
              float vdc,
              float theta_e, float omega_m,
              float* dutyA, float* dutyB, float* dutyC);
+
+void focInjection(FOC_State_t* foc, float freq);
+
+extern volatile uint32_t system_flag;

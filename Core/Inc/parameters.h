@@ -3,6 +3,8 @@
 #define M_PI 3.14159265358979323846264338327950288f
 #define SQRT3 1.73205080756887729352744634150587236f
 
+#define APB_CLOCK_FREQ_HZ   275000000U // 275 MHz APB clock frequency (for timer calculations)
+
 #define RPM_TO_RAD_S        (2.0f * M_PI / 60.0f)
 #define RAD_S_TO_RPM        (60.0f / (2.0f * M_PI))
 
@@ -16,24 +18,45 @@
 #define ADC2_NUM_CHANNELS   2U
 #define ADC3_NUM_CHANNELS   2U
 
-#define ADC_IA_SHUNT        0.00368f // Ia channel gain (shunt resistor)
-#define ADC_IB_SHUNT        0.00214f // Ib channel gain (shunt resistor)
-#define ADC_IC_SHUNT        0.00181f // Ic channel gain (shunt resistor)
-#define ADC_IA_OFFSET       0.006f // Ia channel offset
-#define ADC_IB_OFFSET       0.006f // Ib channel offset
-#define ADC_IC_OFFSET       0.005f // Ic channel offset
-#define ADC_VA_GAIN         0.0316f // Va channel gain (voltage divider)
-#define ADC_VB_GAIN         0.0316f // Vb channel gain (voltage divider)
-#define ADC_VA_OFFSET       0.0f // Va channel offset
-#define ADC_VB_OFFSET       0.0f // Vb channel offset
-#define ADC_IBATT_SHUNT     -0.0032f // Battery current channel gain (shunt resistor)
-#define ADC_IBATT_OFFSET    0.0035f // Battery current channel offset
-#define ADC_VBATT_GAIN      0.1282f // Battery voltage channel gain (voltage divider)
-#define ADC_VBATT_OFFSET    0.0016f // Battery voltage channel offset
+// ---------- ADC Calibration Parameters ----------
+#define BOARD_SELECTION     1U
+// Board 1
+#define ADC_IA_SHUNT_1      0.00371f // Ia channel gain (shunt resistor)
+#define ADC_IB_SHUNT_1      0.00212f // Ib channel gain (shunt resistor)
+#define ADC_IC_SHUNT_1      0.00174f // Ic channel gain (shunt resistor)
+#define ADC_IA_OFFSET_1     0.00376f // Ia channel offset
+#define ADC_IB_OFFSET_1     0.00491f // Ib channel offset
+#define ADC_IC_OFFSET_1     0.00414f // Ic channel offset
+#define ADC_VA_GAIN_1       0.0316f // Va channel gain (voltage divider)
+#define ADC_VB_GAIN_1       0.0316f // Vb channel gain (voltage divider)
+#define ADC_VA_OFFSET_1     0.0f // Va channel offset
+#define ADC_VB_OFFSET_1     0.0f // Vb channel offset
+#define ADC_IBATT_SHUNT_1   -0.0032f // Battery current channel gain (shunt resistor)
+#define ADC_IBATT_OFFSET_1  0.0035f // Battery current channel offset
+#define ADC_VBATT_GAIN_1    0.12817f // Battery voltage channel gain (voltage divider)
+#define ADC_VBATT_OFFSET_1  0.00051f // Battery voltage channel offset
+// Board 2
+#define ADC_IA_SHUNT_2      0.00358f // Ia channel gain (shunt resistor)
+#define ADC_IB_SHUNT_2      0.00211f // Ib channel gain (shunt resistor)
+#define ADC_IC_SHUNT_2      0.00246f // Ic channel gain (shunt resistor)
+#define ADC_IA_OFFSET_2     0.00444f // Ia channel offset
+#define ADC_IB_OFFSET_2     0.00524f // Ib channel offset
+#define ADC_IC_OFFSET_2     0.00952f // Ic channel offset
+#define ADC_VA_GAIN_2       0.0316f // Va channel gain (voltage divider)
+#define ADC_VB_GAIN_2       0.0316f // Vb channel gain (voltage divider)
+#define ADC_VA_OFFSET_2     0.0f // Va channel offset
+#define ADC_VB_OFFSET_2     0.0f // Vb channel offset
+#define ADC_IBATT_SHUNT_2   0.00266f // Battery current channel gain (shunt resistor)
+#define ADC_IBATT_OFFSET_2  0.00352f // Battery current channel offset
+#define ADC_VBATT_GAIN_2    0.12952f // Battery voltage channel gain (voltage divider)
+#define ADC_VBATT_OFFSET_2  0.00749f // Battery voltage channel offset
 
 #define TIM6_FREQ_HZ        1000U
+#define TIM15_FREQ_HZ       1000000U
+#define SPEEDLOOP_FREQ_HZ   1000U
 
-#define PWM_FREQ_DEFAULT_HZ 20000U
+#define PWM_FREQ_DEFAULT_HZ         20000U
+#define PWM_DEADTIME_DEFAULT_NS     1000U
 
 #define MOTOR_POLE_PAIRS            4U
 
@@ -52,6 +75,7 @@
 #define FOC_ALLOWED                 false // Allow FOC mode in the system (set to false to disable FOC-related code and save flash/RAM)
 #define FOC_INITIAL_RPM             1500U // Target RPM for FOC mode (used when FOC is enabled and selected)
 #define FOC_OVERSAMPLING_SIZE       16U // Number of samples to average for oversampling (must be a power of 2 for efficient averaging)
+#define FOC_RAMP_DOWN_SPEED         200U // 200 RPM/s
 
 #define MASTER_MODE                 true // Set master or slave mode in load testing
 #define BATTERY_PROTECTION          false // Set to true when powered with supply without current limit
@@ -59,9 +83,10 @@
 #define BATTERY_OVERVOLTAGE_THRESHOLD   5.0f // Voltage threshold for overvoltage protection (in volts)
 
 #define ENCODER_PPR                 2048U // Pulses per revolution for the encoder
-#define ENCODER_MT_THRESHOLD        500U // Threshold in RPM for switching between M and T methods
+#define ENCODER_T_THRESHOLD         250U // Threshold in RPM for using T method (with hysteresis)
+#define ENCODER_M_THRESHOLD         700U // Threshold in RPM for using M method (with hysteresis)
 #define ENCODER_ONEPULSE_THRESHOLD  1000U // Threshold in RPM for using one pulse counting
-#define ENCODER_STALL_THRESHOLD     10U // Threshold for detecting stall
+#define ENCODER_STALL_THRESHOLD     100U // Threshold for detecting stall
 
 #define USTIMER_ENCODER_PULSE_ID    0U // Identifier for encoder pulse timing in the microsecond timer
 #define USTIMER_ENCODER_INDEX_ID    1U // Identifier for encoder index timing in the microsecond timer
@@ -91,7 +116,9 @@ enum SystemFlag : uint32_t {
     FLAG_FOC_RUNNING        = 1 << 4,   // For resetting FOC state at mode change
     FLAG_ROTOR_ALIGNING     = 1 << 5,   // For sending duty cycle at beginning of alignment
     FLAG_ELEC_ZERO_ALIGNED  = 1 << 6,   // Indicates electrical zero acquired after alignment
-    FLAG_ACW                = 1 << 7    // Set for anti-clockwise rotation, reset for clockwise
+    FLAG_ACW                = 1 << 7,   // Set for anti-clockwise rotation, reset for clockwise
+    FLAG_TARGET_RAMP        = 1 << 8,   // Indicates ramping to new target in FOC mode
+    FLAG_SPEED_RAMP_INIT    = 1 << 9    // Indicates ramping speed to new target in FOC mode
 };
 
 enum ErrorFlag : uint32_t {
@@ -119,16 +146,18 @@ typedef struct {
     float ibatt_offset;
     float vbatt_gain;
     float vbatt_offset;
+    uint8_t preset;
 } ADCGain_t;
 
 typedef struct {
     float speed;
     float torque;
+    float time;
 } Target_t;
 
 enum PrintData : uint32_t {
-    PRINT_HALL      = 1 << 0,
-    PRINT_RPM       = 1 << 1,
+    PRINT_RPM       = 1 << 0,
+    PRINT_RPMSP     = 1 << 1,
     PRINT_POS       = 1 << 2,
     PRINT_ELPOS     = 1 << 3,
     PRINT_DUTY_A    = 1 << 4,
@@ -172,9 +201,13 @@ TIM1: ADC trigger
 TIM2: 10 Hz interrupt
 TIM3: 4 Hz interrupt
 TIM4: Encoder pulse timing
+TIM5: Incremental counter at APB frequency
 TIM6: 1000 Hz interrupt
-TIM7: Microsecond timer
 TIM8: PWM generation for motor control
+TIM12: Upper 16 bits for TIM5 incremental counter (for microsecond timing)
+TIM15: Remapped TIM4 for encoder index timing
+TIM16: Speed loop timer (1000 Hz)
+
 
 
 ADC channel allocation
