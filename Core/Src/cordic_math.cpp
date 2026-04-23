@@ -2,23 +2,38 @@
 #include "stm32h7xx_hal.h"
 #include <math.h>
 
-static const uint32_t CSR_COS_SIN = (14 << CORDIC_CSR_PRECISION_Pos) |
-                                    (0 << CORDIC_CSR_SCALE_Pos) |
-                                    (1 << CORDIC_CSR_NRES_Pos) |
-                                    (0 << CORDIC_CSR_NARGS_Pos) |
-                                    (0 << CORDIC_CSR_FUNC_Pos);
+static const uint32_t CSR_COS_SIN   = (0  << CORDIC_CSR_ARGSIZE_Pos)
+                                    | (0  << CORDIC_CSR_RESSIZE_Pos)
+                                    | (0  << CORDIC_CSR_NARGS_Pos)
+                                    | (1  << CORDIC_CSR_NRES_Pos)
+                                    | (0  << CORDIC_CSR_DMAWEN_Pos)
+                                    | (0  << CORDIC_CSR_DMAREN_Pos)
+                                    | (0  << CORDIC_CSR_IEN_Pos)
+                                    | (0  << CORDIC_CSR_SCALE_Pos)
+                                    | (14 << CORDIC_CSR_PRECISION_Pos)
+                                    | (0  << CORDIC_CSR_FUNC_Pos);
 
-static const uint32_t CSR_HYPOT   = (14 << CORDIC_CSR_PRECISION_Pos) |
-                                    (0 << CORDIC_CSR_SCALE_Pos) |
-                                    (0 << CORDIC_CSR_NRES_Pos) |
-                                    (1 << CORDIC_CSR_NARGS_Pos) |
-                                    (3 << CORDIC_CSR_FUNC_Pos);
+static const uint32_t CSR_HYPOT = (0  << CORDIC_CSR_ARGSIZE_Pos)
+                                | (0  << CORDIC_CSR_RESSIZE_Pos)
+                                | (1  << CORDIC_CSR_NARGS_Pos)
+                                | (0  << CORDIC_CSR_NRES_Pos)
+                                | (0  << CORDIC_CSR_DMAWEN_Pos)
+                                | (0  << CORDIC_CSR_DMAREN_Pos)
+                                | (0  << CORDIC_CSR_IEN_Pos)
+                                | (0  << CORDIC_CSR_SCALE_Pos)
+                                | (14 << CORDIC_CSR_PRECISION_Pos)
+                                | (3  << CORDIC_CSR_FUNC_Pos);
 
-static const uint32_t CSR_ATAN2   = (14 << CORDIC_CSR_PRECISION_Pos) |
-                                    (0 << CORDIC_CSR_SCALE_Pos) |
-                                    (0 << CORDIC_CSR_NRES_Pos) |
-                                    (1 << CORDIC_CSR_NARGS_Pos) |
-                                    (2 << CORDIC_CSR_FUNC_Pos);
+static const uint32_t CSR_ATAN2 = (0  << CORDIC_CSR_ARGSIZE_Pos)
+                                | (0  << CORDIC_CSR_RESSIZE_Pos)
+                                | (1  << CORDIC_CSR_NARGS_Pos)
+                                | (0  << CORDIC_CSR_NRES_Pos)
+                                | (0  << CORDIC_CSR_DMAWEN_Pos)
+                                | (0  << CORDIC_CSR_DMAREN_Pos)
+                                | (0  << CORDIC_CSR_IEN_Pos)
+                                | (0  << CORDIC_CSR_SCALE_Pos)
+                                | (14 << CORDIC_CSR_PRECISION_Pos)
+                                | (2  << CORDIC_CSR_FUNC_Pos);
 
 static uint32_t current_csr = 0;
 
@@ -46,10 +61,13 @@ float wrap_to_pi(float angle_rad) {
 }
 
 void cordic::cordic_set_mode(uint32_t csr_value) {
-    //if (current_csr != csr_value) {
+    if (current_csr != csr_value) {
         CORDIC->CSR = csr_value;
-        //current_csr = csr_value;
-    //}
+        current_csr = csr_value;
+    }
+    while (CORDIC->CSR & CORDIC_CSR_RRDY) {
+        (void)CORDIC->RDATA; 
+    }
 }
 
 void cordic::sincos(int32_t angle_q31, int32_t* sin_out, int32_t* cos_out) {
@@ -69,20 +87,23 @@ void cordic::sincos(int32_t angle_q31, int32_t* sin_out, int32_t* cos_out) {
 
 void cordic::sincosf(float angle_rad, float* sin_out, float* cos_out) {
     int32_t s, c;
-    cordic::sincos(float_to_q31(normalize_rad(wrap_to_pi(angle_rad))), &s, &c);
+    int32_t angle_q31 = float_to_q31(normalize_rad(wrap_to_pi(angle_rad)));
+    cordic::sincos(angle_q31, &s, &c);
     *sin_out = q31_to_float(s);
     *cos_out = q31_to_float(c);
 }
 
 float cordic::sinf(float angle_rad) {
     int32_t s, c;
-    cordic::sincos(float_to_q31(normalize_rad(wrap_to_pi(angle_rad))), &s, &c);
+    int32_t angle_q31 = float_to_q31(normalize_rad(wrap_to_pi(angle_rad)));
+    cordic::sincos(angle_q31, &s, &c);
     return q31_to_float(s);
 }
 
 float cordic::cosf(float angle_rad) {
     int32_t s, c;
-    cordic::sincos(float_to_q31(normalize_rad(wrap_to_pi(angle_rad))), &s, &c);
+    int32_t angle_q31 = float_to_q31(normalize_rad(wrap_to_pi(angle_rad)));
+    cordic::sincos(angle_q31, &s, &c);
     return q31_to_float(c);
 }
 
@@ -100,9 +121,9 @@ float cordic::hypotf(float x, float y) {
         return 0.0f;
     }
 
-    // Scale down by max_abs * 2.5 to ensure the inputs fit well within the CORDIC range and maintain precision
-    float x_norm = x / (max_abs * 2.5f);
-    float y_norm = y / (max_abs * 2.5f);
+    // Scale down by max_abs * HYPOT_GAIN to ensure the inputs fit well within the CORDIC range and maintain precision
+    float x_norm = x / (max_abs * HYPOT_GAIN);
+    float y_norm = y / (max_abs * HYPOT_GAIN);
 
     // Send the normalized data to CORDIC
     CORDIC->WDATA = float_to_q31(x_norm);
@@ -111,7 +132,7 @@ float cordic::hypotf(float x, float y) {
     // Reading RDATA stalls the Cortex-M7 CPU for ~4-6 clock cycles until done.
     int32_t q31_mod = CORDIC->RDATA;
     CORDIC_END();
-    return q31_to_float(q31_mod) * (max_abs * 2.5f);
+    return q31_to_float(q31_mod) * (max_abs * HYPOT_GAIN);
 }
 
 float cordic::atan2f(float y, float x) {

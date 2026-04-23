@@ -23,6 +23,7 @@ extern void cmd_sin(int argc, char** argv);
 extern void cmd_cos(int argc, char** argv);
 extern void cmd_arctan(int argc, char** argv);
 extern void cmd_hypot(int argc, char** argv);
+extern void cmd_debug(int argc, char** argv);
 
 static const cmd_entry_t cmd_table[] = {
     { "start",       cmd_start,       1,    2,  "Usage: start <mode>\r\n"                       }, // 1 means just the command itself
@@ -43,6 +44,7 @@ static const cmd_entry_t cmd_table[] = {
     { "cos",         cmd_cos,         2,    2,  "Usage: cos <angle_rad>\r\n"                    },
     { "arctan",      cmd_arctan,      3,    3,  "Usage: arctan <y> <x>\r\n"                     },
     { "hypot",       cmd_hypot,       3,    3,  "Usage: hypot <x> <y>\r\n"                      },
+    { "debug",       cmd_debug,       2,    2,  "Usage: debug <subcmd>\r\n"                     },
 };
 
 const int num_commands = sizeof(cmd_table) / sizeof(cmd_entry_t);

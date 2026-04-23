@@ -2097,32 +2097,63 @@ void cmd_audible(int argc, char** argv) {
 
 void cmd_sin(int argc, char** argv) {
     float value = atof(argv[1]);
-    usb_printf("sinf(%.2f) = %.5f, cordic::sinf(%.2f) = %.5f\r\n", value, sinf(value), value, cordic::sinf(value));
+    uint64_t start_tick = HighResTimer::getTicks();
+    float math_sin = sinf(value);
+    uint64_t math_ticks = HighResTimer::getTicksDelta(start_tick);
+    float cordic_sin = cordic::sinf(value);
+    uint64_t cordic_ticks = HighResTimer::getTicksDelta(start_tick) - math_ticks;
+    usb_printf("sinf(%.2f) = %.5f, cordic::sinf(%.2f) = %.5f\r\nMath: %llu ticks, CORDIC: %llu ticks\r\n", value, math_sin, value, cordic_sin, (unsigned long long)math_ticks, (unsigned long long)cordic_ticks);
 }
 
 void cmd_cos(int argc, char** argv) {
     float value = atof(argv[1]);
-    usb_printf("cosf(%.2f) = %.5f, cordic::cosf(%.2f) = %.5f\r\n", value, cosf(value), value, cordic::cosf(value));
+    uint64_t start_tick = HighResTimer::getTicks();
+    float math_cos = cosf(value);
+    uint64_t math_ticks = HighResTimer::getTicksDelta(start_tick);
+    float cordic_cos = cordic::cosf(value);
+    uint64_t cordic_ticks = HighResTimer::getTicksDelta(start_tick) - math_ticks;
+    usb_printf("cosf(%.2f) = %.5f, cordic::cosf(%.2f) = %.5f\r\nMath: %llu ticks, CORDIC: %llu ticks\r\n", value, math_cos, value, cordic_cos, (unsigned long long)math_ticks, (unsigned long long)cordic_ticks);
 }
 
 void cmd_arctan(int argc, char** argv) {
     float y = atof(argv[1]);
     float x = atof(argv[2]);
-    if (x <= 0.0f || y <= 0.0f) {
-        usb_printf("x and y must be positive for arctan test\r\n");
-        return;
-    }
-    usb_printf("atan2f(%.2f, %.2f) = %.5f, cordic::atan2f(%.2f, %.2f) = %.5f\r\n", y, x, atan2f(y, x), y, x, cordic::atan2f(y, x));
+    uint64_t start_tick = HighResTimer::getTicks();
+    float math_atan2 = atan2f(y, x);
+    uint64_t math_ticks = HighResTimer::getTicksDelta(start_tick);
+    float cordic_atan2 = cordic::atan2f(y, x);
+    uint64_t cordic_ticks = HighResTimer::getTicksDelta(start_tick) - math_ticks;
+    usb_printf("atan2f(%.2f, %.2f) = %.5f, cordic::atan2f(%.2f, %.2f) = %.5f\r\nMath: %llu ticks, CORDIC: %llu ticks\r\n", y, x, math_atan2, y, x, cordic_atan2, (unsigned long long)math_ticks, (unsigned long long)cordic_ticks);
 }
 
 void cmd_hypot(int argc, char** argv) {
     float x = atof(argv[1]);
     float y = atof(argv[2]);
-    if (x <= 0.0f || y <= 0.0f) {
-        usb_printf("x and y must be positive for hypot test\r\n");
-        return;
+    uint64_t start_tick = HighResTimer::getTicks();
+    float math_hypot = hypotf(x, y);
+    uint64_t math_ticks = HighResTimer::getTicksDelta(start_tick);
+    float cordic_hypot = cordic::hypotf(x, y);
+    uint64_t cordic_ticks = HighResTimer::getTicksDelta(start_tick) - math_ticks;
+    usb_printf("hypotf(%.2f, %.2f) = %.5f, cordic::hypotf(%.2f, %.2f) = %.5f\r\nMath: %llu ticks, CORDIC: %llu ticks\r\n", x, y, math_hypot, x, y, cordic_hypot, (unsigned long long)math_ticks, (unsigned long long)cordic_ticks);
+}
+
+void cmd_debug(int argc, char** argv) {
+    char* subcmd = argv[1];
+
+    if (strcmp(subcmd, "cordic") == 0) {
+        uint32_t csr = CORDIC->CSR;
+        uint32_t rrdy = (csr & CORDIC_CSR_RRDY_Msk) >> CORDIC_CSR_RRDY_Pos;
+        uint32_t argsize = (csr & CORDIC_CSR_ARGSIZE_Msk) >> CORDIC_CSR_ARGSIZE_Pos;
+        uint32_t ressize = (csr & CORDIC_CSR_RESSIZE_Msk) >> CORDIC_CSR_RESSIZE_Pos;
+        uint32_t scale = (csr & CORDIC_CSR_SCALE_Msk) >> CORDIC_CSR_SCALE_Pos;
+        uint32_t precision = (csr & CORDIC_CSR_PRECISION_Msk) >> CORDIC_CSR_PRECISION_Pos;
+        uint32_t func = (csr & CORDIC_CSR_FUNC_Msk) >> CORDIC_CSR_FUNC_Pos;
+        usb_printf("CORDIC CSR: 0x%08X\r\nRRDY: %u\r\nARGSIZE: %u\r\nRESSIZE: %u\r\nSCALE: %u\r\nPRECISION: %u\r\nFUNC: %u\r\n", csr, rrdy, argsize, ressize, scale, precision, func);
     }
-    usb_printf("hypotf(%.2f, %.2f) = %.5f, cordic::hypotf(%.2f, %.2f) = %.5f\r\n", x, y, hypotf(x, y), x, y, cordic::hypotf(x, y));
+
+    else {
+        usb_printf("Unknown debug subcommand\r\n");
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
