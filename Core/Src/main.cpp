@@ -105,6 +105,8 @@ ADCGain_t adc_gain;
 
 volatile Target_t target = { .speed = 0.0f, .torque = 0.0f, .time = 0.0f };
 
+ModulationType modulation_type = ModulationType::SVPWM;
+
 volatile uint32_t print_mask = 0;
 volatile PrintFormat print_format = PrintFormat::PRINT_UTF8;
 
@@ -1258,7 +1260,7 @@ void vvvfRampUp(void) {
   float v_beta = u_mag * sinf(angle);
   float ts = 1.0f / frequency;
   float dutyA, dutyB, dutyC;
-  modulate(ModulationType::SVPWM, v_alpha, v_beta, v_dc, ts, &dutyA, &dutyB, &dutyC);
+  modulate(modulation_type, v_alpha, v_beta, v_dc, ts, &dutyA, &dutyB, &dutyC);
 
   motorPWM.setDuty(dutyA, dutyB, dutyC);
 
@@ -1637,6 +1639,36 @@ void cmd_torque(int argc, char** argv) {
         system_flag &= ~FLAG_SPEED_RAMP_INIT;
         target.time = 0.0f;
         usb_printf("Torque set to %.2f\r\n", torque);
+    }
+}
+
+void cmd_mod(int argc, char** argv) {
+    if (strcmp(argv[1], "svpwm") == 0) {
+        modulation_type = ModulationType::SVPWM;
+        usb_printf("Modulation set to SVPWM\r\n");
+    }
+    else if (strcmp(argv[1], "sym") == 0) {
+        modulation_type = ModulationType::SYM_PWM;
+        usb_printf("Modulation set to SPWM with Zero Sequence injection\r\n");
+    }
+    else if (strcmp(argv[1], "dpwm0") == 0) {
+        modulation_type = ModulationType::DPWM0;
+        usb_printf("Modulation set to DPWM0\r\n");
+    }
+    else if (strcmp(argv[1], "dpwm1") == 0) {
+        modulation_type = ModulationType::DPWM1;
+        usb_printf("Modulation set to DPWM1\r\n");
+    }
+    else if (strcmp(argv[1], "dpwm2") == 0) {
+        modulation_type = ModulationType::DPWM2;
+        usb_printf("Modulation set to DPWM2\r\n");
+    }
+    else if (strcmp(argv[1], "dpwm3") == 0) {
+        modulation_type = ModulationType::DPWM3;
+        usb_printf("Modulation set to DPWM3\r\n");
+    }
+    else {
+        usb_printf("Unknown modulation type\r\n");
     }
 }
 
