@@ -61,10 +61,10 @@ float wrap_to_pi(float angle_rad) {
 }
 
 void cordic::cordic_set_mode(uint32_t csr_value) {
-    if (current_csr != csr_value) {
+    //if (current_csr != csr_value) {
         CORDIC->CSR = csr_value;
-        current_csr = csr_value;
-    }
+    //    current_csr = csr_value;
+    //}
     while (CORDIC->CSR & CORDIC_CSR_RRDY) {
         (void)CORDIC->RDATA; 
     }
@@ -108,22 +108,21 @@ float cordic::cosf(float angle_rad) {
 }
 
 float cordic::hypotf(float x, float y) {
-    CORDIC_BEGIN();
-    // Ensure CORDIC is in the correct mode for Hypotenuse calculations
-    cordic_set_mode(CSR_HYPOT);
-
     // Normalize inputs to prevent overflow and maintain precision
     float max_abs = fmaxf(fabsf(x), fabsf(y));
 
     // If both x and y are very close to zero, return zero to avoid division issues
     if (max_abs < 1e-6f) {
-        CORDIC_END();
         return 0.0f;
     }
 
     // Scale down by max_abs * HYPOT_GAIN to ensure the inputs fit well within the CORDIC range and maintain precision
     float x_norm = x / (max_abs * HYPOT_GAIN);
     float y_norm = y / (max_abs * HYPOT_GAIN);
+
+    CORDIC_BEGIN();
+    // Ensure CORDIC is in the correct mode for Hypotenuse calculations
+    cordic_set_mode(CSR_HYPOT);
 
     // Send the normalized data to CORDIC
     CORDIC->WDATA = float_to_q31(x_norm);
@@ -136,10 +135,6 @@ float cordic::hypotf(float x, float y) {
 }
 
 float cordic::atan2f(float y, float x) {
-    CORDIC_BEGIN();
-    // Ensure CORDIC is in the correct mode for Atan2 calculations
-    cordic_set_mode(CSR_ATAN2);
-
     // Normalize inputs to prevent overflow and maintain precision
     float x_abs = fabsf(x);
     float y_abs = fabsf(y);
@@ -147,13 +142,16 @@ float cordic::atan2f(float y, float x) {
 
     // If both x and y are very close to zero, return zero to avoid division issues
     if (max_abs < 1e-6f) {
-        CORDIC_END();
         return 0.0f;
     }
 
     // Scale down by max_abs to ensure the inputs fit well within the CORDIC range and maintain precision
     float x_norm = x / max_abs;
     float y_norm = y / max_abs;
+
+    CORDIC_BEGIN();
+    // Ensure CORDIC is in the correct mode for Atan2 calculations
+    cordic_set_mode(CSR_ATAN2);
 
     // Send the normalized data to CORDIC
     CORDIC->WDATA = float_to_q31(x_norm);

@@ -91,7 +91,7 @@ static void svpwm_standard(float v_alpha, float v_beta, float v_dc,
     float theta_s;
     get_sector_and_angle(v_alpha, v_beta, sector, theta_s);
 
-    float v_ref   = hypotf(v_alpha, v_beta);
+    float v_ref   = cordic::hypotf(v_alpha, v_beta);
     float v_ratio = v_ref * SQRT3 / v_dc;                        // normalised magnitude
     //const float csc60 = 2.0f / SQRT3;
     const float sin60 = SQRT3 / 2.0f;
