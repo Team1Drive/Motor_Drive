@@ -327,14 +327,10 @@ void focTest(FOC_State_t* foc,
     foc->u_mag  = hypotf(foc->Vd_cmd, foc->Vq_cmd);
 
     float v_max = vdc / SQRT3;  // Maximum voltage magnitude for SVPWM (line-line voltage limit)
-    if (foc->u_mag > v_max) {
-        float scale = v_max / foc->u_mag;
-        foc->Vd_cmd *= scale;
-        foc->Vq_cmd *= scale;
-    }
+    if (foc->u_mag > v_max) foc->Vq_cmd = sqrt(v_max * v_max - foc->Vd_cmd * foc->Vd_cmd);
     
     float v_alpha, v_beta;
-    inv_park(foc->Vd_cmd, foc->Vq_cmd, theta_e, &v_alpha, &v_beta);     
+    inv_park(foc->Vd_cmd, foc->Vq_cmd, theta_e, &v_alpha, &v_beta);
 
     modulate(ModulationType::SVPWM,
              v_alpha, v_beta,

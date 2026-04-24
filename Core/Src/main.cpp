@@ -108,7 +108,7 @@ volatile Target_t target = { .speed = 0.0f, .torque = 0.0f, .time = 0.0f };
 ModulationType modulation_type = ModulationType::SVPWM;
 
 volatile uint32_t print_mask = 0;
-volatile PrintFormat print_format = PrintFormat::PRINT_UTF8;
+volatile PrintFormat print_format = PrintFormat::PRINT_BINARY;
 
 ring_buffer_t rx_ring = { .head = 0, .tail = 0 };
 
@@ -958,25 +958,18 @@ void speedControl(void) {
   /* =========================================================================
   *   Field-weakening Loop
   * ========================================================================= */
-  float U_max_fw   = foc_state.Vdc / SQRT3;
+  float U_max_fw   = (foc_state.Vdc / SQRT3) * 0.95f;
   float u_mag_prev = foc_state.u_mag;
   float new_Id_ref;
   if (fabsf(foc_state.omega_m) > 20.0f) {
       float fw_error = (U_max_fw - u_mag_prev) / fabsf(foc_state.omega_m);
-      if (fw_error < 0.0f || foc_state.Id_ref < 0.0f) {
-        // Only integrates when FW is requested or is already inside FW
-        new_Id_ref = PI_update(&foc_state.pi_fw, fw_error, foc_state.ts_speed);
-      }
-      else {
-        // Zero the integrator if FW is not needed
-        // Method 1：Reset PI（Simple, faster）
-        new_Id_ref = 0.0f;
-        PI_reset(&foc_state.pi_fw);
-        // Method 2：Exponential decay（Smoother）
-        // foc_state.pi_fw.integrator *= 0.99f;
-        // new_Id_ref = foc_state.pi_fw.integrator;
-      }
-  }else {
+      //foc_state.pi_fw.integrator += foc_state.pi_fw.ki * fw_error * foc_state.ts_speed;
+      //if (foc_state.pi_fw.integrator > 0.0f) foc_state.pi_fw.integrator = 0.0f;
+      //if (foc_state.pi_fw.integrator < FOC_ID_FW_MIN) foc_state.pi_fw.integrator = FOC_ID_FW_MIN;
+      //new_Id_ref = foc_state.pi_fw.integrator;
+      new_Id_ref = PI_update(&foc_state.pi_fw, fw_error, foc_state.ts_speed);
+      if (new_Id_ref > 0.0f) new_Id_ref = 0.0f;
+  } else {
       new_Id_ref = 0.0f;
       PI_reset(&foc_state.pi_fw);
   }
