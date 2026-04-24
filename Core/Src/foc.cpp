@@ -327,14 +327,10 @@ void focTest(FOC_State_t* foc,
     foc->u_mag  = hypotf(foc->Vd_cmd, foc->Vq_cmd);
 
     float v_max = vdc / SQRT3;  // Maximum voltage magnitude for SVPWM (line-line voltage limit)
-    if (foc->u_mag > v_max) {
-        float scale = v_max / foc->u_mag;
-        foc->Vd_cmd *= scale;
-        foc->Vq_cmd *= scale;
-    }
+    if (foc->u_mag > v_max) foc->Vq_cmd = sqrt(v_max * v_max - foc->Vd_cmd * foc->Vd_cmd);
     
     float v_alpha, v_beta;
-    inv_park(foc->Vd_cmd, foc->Vq_cmd, theta_e, &v_alpha, &v_beta);     
+    inv_park(foc->Vd_cmd, foc->Vq_cmd, theta_e, &v_alpha, &v_beta);
 
     modulate(ModulationType::SVPWM,
              v_alpha, v_beta,
@@ -350,21 +346,21 @@ void focInjection(FOC_State_t* foc, float freq) {
     static float accumulated_time = 0.0f;
 
     accumulated_time += foc->ts;
-    if (accumulated_time < 0.167f * speed_multiplier) inj_phase += 2.0f * M_PI * 783.99 * foc->ts;
-    else if (accumulated_time < 0.333f * speed_multiplier) inj_phase += 2.0f * M_PI * 698.46f * foc->ts;
-    else if (accumulated_time < 0.667f * speed_multiplier) inj_phase += 2.0f * M_PI * 440.00f * foc->ts;
-    else if (accumulated_time < 1.0f * speed_multiplier) inj_phase += 2.0f * M_PI * 493.88f * foc->ts;
+    if (accumulated_time < 0.167f * speed_multiplier) inj_phase += 2.0f * M_PI * 659.26f * foc->ts;
+    else if (accumulated_time < 0.333f * speed_multiplier) inj_phase += 2.0f * M_PI * 587.33f * foc->ts;
+    else if (accumulated_time < 0.667f * speed_multiplier) inj_phase += 2.0f * M_PI * 369.99f * foc->ts;
+    else if (accumulated_time < 1.0f * speed_multiplier) inj_phase += 2.0f * M_PI * 415.30f * foc->ts;
 
-    else if (accumulated_time < 1.167f * speed_multiplier) inj_phase += 2.0f * M_PI * 659.26f * foc->ts;
-    else if (accumulated_time < 1.333f * speed_multiplier) inj_phase += 2.0f * M_PI * 587.33f * foc->ts;
-    else if (accumulated_time < 1.667f * speed_multiplier) inj_phase += 2.0f * M_PI * 349.23f * foc->ts;
-    else if (accumulated_time < 2.0f * speed_multiplier) inj_phase += 2.0f * M_PI * 392.00f * foc->ts;
+    else if (accumulated_time < 1.167f * speed_multiplier) inj_phase += 2.0f * M_PI * 554.37f * foc->ts;
+    else if (accumulated_time < 1.333f * speed_multiplier) inj_phase += 2.0f * M_PI * 493.88f * foc->ts;
+    else if (accumulated_time < 1.667f * speed_multiplier) inj_phase += 2.0f * M_PI * 293.66f * foc->ts;
+    else if (accumulated_time < 2.0f * speed_multiplier) inj_phase += 2.0f * M_PI * 329.63f * foc->ts;
 
-    else if (accumulated_time < 2.267f * speed_multiplier) inj_phase += 2.0f * M_PI * 587.33f * foc->ts;
-    else if (accumulated_time < 2.333f * speed_multiplier) inj_phase += 2.0f * M_PI * 523.25f * foc->ts;
-    else if (accumulated_time < 2.667f * speed_multiplier) inj_phase += 2.0f * M_PI * 329.63f * foc->ts;
-    else if (accumulated_time < 3.0f * speed_multiplier) inj_phase += 2.0f * M_PI * 392.00f * foc->ts;
-    else if (accumulated_time < 3.33f * speed_multiplier) inj_phase += 2.0f * M_PI * 523.25f * foc->ts;
+    else if (accumulated_time < 2.267f * speed_multiplier) inj_phase += 2.0f * M_PI * 493.88f * foc->ts;
+    else if (accumulated_time < 2.333f * speed_multiplier) inj_phase += 2.0f * M_PI * 440.00f * foc->ts;
+    else if (accumulated_time < 2.667f * speed_multiplier) inj_phase += 2.0f * M_PI * 277.18f * foc->ts;
+    else if (accumulated_time < 3.0f * speed_multiplier) inj_phase += 2.0f * M_PI * 329.63f * foc->ts;
+    else if (accumulated_time < 3.33f * speed_multiplier) inj_phase += 2.0f * M_PI * 440.00f * foc->ts;
     else if (accumulated_time < 5.0f * speed_multiplier) inj_phase = 0.0f;
     else {
         accumulated_time = 0.0f; // Reset after one full cycle

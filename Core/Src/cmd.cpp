@@ -12,6 +12,7 @@ extern void cmd_reset(int argc, char** argv);
 extern void cmd_foc(int argc, char** argv);
 extern void cmd_sixstep(int argc, char** argv);
 extern void cmd_speed(int argc, char** argv);
+extern void cmd_mod(int argc, char** argv);
 extern void cmd_duty(int argc, char** argv);
 extern void cmd_vec(int argc, char** argv);
 extern void cmd_tune(int argc, char** argv);
@@ -28,6 +29,7 @@ static const cmd_entry_t cmd_table[] = {
     { "foc",         cmd_foc,         2,    3,  "Usage: foc <rpm> or foc status\r\n"            }, // e.g., "foc 1000" = 2 tokens
     { "sixstep",     cmd_sixstep,     1,    1,  "Usage: sixstep\r\n"                            },
     { "speed",       cmd_speed,       2,    3,  "Usage: speed <value>\r\n"                      },
+    { "mod",         cmd_mod,         2,    2,  "Usage: mod <type>\r\n"                         }, // Select modulation type, e.g., "mod svpwm"
     { "duty",        cmd_duty,        2,    2,  "Usage: duty <v1>,<v2>,<v3>\r\n"                }, // Arguments can be kept comma-separated internally
     { "vec",         cmd_vec,         2,    2,  "Usage: vec <0-5>\r\n"                          },
     { "tune",        cmd_tune,        4,    4,  "Usage: tune <subsys> <param> <value>\r\n"      }, // e.g., "tune speed p 0.1" = 4 tokens

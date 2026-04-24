@@ -105,8 +105,10 @@ ADCGain_t adc_gain;
 
 volatile Target_t target = { .speed = 0.0f, .torque = 0.0f, .time = 0.0f };
 
+ModulationType modulation_type = ModulationType::SVPWM;
+
 volatile uint32_t print_mask = 0;
-volatile PrintFormat print_format = PrintFormat::PRINT_UTF8;
+volatile PrintFormat print_format = PrintFormat::PRINT_BINARY;
 
 ring_buffer_t rx_ring = { .head = 0, .tail = 0 };
 
@@ -219,6 +221,8 @@ int main(void)
   
   if (motorPWM.setFrequency(PWM_FREQ_DEFAULT_HZ) != HAL_OK) error_flag |= ERROR_PWM_CONFIG;
   if (motorPWM.setDeadTime(PWM_DEADTIME_DEFAULT_NS) != HAL_OK) error_flag |= ERROR_PWM_CONFIG;
+
+  binaryLogTimer.setFrequency(5000);
   
   /* Initialise FOC controller */
   foc_init(&foc_state);
@@ -867,6 +871,9 @@ void speedControl(void) {
 
   foc_state.ts_speed = 1.0f / (float)speedControlTimer.getFrequency();
   
+  /* =========================================================================
+  *   Ramp up/down logic
+  * ========================================================================= */
   if ((system_flag & FLAG_FOC_RUNNING) == 0) {
     float ramp_down_step = FOC_RAMP_RATE * foc_state.ts_speed;
     if (target.speed > 0.0f){
@@ -925,7 +932,10 @@ void speedControl(void) {
     ramp_speed_increment = 0.0f;
     system_flag &= ~FLAG_TARGET_RAMP;
   }
-
+  
+  /* =========================================================================
+  *   Speed Loop
+  * ========================================================================= */
   // Calculate speed delta using a ramp function to limit acceleration
   static float p_rpm = 0.0f;
   foc_state.rpm = encoder.getRPM() * 0.2f + p_rpm * 0.8f;
@@ -944,29 +954,30 @@ void speedControl(void) {
   float err_sp = foc_state.omega_ref - omega_m;
   float new_Iq_ref = PI_update(&foc_state.pi_speed, err_sp, foc_state.ts_speed);
 
-  float U_max_fw   = foc_state.Vdc / SQRT3;
+  
+  /* =========================================================================
+  *   Field-weakening Loop
+  * ========================================================================= */
+  float U_max_fw   = (foc_state.Vdc / SQRT3) * 0.95f;
   float u_mag_prev = foc_state.u_mag;
   float new_Id_ref;
   if (fabsf(foc_state.omega_m) > 20.0f) {
       float fw_error = (U_max_fw - u_mag_prev) / fabsf(foc_state.omega_m);
-      if (fw_error < 0.0f || foc_state.Id_ref < 0.0f) {
-        // Only integrates when FW is requested or is already inside FW
-        new_Id_ref = PI_update(&foc_state.pi_fw, fw_error, foc_state.ts_speed);
-      }
-      else {
-        // Zero the integrator if FW is not needed
-        // Method 1：Reset PI（Simple, faster）
-        new_Id_ref = 0.0f;
-        PI_reset(&foc_state.pi_fw);
-        // Method 2：Exponential decay（Smoother）
-        // foc_state.pi_fw.integrator *= 0.99f;
-        // new_Id_ref = foc_state.pi_fw.integrator;
-      }
-  }else {
+      //foc_state.pi_fw.integrator += foc_state.pi_fw.ki * fw_error * foc_state.ts_speed;
+      //if (foc_state.pi_fw.integrator > 0.0f) foc_state.pi_fw.integrator = 0.0f;
+      //if (foc_state.pi_fw.integrator < FOC_ID_FW_MIN) foc_state.pi_fw.integrator = FOC_ID_FW_MIN;
+      //new_Id_ref = foc_state.pi_fw.integrator;
+      new_Id_ref = PI_update(&foc_state.pi_fw, fw_error, foc_state.ts_speed);
+      if (new_Id_ref > 0.0f) new_Id_ref = 0.0f;
+  } else {
       new_Id_ref = 0.0f;
       PI_reset(&foc_state.pi_fw);
   }
 
+  
+  /* =========================================================================
+  *   Setting new Id and Iq setpoints
+  * ========================================================================= */
   // In manual FOC mode, current setpoints are controlled directly by the user
   if (control_mode != MotorControlMode::MOTOR_FOC_MANUAL) {
     __disable_irq();
@@ -1137,47 +1148,47 @@ void vvvfRampUp(void) {
 
   // Audible frequency adjustment
   if (system_flag & FLAG_AUDIBLE) {
-    if (rpm < 30.0f) {
+    if (fabsf(rpm) < 30.0f) {
       motorPWM.setFrequency(293.66f);
     }
-    else if (rpm < 60.0f) {
+    else if (fabsf(rpm) < 60.0f) {
       motorPWM.setFrequency(329.63f);
     }
-    else if (rpm < 90.0f) {
+    else if (fabsf(rpm) < 90.0f) {
       motorPWM.setFrequency(349.23f);
     }
-    else if (rpm < 120.0f) {
+    else if (fabsf(rpm) < 120.0f) {
       motorPWM.setFrequency(392.00f);
     }
-    else if (rpm < 150.0f) {
+    else if (fabsf(rpm) < 150.0f) {
       motorPWM.setFrequency(440.00f);
     }
-    else if (rpm < 180.0f) {
+    else if (fabsf(rpm) < 180.0f) {
       motorPWM.setFrequency(493.88f);
     }
-    else if (rpm < 210.0f) {
+    else if (fabsf(rpm) < 210.0f) {
       motorPWM.setFrequency(523.25f);
     }
-    else if (rpm < 240.0f) {
+    else if (fabsf(rpm) < 240.0f) {
       motorPWM.setFrequency(587.33f);
     }
-    else if (rpm < 270.0f) {
+    else if (fabsf(rpm) < 270.0f) {
       motorPWM.setFrequency(659.26f);
     }
-    else if (rpm < 300.0f) {
+    else if (fabsf(rpm) < 300.0f) {
       motorPWM.setFrequency(698.46f);
     }
-    else if (rpm < 330.0f) {
+    else if (fabsf(rpm) < 330.0f) {
       motorPWM.setFrequency(783.99f);
     }
-    else if (rpm < 360.0f) {
+    else if (fabsf(rpm) < 360.0f) {
       motorPWM.setFrequency(880.00f);
     }
-    else if (rpm < 600.0f) {
+    else if (fabsf(rpm) < 600.0f) {
       motorPWM.setFrequency(900.00f);
     }
     else {
-      motorPWM.setFrequency((uint32_t)rpm * 2);
+      motorPWM.setFrequency((uint32_t)fabsf(rpm) * 2);
     }
   }
   else {
@@ -1214,6 +1225,7 @@ void vvvfRampUp(void) {
         system_flag &= ~FLAG_VVVF_RUNNING;
         control_mode = MotorControlMode::MOTOR_STOP;
         motorPWM.setDuty(-1.0f, -1.0f, -1.0f);
+        motorPWM.setFrequency(PWM_FREQ_DEFAULT_HZ);
         relay.write(0);
         return;
       }
@@ -1228,7 +1240,7 @@ void vvvfRampUp(void) {
   if (angle >= 2.0f * M_PI) angle -= 2.0f * M_PI;
 
   // Calculate voltage amplitude
-  float amplitude;
+  /* float amplitude;
   const float MIN_VOLTAGE = 0.15f;      // Boost start voltage
   const float KNEE_RPM = 1000.0f;        // Knee point (RPM)
   if (rpm < KNEE_RPM) {
@@ -1244,7 +1256,21 @@ void vvvfRampUp(void) {
 
   float dutyA = 0.5f + amplitude * 0.5f * sinf(angle);
   float dutyB = 0.5f + amplitude * 0.5f * sinf(angle - 2.0f * M_PI / 3.0f);
-  float dutyC = 0.5f + amplitude * 0.5f * sinf(angle + 2.0f * M_PI / 3.0f);
+  float dutyC = 0.5f + amplitude * 0.5f * sinf(angle + 2.0f * M_PI / 3.0f); */
+
+  const float MIN_AMPLITUDE = 0.15f;
+  float amplitude = MIN_AMPLITUDE + (1.0f - MIN_AMPLITUDE) * rpm / ((float)VVVF_MAX_RPM * 0.5f);
+  if (amplitude < MIN_AMPLITUDE) amplitude = MIN_AMPLITUDE;
+  if (amplitude > 1.0f) amplitude = 1.0f;
+
+  float v_dc = adcToVoltage(adc1.getLatestChannelMean(2, FOC_OVERSAMPLING_SIZE), 3.3f, 65536, adc_gain.vbatt_gain, adc_gain.vbatt_offset);
+  float u_max_linear = v_dc / SQRT3;
+  float u_mag = amplitude * u_max_linear;
+  float v_alpha = u_mag * cosf(angle);
+  float v_beta = u_mag * sinf(angle);
+  float ts = 1.0f / frequency;
+  float dutyA, dutyB, dutyC;
+  modulate(modulation_type, v_alpha, v_beta, v_dc, ts, &dutyA, &dutyB, &dutyC);
 
   motorPWM.setDuty(dutyA, dutyB, dutyC);
 
@@ -1623,6 +1649,36 @@ void cmd_torque(int argc, char** argv) {
         system_flag &= ~FLAG_SPEED_RAMP_INIT;
         target.time = 0.0f;
         usb_printf("Torque set to %.2f\r\n", torque);
+    }
+}
+
+void cmd_mod(int argc, char** argv) {
+    if (strcmp(argv[1], "svpwm") == 0) {
+        modulation_type = ModulationType::SVPWM;
+        usb_printf("Modulation set to SVPWM\r\n");
+    }
+    else if (strcmp(argv[1], "sym") == 0) {
+        modulation_type = ModulationType::SYM_PWM;
+        usb_printf("Modulation set to SPWM with Zero Sequence injection\r\n");
+    }
+    else if (strcmp(argv[1], "dpwm0") == 0) {
+        modulation_type = ModulationType::DPWM0;
+        usb_printf("Modulation set to DPWM0\r\n");
+    }
+    else if (strcmp(argv[1], "dpwm1") == 0) {
+        modulation_type = ModulationType::DPWM1;
+        usb_printf("Modulation set to DPWM1\r\n");
+    }
+    else if (strcmp(argv[1], "dpwm2") == 0) {
+        modulation_type = ModulationType::DPWM2;
+        usb_printf("Modulation set to DPWM2\r\n");
+    }
+    else if (strcmp(argv[1], "dpwm3") == 0) {
+        modulation_type = ModulationType::DPWM3;
+        usb_printf("Modulation set to DPWM3\r\n");
+    }
+    else {
+        usb_printf("Unknown modulation type\r\n");
     }
 }
 
@@ -2006,7 +2062,7 @@ void cmd_log(int argc, char** argv) {
                 break;
 
             case 4:
-                print_mask = PRINT_RPM | PRINT_IA | PRINT_IB | PRINT_IC | PRINT_FOC_ID | PRINT_FOC_IQ | PRINT_FOC_VD | PRINT_FOC_VQ | PRINT_FOC_IDSP | PRINT_FOC_IQSP;
+                print_mask = PRINT_RPM | PRINT_RPMSP | PRINT_IA | PRINT_IB | PRINT_IC | PRINT_FOC_ID | PRINT_FOC_IQ | PRINT_FOC_VD | PRINT_FOC_VQ | PRINT_FOC_IDSP | PRINT_FOC_IQSP;
                 usb_printf("Preset %d active\r\n", preset_id);
                 break;
                 
