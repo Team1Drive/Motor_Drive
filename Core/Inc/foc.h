@@ -57,17 +57,23 @@
 /** Rotor inertia (kg·m²) */
 #define FOC_J               4.802e-6f
 
+/** Viscous Friction (N·m·s/rad) */
+#define FOC_B               4.3e-5f
+
+/** Torque constant (Nm/A) */
+#define FOC_KT              4.1028e-2f
+
 /** Electrical damping factor */
-#define FOC_ZETA_I          0.7f
+#define FOC_ZETA_I          0.707f
 
 /** Speed PI damping factor */
-#define FOC_ZETA_SP         0.7f
+#define FOC_ZETA_SP         0.707f
 
 /** Current PI bandwidth (rad/s). */
-#define FOC_WND_I           (500 * FREQ_TO_OMEGA)
+#define FOC_WND_I           (200 * FREQ_TO_OMEGA)
 
 /** Speed PI bandwidth (rad/s). */
-#define FOC_WND_SP          (50 * FREQ_TO_OMEGA)
+#define FOC_WND_SP          (10 * FREQ_TO_OMEGA)
 
 /**
  * PM flux linkage (Wb).
@@ -126,10 +132,10 @@
 #define FOC_KI_FW           4000.0f
 
 /** Speed PI proportional gain. Start: 0.05, MATLAB ref: 0.15 */
-#define FOC_KP_SP           0.009247 //(FOC_ZETA_SP * 2 * FOC_WND_SP * FOC_J)
+#define FOC_KP_SP           ((FOC_ZETA_SP * 2 * FOC_WND_SP * FOC_J - FOC_B) / FOC_KT) //0.009247 
 
 /** Speed PI integral gain. Start: 1.0, MATLAB ref: 3.0 */
-#define FOC_KI_SP           0.0092 //(FOC_WND_SP * FOC_WND_SP * FOC_J)
+#define FOC_KI_SP           ((FOC_WND_SP * FOC_WND_SP * FOC_J) / FOC_KT) //0.0092
 
 /* =========================================================================
  * PI CLAMPS
