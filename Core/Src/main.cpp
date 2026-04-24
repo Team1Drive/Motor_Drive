@@ -1228,7 +1228,7 @@ void vvvfRampUp(void) {
   if (angle >= 2.0f * M_PI) angle -= 2.0f * M_PI;
 
   // Calculate voltage amplitude
-  float amplitude;
+  /* float amplitude;
   const float MIN_VOLTAGE = 0.15f;      // Boost start voltage
   const float KNEE_RPM = 1000.0f;        // Knee point (RPM)
   if (rpm < KNEE_RPM) {
@@ -1244,7 +1244,21 @@ void vvvfRampUp(void) {
 
   float dutyA = 0.5f + amplitude * 0.5f * sinf(angle);
   float dutyB = 0.5f + amplitude * 0.5f * sinf(angle - 2.0f * M_PI / 3.0f);
-  float dutyC = 0.5f + amplitude * 0.5f * sinf(angle + 2.0f * M_PI / 3.0f);
+  float dutyC = 0.5f + amplitude * 0.5f * sinf(angle + 2.0f * M_PI / 3.0f); */
+
+  const float MIN_AMPLITUDE = 0.15f;
+  float amplitude = rpm / (float)(VVVF_MAX_RPM >> 1);
+  if (amplitude < MIN_AMPLITUDE) amplitude = MIN_AMPLITUDE;
+  if (amplitude > 1.0f) amplitude = 1.0f;
+
+  float v_dc = adcToVoltage(adc1.getLatestChannelMean(2, FOC_OVERSAMPLING_SIZE), 3.3f, 65536, adc_gain.vbatt_gain, adc_gain.vbatt_offset);
+  float u_max_linear = v_dc / SQRT3;
+  float u_mag = amplitude * u_max_linear;
+  float v_alpha = u_mag * cosf(angle);
+  float v_beta = u_mag * sinf(angle);
+  float ts = 1.0f / frequency;
+  float dutyA, dutyB, dutyC;
+  modulate(ModulationType::SVPWM, v_alpha, v_beta, v_dc, ts, &dutyA, &dutyB, &dutyC);
 
   motorPWM.setDuty(dutyA, dutyB, dutyC);
 

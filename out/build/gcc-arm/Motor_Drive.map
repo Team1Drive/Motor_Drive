@@ -5592,8 +5592,8 @@ Discarded input sections
  .debug_macro   0x00000000      0x293 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_flash.c.obj
  .debug_macro   0x00000000       0x90 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_flash.c.obj
  .debug_macro   0x00000000      0x5f2 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_flash.c.obj
- .debug_line    0x00000000      0xb93 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_flash.c.obj
- .debug_str     0x00000000   0x15765d cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_flash.c.obj
+ .debug_line    0x00000000      0xb9f cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_flash.c.obj
+ .debug_str     0x00000000   0x157661 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_flash.c.obj
  .comment       0x00000000       0x46 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_flash.c.obj
  .debug_frame   0x00000000      0x1fc cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_flash.c.obj
  .ARM.attributes
@@ -5794,8 +5794,8 @@ Discarded input sections
  .debug_macro   0x00000000      0x293 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_flash_ex.c.obj
  .debug_macro   0x00000000       0x90 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_flash_ex.c.obj
  .debug_macro   0x00000000      0x5f2 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_flash_ex.c.obj
- .debug_line    0x00000000      0xee6 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_flash_ex.c.obj
- .debug_str     0x00000000   0x157974 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_flash_ex.c.obj
+ .debug_line    0x00000000      0xef2 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_flash_ex.c.obj
+ .debug_str     0x00000000   0x157978 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_flash_ex.c.obj
  .comment       0x00000000       0x46 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_flash_ex.c.obj
  .debug_frame   0x00000000      0x484 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_flash_ex.c.obj
  .ARM.attributes
@@ -6093,8 +6093,8 @@ Discarded input sections
  .debug_macro   0x00000000      0x293 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_hsem.c.obj
  .debug_macro   0x00000000       0x90 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_hsem.c.obj
  .debug_macro   0x00000000      0x5f2 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_hsem.c.obj
- .debug_line    0x00000000      0x8cd cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_hsem.c.obj
- .debug_str     0x00000000   0x157332 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_hsem.c.obj
+ .debug_line    0x00000000      0x8d9 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_hsem.c.obj
+ .debug_str     0x00000000   0x157336 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_hsem.c.obj
  .comment       0x00000000       0x46 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_hsem.c.obj
  .debug_frame   0x00000000      0x1bc cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_hsem.c.obj
  .ARM.attributes
@@ -6400,8 +6400,8 @@ Discarded input sections
  .debug_macro   0x00000000      0x293 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_dma_ex.c.obj
  .debug_macro   0x00000000       0x90 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_dma_ex.c.obj
  .debug_macro   0x00000000      0x5f2 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_dma_ex.c.obj
- .debug_line    0x00000000     0x1064 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_dma_ex.c.obj
- .debug_str     0x00000000   0x1577ba cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_dma_ex.c.obj
+ .debug_line    0x00000000     0x1070 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_dma_ex.c.obj
+ .debug_str     0x00000000   0x1577be cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_dma_ex.c.obj
  .comment       0x00000000       0x46 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_dma_ex.c.obj
  .debug_frame   0x00000000      0x174 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_dma_ex.c.obj
  .ARM.attributes
@@ -6584,8 +6584,8 @@ Discarded input sections
  .debug_macro   0x00000000      0x293 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_mdma.c.obj
  .debug_macro   0x00000000       0x90 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_mdma.c.obj
  .debug_macro   0x00000000      0x5f2 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_mdma.c.obj
- .debug_line    0x00000000     0x138f cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_mdma.c.obj
- .debug_str     0x00000000   0x157a27 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_mdma.c.obj
+ .debug_line    0x00000000     0x139b cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_mdma.c.obj
+ .debug_str     0x00000000   0x157a2b cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_mdma.c.obj
  .comment       0x00000000       0x46 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_mdma.c.obj
  .debug_frame   0x00000000      0x34c cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_mdma.c.obj
  .ARM.attributes
@@ -6760,8 +6760,8 @@ Discarded input sections
  .debug_macro   0x00000000      0x293 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pwr.c.obj
  .debug_macro   0x00000000       0x90 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pwr.c.obj
  .debug_macro   0x00000000      0x5f2 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pwr.c.obj
- .debug_line    0x00000000      0x972 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pwr.c.obj
- .debug_str     0x00000000   0x157671 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pwr.c.obj
+ .debug_line    0x00000000      0x97e cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pwr.c.obj
+ .debug_str     0x00000000   0x157675 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pwr.c.obj
  .comment       0x00000000       0x46 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pwr.c.obj
  .debug_frame   0x00000000      0x254 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pwr.c.obj
  .ARM.attributes
@@ -7663,8 +7663,8 @@ Discarded input sections
  .debug_macro   0x00000000      0x293 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_i2c.c.obj
  .debug_macro   0x00000000       0x90 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_i2c.c.obj
  .debug_macro   0x00000000      0x5f2 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_i2c.c.obj
- .debug_line    0x00000000     0x3aa6 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_i2c.c.obj
- .debug_str     0x00000000   0x15874b cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_i2c.c.obj
+ .debug_line    0x00000000     0x3ab2 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_i2c.c.obj
+ .debug_str     0x00000000   0x15874f cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_i2c.c.obj
  .comment       0x00000000       0x46 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_i2c.c.obj
  .debug_frame   0x00000000      0xc40 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_i2c.c.obj
  .ARM.attributes
@@ -7817,8 +7817,8 @@ Discarded input sections
  .debug_macro   0x00000000      0x293 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_i2c_ex.c.obj
  .debug_macro   0x00000000       0x90 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_i2c_ex.c.obj
  .debug_macro   0x00000000      0x5f2 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_i2c_ex.c.obj
- .debug_line    0x00000000      0x8bd cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_i2c_ex.c.obj
- .debug_str     0x00000000   0x157af1 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_i2c_ex.c.obj
+ .debug_line    0x00000000      0x8c9 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_i2c_ex.c.obj
+ .debug_str     0x00000000   0x157af5 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_i2c_ex.c.obj
  .comment       0x00000000       0x46 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_i2c_ex.c.obj
  .debug_frame   0x00000000      0x100 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_i2c_ex.c.obj
  .ARM.attributes
@@ -7977,8 +7977,8 @@ Discarded input sections
  .debug_macro   0x00000000      0x293 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_exti.c.obj
  .debug_macro   0x00000000       0x90 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_exti.c.obj
  .debug_macro   0x00000000      0x5f2 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_exti.c.obj
- .debug_line    0x00000000      0xbe3 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_exti.c.obj
- .debug_str     0x00000000   0x157510 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_exti.c.obj
+ .debug_line    0x00000000      0xbef cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_exti.c.obj
+ .debug_str     0x00000000   0x157514 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_exti.c.obj
  .comment       0x00000000       0x46 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_exti.c.obj
  .debug_frame   0x00000000      0x174 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_exti.c.obj
  .ARM.attributes
@@ -10536,382 +10536,381 @@ LOAD C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb
                 0x08005748      0x13c CMakeFiles/Motor_Drive.dir/Core/Src/main.cpp.obj
                 0x08005748                startUpSequence(MotorControlMode)
  .text._Z10vvvfRampUpv
-                0x08005884      0x630 CMakeFiles/Motor_Drive.dir/Core/Src/main.cpp.obj
+                0x08005884      0x648 CMakeFiles/Motor_Drive.dir/Core/Src/main.cpp.obj
                 0x08005884                vvvfRampUp()
  .text._Z18sixStepCommutationv
-                0x08005eb4      0x148 CMakeFiles/Motor_Drive.dir/Core/Src/main.cpp.obj
-                0x08005eb4                sixStepCommutation()
+                0x08005ecc      0x148 CMakeFiles/Motor_Drive.dir/Core/Src/main.cpp.obj
+                0x08005ecc                sixStepCommutation()
  .text._Z17clearRunningFlagsv
-                0x08005ffc       0x48 CMakeFiles/Motor_Drive.dir/Core/Src/main.cpp.obj
-                0x08005ffc                clearRunningFlags()
+                0x08006014       0x48 CMakeFiles/Motor_Drive.dir/Core/Src/main.cpp.obj
+                0x08006014                clearRunningFlags()
  .text._Z18loadAdcCalibrationP9ADCGain_th
-                0x08006044      0x1b8 CMakeFiles/Motor_Drive.dir/Core/Src/main.cpp.obj
-                0x08006044                loadAdcCalibration(ADCGain_t*, unsigned char)
+                0x0800605c      0x1b8 CMakeFiles/Motor_Drive.dir/Core/Src/main.cpp.obj
+                0x0800605c                loadAdcCalibration(ADCGain_t*, unsigned char)
  .text._Z9cmd_startiPPc
-                0x080061fc       0x94 CMakeFiles/Motor_Drive.dir/Core/Src/main.cpp.obj
-                0x080061fc                cmd_start(int, char**)
+                0x08006214       0x94 CMakeFiles/Motor_Drive.dir/Core/Src/main.cpp.obj
+                0x08006214                cmd_start(int, char**)
  .text._Z8cmd_stopiPPc
-                0x08006290       0xc8 CMakeFiles/Motor_Drive.dir/Core/Src/main.cpp.obj
-                0x08006290                cmd_stop(int, char**)
+                0x080062a8       0xc8 CMakeFiles/Motor_Drive.dir/Core/Src/main.cpp.obj
+                0x080062a8                cmd_stop(int, char**)
  .text._Z9cmd_aligniPPc
-                0x08006358       0xdc CMakeFiles/Motor_Drive.dir/Core/Src/main.cpp.obj
-                0x08006358                cmd_align(int, char**)
+                0x08006370       0xdc CMakeFiles/Motor_Drive.dir/Core/Src/main.cpp.obj
+                0x08006370                cmd_align(int, char**)
  .text._Z9cmd_resetiPPc
-                0x08006434       0x68 CMakeFiles/Motor_Drive.dir/Core/Src/main.cpp.obj
-                0x08006434                cmd_reset(int, char**)
+                0x0800644c       0x68 CMakeFiles/Motor_Drive.dir/Core/Src/main.cpp.obj
+                0x0800644c                cmd_reset(int, char**)
  .text._Z7cmd_fociPPc
-                0x0800649c      0x3c0 CMakeFiles/Motor_Drive.dir/Core/Src/main.cpp.obj
-                0x0800649c                cmd_foc(int, char**)
+                0x080064b4      0x3c0 CMakeFiles/Motor_Drive.dir/Core/Src/main.cpp.obj
+                0x080064b4                cmd_foc(int, char**)
  .text._Z11cmd_sixstepiPPc
-                0x0800685c       0x54 CMakeFiles/Motor_Drive.dir/Core/Src/main.cpp.obj
-                0x0800685c                cmd_sixstep(int, char**)
+                0x08006874       0x54 CMakeFiles/Motor_Drive.dir/Core/Src/main.cpp.obj
+                0x08006874                cmd_sixstep(int, char**)
  .text._Z9cmd_speediPPc
-                0x080068b0      0x13c CMakeFiles/Motor_Drive.dir/Core/Src/main.cpp.obj
-                0x080068b0                cmd_speed(int, char**)
+                0x080068c8      0x13c CMakeFiles/Motor_Drive.dir/Core/Src/main.cpp.obj
+                0x080068c8                cmd_speed(int, char**)
  .text._Z8cmd_dutyiPPc
-                0x080069ec      0x1ac CMakeFiles/Motor_Drive.dir/Core/Src/main.cpp.obj
-                0x080069ec                cmd_duty(int, char**)
+                0x08006a04      0x1ac CMakeFiles/Motor_Drive.dir/Core/Src/main.cpp.obj
+                0x08006a04                cmd_duty(int, char**)
  .text._Z7cmd_veciPPc
-                0x08006b98      0x154 CMakeFiles/Motor_Drive.dir/Core/Src/main.cpp.obj
-                0x08006b98                cmd_vec(int, char**)
+                0x08006bb0      0x154 CMakeFiles/Motor_Drive.dir/Core/Src/main.cpp.obj
+                0x08006bb0                cmd_vec(int, char**)
  .text._Z8cmd_tuneiPPc
-                0x08006cec      0x428 CMakeFiles/Motor_Drive.dir/Core/Src/main.cpp.obj
-                0x08006cec                cmd_tune(int, char**)
+                0x08006d04      0x428 CMakeFiles/Motor_Drive.dir/Core/Src/main.cpp.obj
+                0x08006d04                cmd_tune(int, char**)
  .text._Z13cmd_incrementiPPc
-                0x08007114      0x554 CMakeFiles/Motor_Drive.dir/Core/Src/main.cpp.obj
-                0x08007114                cmd_increment(int, char**)
+                0x0800712c      0x554 CMakeFiles/Motor_Drive.dir/Core/Src/main.cpp.obj
+                0x0800712c                cmd_increment(int, char**)
  .text._Z9cmd_boardiPPc
-                0x08007668       0x5c CMakeFiles/Motor_Drive.dir/Core/Src/main.cpp.obj
-                0x08007668                cmd_board(int, char**)
+                0x08007680       0x5c CMakeFiles/Motor_Drive.dir/Core/Src/main.cpp.obj
+                0x08007680                cmd_board(int, char**)
  .text._Z7cmd_logiPPc
-                0x080076c4      0x508 CMakeFiles/Motor_Drive.dir/Core/Src/main.cpp.obj
-                0x080076c4                cmd_log(int, char**)
+                0x080076dc      0x508 CMakeFiles/Motor_Drive.dir/Core/Src/main.cpp.obj
+                0x080076dc                cmd_log(int, char**)
  .text._Z11cmd_audibleiPPc
-                0x08007bcc       0x68 CMakeFiles/Motor_Drive.dir/Core/Src/main.cpp.obj
-                0x08007bcc                cmd_audible(int, char**)
+                0x08007be4       0x68 CMakeFiles/Motor_Drive.dir/Core/Src/main.cpp.obj
+                0x08007be4                cmd_audible(int, char**)
  .text._Z7focTickv
-                0x08007c34      0x1b0 CMakeFiles/Motor_Drive.dir/Core/Src/main.cpp.obj
-                0x08007c34                focTick()
+                0x08007c4c      0x1b0 CMakeFiles/Motor_Drive.dir/Core/Src/main.cpp.obj
+                0x08007c4c                focTick()
  .text._Z10MPU_Configv
-                0x08007de4       0x5a CMakeFiles/Motor_Drive.dir/Core/Src/main.cpp.obj
-                0x08007de4                MPU_Config()
- *fill*         0x08007e3e        0x2 
+                0x08007dfc       0x5a CMakeFiles/Motor_Drive.dir/Core/Src/main.cpp.obj
+                0x08007dfc                MPU_Config()
+ *fill*         0x08007e56        0x2 
  .text._Z41__static_initialization_and_destruction_0v
-                0x08007e40      0x1e0 CMakeFiles/Motor_Drive.dir/Core/Src/main.cpp.obj
+                0x08007e58      0x1e0 CMakeFiles/Motor_Drive.dir/Core/Src/main.cpp.obj
  .text._GLOBAL__sub_I_adc1_buffer
-                0x08008020        0xa CMakeFiles/Motor_Drive.dir/Core/Src/main.cpp.obj
- *fill*         0x0800802a        0x2 
+                0x08008038        0xa CMakeFiles/Motor_Drive.dir/Core/Src/main.cpp.obj
+ *fill*         0x08008042        0x2 
  .text.LL_RCC_GetAPB2Prescaler
-                0x0800802c       0x1c CMakeFiles/Motor_Drive.dir/Core/Src/pwm3phase_timer.cpp.obj
+                0x08008044       0x1c CMakeFiles/Motor_Drive.dir/Core/Src/pwm3phase_timer.cpp.obj
  .text.LL_TIM_GetCounterMode
-                0x08008048       0x30 CMakeFiles/Motor_Drive.dir/Core/Src/pwm3phase_timer.cpp.obj
+                0x08008060       0x30 CMakeFiles/Motor_Drive.dir/Core/Src/pwm3phase_timer.cpp.obj
  .text.LL_TIM_GetClockDivision
-                0x08008078       0x1c CMakeFiles/Motor_Drive.dir/Core/Src/pwm3phase_timer.cpp.obj
+                0x08008090       0x1c CMakeFiles/Motor_Drive.dir/Core/Src/pwm3phase_timer.cpp.obj
  .text.LL_TIM_OC_SetDeadTime
-                0x08008094       0x26 CMakeFiles/Motor_Drive.dir/Core/Src/pwm3phase_timer.cpp.obj
+                0x080080ac       0x26 CMakeFiles/Motor_Drive.dir/Core/Src/pwm3phase_timer.cpp.obj
  .text._ZN16ThreePhasePWMOutC2EP17TIM_HandleTypeDef
-                0x080080ba       0x48 CMakeFiles/Motor_Drive.dir/Core/Src/pwm3phase_timer.cpp.obj
-                0x080080ba                ThreePhasePWMOut::ThreePhasePWMOut(TIM_HandleTypeDef*)
-                0x080080ba                ThreePhasePWMOut::ThreePhasePWMOut(TIM_HandleTypeDef*)
+                0x080080d2       0x48 CMakeFiles/Motor_Drive.dir/Core/Src/pwm3phase_timer.cpp.obj
+                0x080080d2                ThreePhasePWMOut::ThreePhasePWMOut(TIM_HandleTypeDef*)
+                0x080080d2                ThreePhasePWMOut::ThreePhasePWMOut(TIM_HandleTypeDef*)
  .text._ZN16ThreePhasePWMOut19updateCompareValuesEv
-                0x08008102       0xc4 CMakeFiles/Motor_Drive.dir/Core/Src/pwm3phase_timer.cpp.obj
-                0x08008102                ThreePhasePWMOut::updateCompareValues()
+                0x0800811a       0xc4 CMakeFiles/Motor_Drive.dir/Core/Src/pwm3phase_timer.cpp.obj
+                0x0800811a                ThreePhasePWMOut::updateCompareValues()
  .text._ZN16ThreePhasePWMOut4initEv
-                0x080081c6       0x44 CMakeFiles/Motor_Drive.dir/Core/Src/pwm3phase_timer.cpp.obj
-                0x080081c6                ThreePhasePWMOut::init()
+                0x080081de       0x44 CMakeFiles/Motor_Drive.dir/Core/Src/pwm3phase_timer.cpp.obj
+                0x080081de                ThreePhasePWMOut::init()
  .text._ZN16ThreePhasePWMOut4stopEv
-                0x0800820a       0xe4 CMakeFiles/Motor_Drive.dir/Core/Src/pwm3phase_timer.cpp.obj
-                0x0800820a                ThreePhasePWMOut::stop()
+                0x08008222       0xe4 CMakeFiles/Motor_Drive.dir/Core/Src/pwm3phase_timer.cpp.obj
+                0x08008222                ThreePhasePWMOut::stop()
  .text._ZN16ThreePhasePWMOut7setDutyEfff
-                0x080082ee      0x2ba CMakeFiles/Motor_Drive.dir/Core/Src/pwm3phase_timer.cpp.obj
-                0x080082ee                ThreePhasePWMOut::setDuty(float, float, float)
+                0x08008306      0x2ba CMakeFiles/Motor_Drive.dir/Core/Src/pwm3phase_timer.cpp.obj
+                0x08008306                ThreePhasePWMOut::setDuty(float, float, float)
  .text._ZNK16ThreePhasePWMOut7getDutyEh
-                0x080085a8       0x4c CMakeFiles/Motor_Drive.dir/Core/Src/pwm3phase_timer.cpp.obj
-                0x080085a8                ThreePhasePWMOut::getDuty(unsigned char) const
- *fill*         0x080085f4        0x4 
+                0x080085c0       0x4c CMakeFiles/Motor_Drive.dir/Core/Src/pwm3phase_timer.cpp.obj
+                0x080085c0                ThreePhasePWMOut::getDuty(unsigned char) const
+ *fill*         0x0800860c        0x4 
  .text._ZN16ThreePhasePWMOut11setDeadTimeEm
-                0x080085f8      0x858 CMakeFiles/Motor_Drive.dir/Core/Src/pwm3phase_timer.cpp.obj
-                0x080085f8                ThreePhasePWMOut::setDeadTime(unsigned long)
+                0x08008610      0x858 CMakeFiles/Motor_Drive.dir/Core/Src/pwm3phase_timer.cpp.obj
+                0x08008610                ThreePhasePWMOut::setDeadTime(unsigned long)
  .text._ZN16ThreePhasePWMOut12setFrequencyEm
-                0x08008e50      0x128 CMakeFiles/Motor_Drive.dir/Core/Src/pwm3phase_timer.cpp.obj
-                0x08008e50                ThreePhasePWMOut::setFrequency(unsigned long)
+                0x08008e68      0x128 CMakeFiles/Motor_Drive.dir/Core/Src/pwm3phase_timer.cpp.obj
+                0x08008e68                ThreePhasePWMOut::setFrequency(unsigned long)
  .text._ZNK16ThreePhasePWMOut12getFrequencyEv
-                0x08008f78       0x18 CMakeFiles/Motor_Drive.dir/Core/Src/pwm3phase_timer.cpp.obj
-                0x08008f78                ThreePhasePWMOut::getFrequency() const
+                0x08008f90       0x18 CMakeFiles/Motor_Drive.dir/Core/Src/pwm3phase_timer.cpp.obj
+                0x08008f90                ThreePhasePWMOut::getFrequency() const
  .text._ZSt3minIfERKT_S2_S2_
-                0x08008f90       0x32 CMakeFiles/Motor_Drive.dir/Core/Src/pwm3phase_timer.cpp.obj
-                0x08008f90                float const& std::min<float>(float const&, float const&)
+                0x08008fa8       0x32 CMakeFiles/Motor_Drive.dir/Core/Src/pwm3phase_timer.cpp.obj
+                0x08008fa8                float const& std::min<float>(float const&, float const&)
  .text._ZSt3maxIfERKT_S2_S2_
-                0x08008fc2       0x32 CMakeFiles/Motor_Drive.dir/Core/Src/pwm3phase_timer.cpp.obj
-                0x08008fc2                float const& std::max<float>(float const&, float const&)
+                0x08008fda       0x32 CMakeFiles/Motor_Drive.dir/Core/Src/pwm3phase_timer.cpp.obj
+                0x08008fda                float const& std::max<float>(float const&, float const&)
  .text._ZN10DigitalOutC2EP12GPIO_TypeDeft
-                0x08008ff4       0x28 CMakeFiles/Motor_Drive.dir/Core/Src/digitalio.cpp.obj
-                0x08008ff4                DigitalOut::DigitalOut(GPIO_TypeDef*, unsigned short)
-                0x08008ff4                DigitalOut::DigitalOut(GPIO_TypeDef*, unsigned short)
+                0x0800900c       0x28 CMakeFiles/Motor_Drive.dir/Core/Src/digitalio.cpp.obj
+                0x0800900c                DigitalOut::DigitalOut(GPIO_TypeDef*, unsigned short)
+                0x0800900c                DigitalOut::DigitalOut(GPIO_TypeDef*, unsigned short)
  .text._ZN10DigitalOut5writeEb
-                0x0800901c       0x2e CMakeFiles/Motor_Drive.dir/Core/Src/digitalio.cpp.obj
-                0x0800901c                DigitalOut::write(bool)
+                0x08009034       0x2e CMakeFiles/Motor_Drive.dir/Core/Src/digitalio.cpp.obj
+                0x08009034                DigitalOut::write(bool)
  .text._ZN10DigitalOut6toggleEv
-                0x0800904a       0x20 CMakeFiles/Motor_Drive.dir/Core/Src/digitalio.cpp.obj
-                0x0800904a                DigitalOut::toggle()
- *fill*         0x0800906a        0x2 
+                0x08009062       0x20 CMakeFiles/Motor_Drive.dir/Core/Src/digitalio.cpp.obj
+                0x08009062                DigitalOut::toggle()
+ *fill*         0x08009082        0x2 
  .text._ZSt5isinff
-                0x0800906c       0x48 CMakeFiles/Motor_Drive.dir/Core/Src/encoder.cpp.obj
-                0x0800906c                std::isinf(float)
+                0x08009084       0x48 CMakeFiles/Motor_Drive.dir/Core/Src/encoder.cpp.obj
+                0x08009084                std::isinf(float)
  .text._ZSt5isnanf
-                0x080090b4       0x38 CMakeFiles/Motor_Drive.dir/Core/Src/encoder.cpp.obj
-                0x080090b4                std::isnan(float)
+                0x080090cc       0x38 CMakeFiles/Motor_Drive.dir/Core/Src/encoder.cpp.obj
+                0x080090cc                std::isnan(float)
  .text._ZN12HighResTimer8getTicksEv
-                0x080090ec       0x8c CMakeFiles/Motor_Drive.dir/Core/Src/encoder.cpp.obj
-                0x080090ec                HighResTimer::getTicks()
+                0x08009104       0x8c CMakeFiles/Motor_Drive.dir/Core/Src/encoder.cpp.obj
+                0x08009104                HighResTimer::getTicks()
  .text._ZN7EncoderC2EP17TIM_HandleTypeDefS1_tmmh
-                0x08009178       0x70 CMakeFiles/Motor_Drive.dir/Core/Src/encoder.cpp.obj
-                0x08009178                Encoder::Encoder(TIM_HandleTypeDef*, TIM_HandleTypeDef*, unsigned short, unsigned long, unsigned long, unsigned char)
-                0x08009178                Encoder::Encoder(TIM_HandleTypeDef*, TIM_HandleTypeDef*, unsigned short, unsigned long, unsigned long, unsigned char)
+                0x08009190       0x70 CMakeFiles/Motor_Drive.dir/Core/Src/encoder.cpp.obj
+                0x08009190                Encoder::Encoder(TIM_HandleTypeDef*, TIM_HandleTypeDef*, unsigned short, unsigned long, unsigned long, unsigned char)
+                0x08009190                Encoder::Encoder(TIM_HandleTypeDef*, TIM_HandleTypeDef*, unsigned short, unsigned long, unsigned long, unsigned char)
  .text._ZN7Encoder9indexRiseEv
-                0x080091e8       0x84 CMakeFiles/Motor_Drive.dir/Core/Src/encoder.cpp.obj
-                0x080091e8                Encoder::indexRise()
+                0x08009200       0x84 CMakeFiles/Motor_Drive.dir/Core/Src/encoder.cpp.obj
+                0x08009200                Encoder::indexRise()
  .text._ZN7Encoder14calcElecOffsetEtt
-                0x0800926c       0x4e CMakeFiles/Motor_Drive.dir/Core/Src/encoder.cpp.obj
-                0x0800926c                Encoder::calcElecOffset(unsigned short, unsigned short)
- *fill*         0x080092ba        0x2 
+                0x08009284       0x4e CMakeFiles/Motor_Drive.dir/Core/Src/encoder.cpp.obj
+                0x08009284                Encoder::calcElecOffset(unsigned short, unsigned short)
+ *fill*         0x080092d2        0x2 
  .text._ZN7Encoder11updateSpeedEv
-                0x080092bc      0x2a8 CMakeFiles/Motor_Drive.dir/Core/Src/encoder.cpp.obj
-                0x080092bc                Encoder::updateSpeed()
+                0x080092d4      0x2a8 CMakeFiles/Motor_Drive.dir/Core/Src/encoder.cpp.obj
+                0x080092d4                Encoder::updateSpeed()
  .text._ZN7Encoder15counterOverflowEv
-                0x08009564       0x44 CMakeFiles/Motor_Drive.dir/Core/Src/encoder.cpp.obj
-                0x08009564                Encoder::counterOverflow()
+                0x0800957c       0x44 CMakeFiles/Motor_Drive.dir/Core/Src/encoder.cpp.obj
+                0x0800957c                Encoder::counterOverflow()
  .text._ZN7Encoder13timerOverflowEv
-                0x080095a8       0x1e CMakeFiles/Motor_Drive.dir/Core/Src/encoder.cpp.obj
-                0x080095a8                Encoder::timerOverflow()
+                0x080095c0       0x1e CMakeFiles/Motor_Drive.dir/Core/Src/encoder.cpp.obj
+                0x080095c0                Encoder::timerOverflow()
  .text._ZN7Encoder4initEv
-                0x080095c6       0x72 CMakeFiles/Motor_Drive.dir/Core/Src/encoder.cpp.obj
-                0x080095c6                Encoder::init()
+                0x080095de       0x72 CMakeFiles/Motor_Drive.dir/Core/Src/encoder.cpp.obj
+                0x080095de                Encoder::init()
  .text._ZN7Encoder5startEv
-                0x08009638       0x88 CMakeFiles/Motor_Drive.dir/Core/Src/encoder.cpp.obj
-                0x08009638                Encoder::start()
+                0x08009650       0x88 CMakeFiles/Motor_Drive.dir/Core/Src/encoder.cpp.obj
+                0x08009650                Encoder::start()
  .text._ZN7Encoder13elecZeroAlignEv
-                0x080096c0       0x84 CMakeFiles/Motor_Drive.dir/Core/Src/encoder.cpp.obj
-                0x080096c0                Encoder::elecZeroAlign()
+                0x080096d8       0x84 CMakeFiles/Motor_Drive.dir/Core/Src/encoder.cpp.obj
+                0x080096d8                Encoder::elecZeroAlign()
  .text._ZN7Encoder15irqHandlerIndexEt
-                0x08009744       0x34 CMakeFiles/Motor_Drive.dir/Core/Src/encoder.cpp.obj
-                0x08009744                Encoder::irqHandlerIndex(unsigned short)
+                0x0800975c       0x34 CMakeFiles/Motor_Drive.dir/Core/Src/encoder.cpp.obj
+                0x0800975c                Encoder::irqHandlerIndex(unsigned short)
  .text._ZN7Encoder15irqHandlerSpeedEv
-                0x08009778       0x20 CMakeFiles/Motor_Drive.dir/Core/Src/encoder.cpp.obj
-                0x08009778                Encoder::irqHandlerSpeed()
+                0x08009790       0x20 CMakeFiles/Motor_Drive.dir/Core/Src/encoder.cpp.obj
+                0x08009790                Encoder::irqHandlerSpeed()
  .text._ZN7Encoder25irqHandlerEncoderOverflowEv
-                0x08009798       0x20 CMakeFiles/Motor_Drive.dir/Core/Src/encoder.cpp.obj
-                0x08009798                Encoder::irqHandlerEncoderOverflow()
+                0x080097b0       0x20 CMakeFiles/Motor_Drive.dir/Core/Src/encoder.cpp.obj
+                0x080097b0                Encoder::irqHandlerEncoderOverflow()
  .text._ZN7Encoder23irqHandlerTimerOverflowEv
-                0x080097b8       0x20 CMakeFiles/Motor_Drive.dir/Core/Src/encoder.cpp.obj
-                0x080097b8                Encoder::irqHandlerTimerOverflow()
+                0x080097d0       0x20 CMakeFiles/Motor_Drive.dir/Core/Src/encoder.cpp.obj
+                0x080097d0                Encoder::irqHandlerTimerOverflow()
  .text._ZNK7Encoder6getPosEv
-                0x080097d8       0x4e CMakeFiles/Motor_Drive.dir/Core/Src/encoder.cpp.obj
-                0x080097d8                Encoder::getPos() const
+                0x080097f0       0x4e CMakeFiles/Motor_Drive.dir/Core/Src/encoder.cpp.obj
+                0x080097f0                Encoder::getPos() const
  .text._ZNK7Encoder12getPosBypassEv
-                0x08009826       0x38 CMakeFiles/Motor_Drive.dir/Core/Src/encoder.cpp.obj
-                0x08009826                Encoder::getPosBypass() const
+                0x0800983e       0x38 CMakeFiles/Motor_Drive.dir/Core/Src/encoder.cpp.obj
+                0x0800983e                Encoder::getPosBypass() const
  .text._ZNK7Encoder10getElecPosEv
-                0x0800985e       0x8e CMakeFiles/Motor_Drive.dir/Core/Src/encoder.cpp.obj
-                0x0800985e                Encoder::getElecPos() const
+                0x08009876       0x8e CMakeFiles/Motor_Drive.dir/Core/Src/encoder.cpp.obj
+                0x08009876                Encoder::getElecPos() const
  .text._ZNK7Encoder6getRPMEv
-                0x080098ec       0x1e CMakeFiles/Motor_Drive.dir/Core/Src/encoder.cpp.obj
-                0x080098ec                Encoder::getRPM() const
- *fill*         0x0800990a        0x2 
+                0x08009904       0x1e CMakeFiles/Motor_Drive.dir/Core/Src/encoder.cpp.obj
+                0x08009904                Encoder::getRPM() const
+ *fill*         0x08009922        0x2 
  .text._ZNK7Encoder14getElecPos_radEv
-                0x0800990c       0x80 CMakeFiles/Motor_Drive.dir/Core/Src/encoder.cpp.obj
-                0x0800990c                Encoder::getElecPos_rad() const
+                0x08009924       0x80 CMakeFiles/Motor_Drive.dir/Core/Src/encoder.cpp.obj
+                0x08009924                Encoder::getElecPos_rad() const
  .text._ZN10HallSensorC2EP12GPIO_TypeDeftS1_tS1_t
-                0x0800998c       0x50 CMakeFiles/Motor_Drive.dir/Core/Src/hallsensor.cpp.obj
-                0x0800998c                HallSensor::HallSensor(GPIO_TypeDef*, unsigned short, GPIO_TypeDef*, unsigned short, GPIO_TypeDef*, unsigned short)
-                0x0800998c                HallSensor::HallSensor(GPIO_TypeDef*, unsigned short, GPIO_TypeDef*, unsigned short, GPIO_TypeDef*, unsigned short)
+                0x080099a4       0x50 CMakeFiles/Motor_Drive.dir/Core/Src/hallsensor.cpp.obj
+                0x080099a4                HallSensor::HallSensor(GPIO_TypeDef*, unsigned short, GPIO_TypeDef*, unsigned short, GPIO_TypeDef*, unsigned short)
+                0x080099a4                HallSensor::HallSensor(GPIO_TypeDef*, unsigned short, GPIO_TypeDef*, unsigned short, GPIO_TypeDef*, unsigned short)
  .text._ZN10HallSensor8chA_riseEv
-                0x080099dc       0x2a CMakeFiles/Motor_Drive.dir/Core/Src/hallsensor.cpp.obj
-                0x080099dc                HallSensor::chA_rise()
+                0x080099f4       0x2a CMakeFiles/Motor_Drive.dir/Core/Src/hallsensor.cpp.obj
+                0x080099f4                HallSensor::chA_rise()
  .text._ZN10HallSensor8chA_fallEv
-                0x08009a06       0x2a CMakeFiles/Motor_Drive.dir/Core/Src/hallsensor.cpp.obj
-                0x08009a06                HallSensor::chA_fall()
+                0x08009a1e       0x2a CMakeFiles/Motor_Drive.dir/Core/Src/hallsensor.cpp.obj
+                0x08009a1e                HallSensor::chA_fall()
  .text._ZN10HallSensor8chB_riseEv
-                0x08009a30       0x2a CMakeFiles/Motor_Drive.dir/Core/Src/hallsensor.cpp.obj
-                0x08009a30                HallSensor::chB_rise()
+                0x08009a48       0x2a CMakeFiles/Motor_Drive.dir/Core/Src/hallsensor.cpp.obj
+                0x08009a48                HallSensor::chB_rise()
  .text._ZN10HallSensor8chB_fallEv
-                0x08009a5a       0x2a CMakeFiles/Motor_Drive.dir/Core/Src/hallsensor.cpp.obj
-                0x08009a5a                HallSensor::chB_fall()
+                0x08009a72       0x2a CMakeFiles/Motor_Drive.dir/Core/Src/hallsensor.cpp.obj
+                0x08009a72                HallSensor::chB_fall()
  .text._ZN10HallSensor8chC_riseEv
-                0x08009a84       0x2a CMakeFiles/Motor_Drive.dir/Core/Src/hallsensor.cpp.obj
-                0x08009a84                HallSensor::chC_rise()
+                0x08009a9c       0x2a CMakeFiles/Motor_Drive.dir/Core/Src/hallsensor.cpp.obj
+                0x08009a9c                HallSensor::chC_rise()
  .text._ZN10HallSensor8chC_fallEv
-                0x08009aae       0x2a CMakeFiles/Motor_Drive.dir/Core/Src/hallsensor.cpp.obj
-                0x08009aae                HallSensor::chC_fall()
+                0x08009ac6       0x2a CMakeFiles/Motor_Drive.dir/Core/Src/hallsensor.cpp.obj
+                0x08009ac6                HallSensor::chC_fall()
  .text._ZN10HallSensor4initEv
-                0x08009ad8       0x20 CMakeFiles/Motor_Drive.dir/Core/Src/hallsensor.cpp.obj
-                0x08009ad8                HallSensor::init()
+                0x08009af0       0x20 CMakeFiles/Motor_Drive.dir/Core/Src/hallsensor.cpp.obj
+                0x08009af0                HallSensor::init()
  .text._ZN10HallSensor4readEv
-                0x08009af8       0x88 CMakeFiles/Motor_Drive.dir/Core/Src/hallsensor.cpp.obj
-                0x08009af8                HallSensor::read()
+                0x08009b10       0x88 CMakeFiles/Motor_Drive.dir/Core/Src/hallsensor.cpp.obj
+                0x08009b10                HallSensor::read()
  .text._ZN10HallSensor16irqHandlerRisingEt
-                0x08009b80       0x60 CMakeFiles/Motor_Drive.dir/Core/Src/hallsensor.cpp.obj
-                0x08009b80                HallSensor::irqHandlerRising(unsigned short)
+                0x08009b98       0x60 CMakeFiles/Motor_Drive.dir/Core/Src/hallsensor.cpp.obj
+                0x08009b98                HallSensor::irqHandlerRising(unsigned short)
  .text._ZN10HallSensor17irqHandlerFallingEt
-                0x08009be0       0x60 CMakeFiles/Motor_Drive.dir/Core/Src/hallsensor.cpp.obj
-                0x08009be0                HallSensor::irqHandlerFalling(unsigned short)
+                0x08009bf8       0x60 CMakeFiles/Motor_Drive.dir/Core/Src/hallsensor.cpp.obj
+                0x08009bf8                HallSensor::irqHandlerFalling(unsigned short)
  .text._ZNK10HallSensor8getStateEv
-                0x08009c40       0x18 CMakeFiles/Motor_Drive.dir/Core/Src/hallsensor.cpp.obj
-                0x08009c40                HallSensor::getState() const
+                0x08009c58       0x18 CMakeFiles/Motor_Drive.dir/Core/Src/hallsensor.cpp.obj
+                0x08009c58                HallSensor::getState() const
  .text._ZSt4fabsf
-                0x08009c58       0x20 CMakeFiles/Motor_Drive.dir/Core/Src/modulation.cpp.obj
-                0x08009c58                std::fabs(float)
+                0x08009c70       0x20 CMakeFiles/Motor_Drive.dir/Core/Src/modulation.cpp.obj
+                0x08009c70                std::fabs(float)
  .text._ZN9__gnu_cxx5__ops16__iter_less_iterEv
-                0x08009c78       0x10 CMakeFiles/Motor_Drive.dir/Core/Src/modulation.cpp.obj
-                0x08009c78                __gnu_cxx::__ops::__iter_less_iter()
+                0x08009c90       0x10 CMakeFiles/Motor_Drive.dir/Core/Src/modulation.cpp.obj
+                0x08009c90                __gnu_cxx::__ops::__iter_less_iter()
  .text._ZL7clamp01f
-                0x08009c88       0x44 CMakeFiles/Motor_Drive.dir/Core/Src/modulation.cpp.obj
+                0x08009ca0       0x44 CMakeFiles/Motor_Drive.dir/Core/Src/modulation.cpp.obj
  .text._ZL15sector_to_timesifffRfS_S_
-                0x08009ccc      0x22c CMakeFiles/Motor_Drive.dir/Core/Src/modulation.cpp.obj
+                0x08009ce4      0x22c CMakeFiles/Motor_Drive.dir/Core/Src/modulation.cpp.obj
  .text._ZL20get_sector_and_angleffRiRf
-                0x08009ef8       0x9c CMakeFiles/Motor_Drive.dir/Core/Src/modulation.cpp.obj
+                0x08009f10       0x9c CMakeFiles/Motor_Drive.dir/Core/Src/modulation.cpp.obj
  .text._Z6clarkefffPfS_
-                0x08009f94       0x68 CMakeFiles/Motor_Drive.dir/Core/Src/modulation.cpp.obj
-                0x08009f94                clarke(float, float, float, float*, float*)
+                0x08009fac       0x68 CMakeFiles/Motor_Drive.dir/Core/Src/modulation.cpp.obj
+                0x08009fac                clarke(float, float, float, float*, float*)
  .text._Z4parkfffPfS_
-                0x08009ffc       0x7e CMakeFiles/Motor_Drive.dir/Core/Src/modulation.cpp.obj
-                0x08009ffc                park(float, float, float, float*, float*)
+                0x0800a014       0x7e CMakeFiles/Motor_Drive.dir/Core/Src/modulation.cpp.obj
+                0x0800a014                park(float, float, float, float*, float*)
  .text._Z8inv_parkfffPfS_
-                0x0800a07a       0x7a CMakeFiles/Motor_Drive.dir/Core/Src/modulation.cpp.obj
-                0x0800a07a                inv_park(float, float, float, float*, float*)
+                0x0800a092       0x7a CMakeFiles/Motor_Drive.dir/Core/Src/modulation.cpp.obj
+                0x0800a092                inv_park(float, float, float, float*, float*)
  .text._ZL14svpwm_standardfffPfS_S_
-                0x0800a0f4      0x194 CMakeFiles/Motor_Drive.dir/Core/Src/modulation.cpp.obj
+                0x0800a10c      0x194 CMakeFiles/Motor_Drive.dir/Core/Src/modulation.cpp.obj
  .text._ZL10svpwm_compffffPfS_S_
-                0x0800a288      0x198 CMakeFiles/Motor_Drive.dir/Core/Src/modulation.cpp.obj
+                0x0800a2a0      0x198 CMakeFiles/Motor_Drive.dir/Core/Src/modulation.cpp.obj
  .text._ZL19svpwm_superpositionffffPfS_S_
-                0x0800a420      0x388 CMakeFiles/Motor_Drive.dir/Core/Src/modulation.cpp.obj
+                0x0800a438      0x388 CMakeFiles/Motor_Drive.dir/Core/Src/modulation.cpp.obj
  .text._ZL14get_phase_refsfffRfS_S_
-                0x0800a7a8       0xb4 CMakeFiles/Motor_Drive.dir/Core/Src/modulation.cpp.obj
+                0x0800a7c0       0xb4 CMakeFiles/Motor_Drive.dir/Core/Src/modulation.cpp.obj
  .text._ZL7sym_pwmfffPfS_S_
-                0x0800a85c      0x130 CMakeFiles/Motor_Drive.dir/Core/Src/modulation.cpp.obj
+                0x0800a874      0x130 CMakeFiles/Motor_Drive.dir/Core/Src/modulation.cpp.obj
  .text._ZL4dpwmfffiPfS_S_
-                0x0800a98c      0x7f0 CMakeFiles/Motor_Drive.dir/Core/Src/modulation.cpp.obj
+                0x0800a9a4      0x7f0 CMakeFiles/Motor_Drive.dir/Core/Src/modulation.cpp.obj
  .text._Z8modulate14ModulationTypeffffPfS0_S0_
-                0x0800b17c      0x140 CMakeFiles/Motor_Drive.dir/Core/Src/modulation.cpp.obj
-                0x0800b17c                modulate(ModulationType, float, float, float, float, float*, float*, float*)
+                0x0800b194      0x140 CMakeFiles/Motor_Drive.dir/Core/Src/modulation.cpp.obj
+                0x0800b194                modulate(ModulationType, float, float, float, float, float*, float*, float*)
  .text._ZSt3minIfET_St16initializer_listIS0_E
-                0x0800b2bc       0x40 CMakeFiles/Motor_Drive.dir/Core/Src/modulation.cpp.obj
-                0x0800b2bc                float std::min<float>(std::initializer_list<float>)
+                0x0800b2d4       0x40 CMakeFiles/Motor_Drive.dir/Core/Src/modulation.cpp.obj
+                0x0800b2d4                float std::min<float>(std::initializer_list<float>)
  .text._ZSt3maxIfET_St16initializer_listIS0_E
-                0x0800b2fc       0x40 CMakeFiles/Motor_Drive.dir/Core/Src/modulation.cpp.obj
-                0x0800b2fc                float std::max<float>(std::initializer_list<float>)
+                0x0800b314       0x40 CMakeFiles/Motor_Drive.dir/Core/Src/modulation.cpp.obj
+                0x0800b314                float std::max<float>(std::initializer_list<float>)
  .text._ZNKSt16initializer_listIfE5beginEv
-                0x0800b33c       0x18 CMakeFiles/Motor_Drive.dir/Core/Src/modulation.cpp.obj
-                0x0800b33c                std::initializer_list<float>::begin() const
+                0x0800b354       0x18 CMakeFiles/Motor_Drive.dir/Core/Src/modulation.cpp.obj
+                0x0800b354                std::initializer_list<float>::begin() const
  .text._ZNKSt16initializer_listIfE3endEv
-                0x0800b354       0x24 CMakeFiles/Motor_Drive.dir/Core/Src/modulation.cpp.obj
-                0x0800b354                std::initializer_list<float>::end() const
+                0x0800b36c       0x24 CMakeFiles/Motor_Drive.dir/Core/Src/modulation.cpp.obj
+                0x0800b36c                std::initializer_list<float>::end() const
  .text._ZSt13__min_elementIPKfN9__gnu_cxx5__ops15_Iter_less_iterEET_S5_S5_T0_
-                0x0800b378       0x56 CMakeFiles/Motor_Drive.dir/Core/Src/modulation.cpp.obj
-                0x0800b378                float const* std::__min_element<float const*, __gnu_cxx::__ops::_Iter_less_iter>(float const*, float const*, __gnu_cxx::__ops::_Iter_less_iter)
+                0x0800b390       0x56 CMakeFiles/Motor_Drive.dir/Core/Src/modulation.cpp.obj
+                0x0800b390                float const* std::__min_element<float const*, __gnu_cxx::__ops::_Iter_less_iter>(float const*, float const*, __gnu_cxx::__ops::_Iter_less_iter)
  .text._ZSt13__max_elementIPKfN9__gnu_cxx5__ops15_Iter_less_iterEET_S5_S5_T0_
-                0x0800b3ce       0x56 CMakeFiles/Motor_Drive.dir/Core/Src/modulation.cpp.obj
-                0x0800b3ce                float const* std::__max_element<float const*, __gnu_cxx::__ops::_Iter_less_iter>(float const*, float const*, __gnu_cxx::__ops::_Iter_less_iter)
+                0x0800b3e6       0x56 CMakeFiles/Motor_Drive.dir/Core/Src/modulation.cpp.obj
+                0x0800b3e6                float const* std::__max_element<float const*, __gnu_cxx::__ops::_Iter_less_iter>(float const*, float const*, __gnu_cxx::__ops::_Iter_less_iter)
  .text._ZNKSt16initializer_listIfE4sizeEv
-                0x0800b424       0x18 CMakeFiles/Motor_Drive.dir/Core/Src/modulation.cpp.obj
-                0x0800b424                std::initializer_list<float>::size() const
+                0x0800b43c       0x18 CMakeFiles/Motor_Drive.dir/Core/Src/modulation.cpp.obj
+                0x0800b43c                std::initializer_list<float>::size() const
  .text._ZNK9__gnu_cxx5__ops15_Iter_less_iterclIPKfS4_EEbT_T0_
-                0x0800b43c       0x34 CMakeFiles/Motor_Drive.dir/Core/Src/modulation.cpp.obj
-                0x0800b43c                bool __gnu_cxx::__ops::_Iter_less_iter::operator()<float const*, float const*>(float const*, float const*) const
+                0x0800b454       0x34 CMakeFiles/Motor_Drive.dir/Core/Src/modulation.cpp.obj
+                0x0800b454                bool __gnu_cxx::__ops::_Iter_less_iter::operator()<float const*, float const*>(float const*, float const*) const
  .text._ZN16MicrosecondTimer10irqHandlerEP17TIM_HandleTypeDef
-                0x0800b470       0x38 CMakeFiles/Motor_Drive.dir/Core/Src/ustimer.cpp.obj
-                0x0800b470                MicrosecondTimer::irqHandler(TIM_HandleTypeDef*)
+                0x0800b488       0x38 CMakeFiles/Motor_Drive.dir/Core/Src/ustimer.cpp.obj
+                0x0800b488                MicrosecondTimer::irqHandler(TIM_HandleTypeDef*)
  .text._ZN10ADCSampler16getInstanceIndexEP17ADC_HandleTypeDef
-                0x0800b4a8       0x50 CMakeFiles/Motor_Drive.dir/Core/Src/adc_sampler.cpp.obj
-                0x0800b4a8                ADCSampler::getInstanceIndex(ADC_HandleTypeDef*)
+                0x0800b4c0       0x50 CMakeFiles/Motor_Drive.dir/Core/Src/adc_sampler.cpp.obj
+                0x0800b4c0                ADCSampler::getInstanceIndex(ADC_HandleTypeDef*)
  .text._ZN10ADCSampler13processBufferEv
-                0x0800b4f8       0xa4 CMakeFiles/Motor_Drive.dir/Core/Src/adc_sampler.cpp.obj
-                0x0800b4f8                ADCSampler::processBuffer()
+                0x0800b510       0xa4 CMakeFiles/Motor_Drive.dir/Core/Src/adc_sampler.cpp.obj
+                0x0800b510                ADCSampler::processBuffer()
  .text._ZN10ADCSampler17processHalfBufferEv
-                0x0800b59c       0xa4 CMakeFiles/Motor_Drive.dir/Core/Src/adc_sampler.cpp.obj
-                0x0800b59c                ADCSampler::processHalfBuffer()
+                0x0800b5b4       0xa4 CMakeFiles/Motor_Drive.dir/Core/Src/adc_sampler.cpp.obj
+                0x0800b5b4                ADCSampler::processHalfBuffer()
  .text._ZN10ADCSamplerC2EP17ADC_HandleTypeDefP19__DMA_HandleTypeDefPVtm
-                0x0800b640       0x5a CMakeFiles/Motor_Drive.dir/Core/Src/adc_sampler.cpp.obj
-                0x0800b640                ADCSampler::ADCSampler(ADC_HandleTypeDef*, __DMA_HandleTypeDef*, unsigned short volatile*, unsigned long)
-                0x0800b640                ADCSampler::ADCSampler(ADC_HandleTypeDef*, __DMA_HandleTypeDef*, unsigned short volatile*, unsigned long)
+                0x0800b658       0x5a CMakeFiles/Motor_Drive.dir/Core/Src/adc_sampler.cpp.obj
+                0x0800b658                ADCSampler::ADCSampler(ADC_HandleTypeDef*, __DMA_HandleTypeDef*, unsigned short volatile*, unsigned long)
+                0x0800b658                ADCSampler::ADCSampler(ADC_HandleTypeDef*, __DMA_HandleTypeDef*, unsigned short volatile*, unsigned long)
  .text._ZN10ADCSampler19setProcessingBufferEPtm
-                0x0800b69a       0x2c CMakeFiles/Motor_Drive.dir/Core/Src/adc_sampler.cpp.obj
-                0x0800b69a                ADCSampler::setProcessingBuffer(unsigned short*, unsigned long)
- *fill*         0x0800b6c6        0x2 
+                0x0800b6b2       0x2c CMakeFiles/Motor_Drive.dir/Core/Src/adc_sampler.cpp.obj
+                0x0800b6b2                ADCSampler::setProcessingBuffer(unsigned short*, unsigned long)
+ *fill*         0x0800b6de        0x2 
  .text._ZN10ADCSampler11irqConvCpltEP17ADC_HandleTypeDef
-                0x0800b6c8       0x38 CMakeFiles/Motor_Drive.dir/Core/Src/adc_sampler.cpp.obj
-                0x0800b6c8                ADCSampler::irqConvCplt(ADC_HandleTypeDef*)
+                0x0800b6e0       0x38 CMakeFiles/Motor_Drive.dir/Core/Src/adc_sampler.cpp.obj
+                0x0800b6e0                ADCSampler::irqConvCplt(ADC_HandleTypeDef*)
  .text._ZN10ADCSampler15irqConvHalfCpltEP17ADC_HandleTypeDef
-                0x0800b700       0x38 CMakeFiles/Motor_Drive.dir/Core/Src/adc_sampler.cpp.obj
-                0x0800b700                ADCSampler::irqConvHalfCplt(ADC_HandleTypeDef*)
+                0x0800b718       0x38 CMakeFiles/Motor_Drive.dir/Core/Src/adc_sampler.cpp.obj
+                0x0800b718                ADCSampler::irqConvHalfCplt(ADC_HandleTypeDef*)
  .text._ZN10ADCSampler8startDMAEv
-                0x0800b738       0x74 CMakeFiles/Motor_Drive.dir/Core/Src/adc_sampler.cpp.obj
-                0x0800b738                ADCSampler::startDMA()
+                0x0800b750       0x74 CMakeFiles/Motor_Drive.dir/Core/Src/adc_sampler.cpp.obj
+                0x0800b750                ADCSampler::startDMA()
  .text._ZN10ADCSampler13getLatestDataEPtm
-                0x0800b7ac      0x23c CMakeFiles/Motor_Drive.dir/Core/Src/adc_sampler.cpp.obj
-                0x0800b7ac                ADCSampler::getLatestData(unsigned short*, unsigned long)
+                0x0800b7c4      0x23c CMakeFiles/Motor_Drive.dir/Core/Src/adc_sampler.cpp.obj
+                0x0800b7c4                ADCSampler::getLatestData(unsigned short*, unsigned long)
  .text._ZN10ADCSampler17getLatestDataMeanEPtm
-                0x0800b9e8      0x17a CMakeFiles/Motor_Drive.dir/Core/Src/adc_sampler.cpp.obj
-                0x0800b9e8                ADCSampler::getLatestDataMean(unsigned short*, unsigned long)
- *fill*         0x0800bb62        0x2 
+                0x0800ba00      0x17a CMakeFiles/Motor_Drive.dir/Core/Src/adc_sampler.cpp.obj
+                0x0800ba00                ADCSampler::getLatestDataMean(unsigned short*, unsigned long)
+ *fill*         0x0800bb7a        0x2 
  .text._ZN10ADCSampler16getLatestChannelEhPtm
-                0x0800bb64      0x220 CMakeFiles/Motor_Drive.dir/Core/Src/adc_sampler.cpp.obj
-                0x0800bb64                ADCSampler::getLatestChannel(unsigned char, unsigned short*, unsigned long)
+                0x0800bb7c      0x220 CMakeFiles/Motor_Drive.dir/Core/Src/adc_sampler.cpp.obj
+                0x0800bb7c                ADCSampler::getLatestChannel(unsigned char, unsigned short*, unsigned long)
  .text._ZN10ADCSampler20getLatestChannelMeanEhm
-                0x0800bd84       0xaa CMakeFiles/Motor_Drive.dir/Core/Src/adc_sampler.cpp.obj
-                0x0800bd84                ADCSampler::getLatestChannelMean(unsigned char, unsigned long)
- *fill*         0x0800be2e        0x2 
+                0x0800bd9c       0xaa CMakeFiles/Motor_Drive.dir/Core/Src/adc_sampler.cpp.obj
+                0x0800bd9c                ADCSampler::getLatestChannelMean(unsigned char, unsigned long)
+ *fill*         0x0800be46        0x2 
  .text.LL_RCC_GetAPB1Prescaler
-                0x0800be30       0x1c CMakeFiles/Motor_Drive.dir/Core/Src/timer.cpp.obj
+                0x0800be48       0x1c CMakeFiles/Motor_Drive.dir/Core/Src/timer.cpp.obj
  .text.LL_RCC_GetAPB2Prescaler
-                0x0800be4c       0x1c CMakeFiles/Motor_Drive.dir/Core/Src/timer.cpp.obj
+                0x0800be64       0x1c CMakeFiles/Motor_Drive.dir/Core/Src/timer.cpp.obj
  .text.LL_TIM_GetPrescaler
-                0x0800be68       0x18 CMakeFiles/Motor_Drive.dir/Core/Src/timer.cpp.obj
- .text.LL_TIM_GetAutoReload
                 0x0800be80       0x18 CMakeFiles/Motor_Drive.dir/Core/Src/timer.cpp.obj
+ .text.LL_TIM_GetAutoReload
+                0x0800be98       0x18 CMakeFiles/Motor_Drive.dir/Core/Src/timer.cpp.obj
  .text._ZN5Timer16getInstanceIndexEP17TIM_HandleTypeDef
-                0x0800be98      0x134 CMakeFiles/Motor_Drive.dir/Core/Src/timer.cpp.obj
-                0x0800be98                Timer::getInstanceIndex(TIM_HandleTypeDef*)
+                0x0800beb0      0x134 CMakeFiles/Motor_Drive.dir/Core/Src/timer.cpp.obj
+                0x0800beb0                Timer::getInstanceIndex(TIM_HandleTypeDef*)
  .text._ZN5Timer15updateFrequencyEv
-                0x0800bfcc       0xc0 CMakeFiles/Motor_Drive.dir/Core/Src/timer.cpp.obj
-                0x0800bfcc                Timer::updateFrequency()
+                0x0800bfe4       0xc0 CMakeFiles/Motor_Drive.dir/Core/Src/timer.cpp.obj
+                0x0800bfe4                Timer::updateFrequency()
  .text._ZN5TimerC2EP17TIM_HandleTypeDef
-                0x0800c08c       0x24 CMakeFiles/Motor_Drive.dir/Core/Src/timer.cpp.obj
-                0x0800c08c                Timer::Timer(TIM_HandleTypeDef*)
-                0x0800c08c                Timer::Timer(TIM_HandleTypeDef*)
+                0x0800c0a4       0x24 CMakeFiles/Motor_Drive.dir/Core/Src/timer.cpp.obj
+                0x0800c0a4                Timer::Timer(TIM_HandleTypeDef*)
+                0x0800c0a4                Timer::Timer(TIM_HandleTypeDef*)
  .text._ZN5Timer5startEv
-                0x0800c0b0       0x40 CMakeFiles/Motor_Drive.dir/Core/Src/timer.cpp.obj
-                0x0800c0b0                Timer::start()
+                0x0800c0c8       0x40 CMakeFiles/Motor_Drive.dir/Core/Src/timer.cpp.obj
+                0x0800c0c8                Timer::start()
  .text._ZN5Timer7startITEv
-                0x0800c0f0       0x40 CMakeFiles/Motor_Drive.dir/Core/Src/timer.cpp.obj
-                0x0800c0f0                Timer::startIT()
+                0x0800c108       0x40 CMakeFiles/Motor_Drive.dir/Core/Src/timer.cpp.obj
+                0x0800c108                Timer::startIT()
  .text._ZN5Timer12getFrequencyEv
-                0x0800c130       0x2e CMakeFiles/Motor_Drive.dir/Core/Src/timer.cpp.obj
-                0x0800c130                Timer::getFrequency()
+                0x0800c148       0x2e CMakeFiles/Motor_Drive.dir/Core/Src/timer.cpp.obj
+                0x0800c148                Timer::getFrequency()
  .text._ZL9PI_updateP4PI_tff
-                0x0800c15e       0xd6 CMakeFiles/Motor_Drive.dir/Core/Src/foc.cpp.obj
+                0x0800c176       0xd6 CMakeFiles/Motor_Drive.dir/Core/Src/foc.cpp.obj
  .text._ZL8PI_resetP4PI_t
-                0x0800c234       0x1c CMakeFiles/Motor_Drive.dir/Core/Src/foc.cpp.obj
+                0x0800c24c       0x1c CMakeFiles/Motor_Drive.dir/Core/Src/foc.cpp.obj
  .text._Z8foc_initP11FOC_State_t
-                0x0800c250      0x148 CMakeFiles/Motor_Drive.dir/Core/Src/foc.cpp.obj
-                0x0800c250                foc_init(FOC_State_t*)
+                0x0800c268      0x148 CMakeFiles/Motor_Drive.dir/Core/Src/foc.cpp.obj
+                0x0800c268                foc_init(FOC_State_t*)
  .text._Z9foc_resetP11FOC_State_t
-                0x0800c398       0x84 CMakeFiles/Motor_Drive.dir/Core/Src/foc.cpp.obj
-                0x0800c398                foc_reset(FOC_State_t*)
+                0x0800c3b0       0x84 CMakeFiles/Motor_Drive.dir/Core/Src/foc.cpp.obj
+                0x0800c3b0                foc_reset(FOC_State_t*)
  .text._Z10focResetPIP11FOC_State_t
-                0x0800c41c       0x36 CMakeFiles/Motor_Drive.dir/Core/Src/foc.cpp.obj
-                0x0800c41c                focResetPI(FOC_State_t*)
- *fill*         0x0800c452        0x2 
+                0x0800c434       0x36 CMakeFiles/Motor_Drive.dir/Core/Src/foc.cpp.obj
+                0x0800c434                focResetPI(FOC_State_t*)
+ *fill*         0x0800c46a        0x2 
  .text._Z12focAlignZeroP11FOC_State_tffPfS1_S1_
-                0x0800c454       0x44 CMakeFiles/Motor_Drive.dir/Core/Src/foc.cpp.obj
-                0x0800c454                focAlignZero(FOC_State_t*, float, float, float*, float*, float*)
+                0x0800c46c       0x44 CMakeFiles/Motor_Drive.dir/Core/Src/foc.cpp.obj
+                0x0800c46c                focAlignZero(FOC_State_t*, float, float, float*, float*, float*)
  .text._Z7focTestP11FOC_State_tffffffPfS1_S1_
-                0x0800c498      0x27c CMakeFiles/Motor_Drive.dir/Core/Src/foc.cpp.obj
-                0x0800c498                focTest(FOC_State_t*, float, float, float, float, float, float, float*, float*, float*)
- *fill*         0x0800c714        0x4 
+                0x0800c4b0      0x27c CMakeFiles/Motor_Drive.dir/Core/Src/foc.cpp.obj
+                0x0800c4b0                focTest(FOC_State_t*, float, float, float, float, float, float, float*, float*, float*)
  .text._Z12focInjectionP11FOC_State_tf
-                0x0800c718      0x3e4 CMakeFiles/Motor_Drive.dir/Core/Src/foc.cpp.obj
-                0x0800c718                focInjection(FOC_State_t*, float)
+                0x0800c72c      0x3d0 CMakeFiles/Motor_Drive.dir/Core/Src/foc.cpp.obj
+                0x0800c72c                focInjection(FOC_State_t*, float)
  .text._Z10usb_printfPKcz
                 0x0800cafc       0x62 CMakeFiles/Motor_Drive.dir/Core/Src/cmd.cpp.obj
                 0x0800cafc                usb_printf(char const*, ...)
@@ -12791,7 +12790,7 @@ LOAD linker stubs
  .comment       0x00000045       0x46 cmake/stm32cubemx/CMakeFiles/USB_Device_Library.dir/__/__/Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ioreq.c.obj
  .comment       0x00000045       0x46 cmake/stm32cubemx/CMakeFiles/USB_Device_Library.dir/__/__/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Src/usbd_cdc.c.obj
 
-.debug_info     0x00000000    0x41c75
+.debug_info     0x00000000    0x41cc1
  .debug_info    0x00000000     0x20f7 CMakeFiles/Motor_Drive.dir/USB_DEVICE/Target/usbd_conf.c.obj
  .debug_info    0x000020f7      0x725 CMakeFiles/Motor_Drive.dir/USB_DEVICE/App/usb_device.c.obj
  .debug_info    0x0000281c      0x4c5 CMakeFiles/Motor_Drive.dir/USB_DEVICE/App/usbd_desc.c.obj
@@ -12806,37 +12805,37 @@ LOAD linker stubs
  .debug_info    0x00008f69      0x168 CMakeFiles/Motor_Drive.dir/Core/Src/sysmem.c.obj
  .debug_info    0x000090d1      0x6b4 CMakeFiles/Motor_Drive.dir/Core/Src/syscalls.c.obj
  .debug_info    0x00009785       0x30 CMakeFiles/Motor_Drive.dir/startup_stm32h725xx.s.obj
- .debug_info    0x000097b5     0x65b7 CMakeFiles/Motor_Drive.dir/Core/Src/main.cpp.obj
- .debug_info    0x0000fd6c     0x2d0f CMakeFiles/Motor_Drive.dir/Core/Src/pwm3phase_timer.cpp.obj
- .debug_info    0x00012a7b     0x1d1f CMakeFiles/Motor_Drive.dir/Core/Src/digitalio.cpp.obj
- .debug_info    0x0001479a     0x2b1f CMakeFiles/Motor_Drive.dir/Core/Src/encoder.cpp.obj
- .debug_info    0x000172b9     0x1fa3 CMakeFiles/Motor_Drive.dir/Core/Src/hallsensor.cpp.obj
- .debug_info    0x0001925c     0x2f14 CMakeFiles/Motor_Drive.dir/Core/Src/modulation.cpp.obj
- .debug_info    0x0001c170     0x25ee CMakeFiles/Motor_Drive.dir/Core/Src/ustimer.cpp.obj
- .debug_info    0x0001e75e     0x320b CMakeFiles/Motor_Drive.dir/Core/Src/adc_sampler.cpp.obj
- .debug_info    0x00021969     0x29ff CMakeFiles/Motor_Drive.dir/Core/Src/timer.cpp.obj
- .debug_info    0x00024368     0x27d1 CMakeFiles/Motor_Drive.dir/Core/Src/foc.cpp.obj
- .debug_info    0x00026b39     0x2592 CMakeFiles/Motor_Drive.dir/Core/Src/cmd.cpp.obj
- .debug_info    0x000290cb     0x1ccf CMakeFiles/Motor_Drive.dir/Core/Src/math_helpers.cpp.obj
- .debug_info    0x0002ad9a      0xbf0 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Core/Src/system_stm32h7xx.c.obj
- .debug_info    0x0002b98a     0x1561 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pcd.c.obj
- .debug_info    0x0002ceeb      0x8b3 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pcd_ex.c.obj
- .debug_info    0x0002d79e     0x1a1e cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_ll_usb.c.obj
- .debug_info    0x0002f1bc      0xd82 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_rcc.c.obj
- .debug_info    0x0002ff3e     0x120b cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_rcc_ex.c.obj
- .debug_info    0x00031149      0xc6b cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_gpio.c.obj
- .debug_info    0x00031db4      0xb71 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_dma.c.obj
- .debug_info    0x00032925      0xdce cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pwr_ex.c.obj
- .debug_info    0x000336f3     0x10a5 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_cortex.c.obj
- .debug_info    0x00034798     0x1698 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal.c.obj
- .debug_info    0x00035e30     0x2321 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_adc.c.obj
- .debug_info    0x00038151     0x22fb cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_adc_ex.c.obj
- .debug_info    0x0003a44c     0x2bae cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_tim.c.obj
- .debug_info    0x0003cffa     0x18c1 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_tim_ex.c.obj
- .debug_info    0x0003e8bb      0xe20 cmake/stm32cubemx/CMakeFiles/USB_Device_Library.dir/__/__/Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_core.c.obj
- .debug_info    0x0003f6db      0xaf9 cmake/stm32cubemx/CMakeFiles/USB_Device_Library.dir/__/__/Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ctlreq.c.obj
- .debug_info    0x000401d4      0x770 cmake/stm32cubemx/CMakeFiles/USB_Device_Library.dir/__/__/Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ioreq.c.obj
- .debug_info    0x00040944     0x1331 cmake/stm32cubemx/CMakeFiles/USB_Device_Library.dir/__/__/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Src/usbd_cdc.c.obj
+ .debug_info    0x000097b5     0x6603 CMakeFiles/Motor_Drive.dir/Core/Src/main.cpp.obj
+ .debug_info    0x0000fdb8     0x2d0f CMakeFiles/Motor_Drive.dir/Core/Src/pwm3phase_timer.cpp.obj
+ .debug_info    0x00012ac7     0x1d1f CMakeFiles/Motor_Drive.dir/Core/Src/digitalio.cpp.obj
+ .debug_info    0x000147e6     0x2b1f CMakeFiles/Motor_Drive.dir/Core/Src/encoder.cpp.obj
+ .debug_info    0x00017305     0x1fa3 CMakeFiles/Motor_Drive.dir/Core/Src/hallsensor.cpp.obj
+ .debug_info    0x000192a8     0x2f14 CMakeFiles/Motor_Drive.dir/Core/Src/modulation.cpp.obj
+ .debug_info    0x0001c1bc     0x25ee CMakeFiles/Motor_Drive.dir/Core/Src/ustimer.cpp.obj
+ .debug_info    0x0001e7aa     0x320b CMakeFiles/Motor_Drive.dir/Core/Src/adc_sampler.cpp.obj
+ .debug_info    0x000219b5     0x29ff CMakeFiles/Motor_Drive.dir/Core/Src/timer.cpp.obj
+ .debug_info    0x000243b4     0x27d1 CMakeFiles/Motor_Drive.dir/Core/Src/foc.cpp.obj
+ .debug_info    0x00026b85     0x2592 CMakeFiles/Motor_Drive.dir/Core/Src/cmd.cpp.obj
+ .debug_info    0x00029117     0x1ccf CMakeFiles/Motor_Drive.dir/Core/Src/math_helpers.cpp.obj
+ .debug_info    0x0002ade6      0xbf0 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Core/Src/system_stm32h7xx.c.obj
+ .debug_info    0x0002b9d6     0x1561 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pcd.c.obj
+ .debug_info    0x0002cf37      0x8b3 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pcd_ex.c.obj
+ .debug_info    0x0002d7ea     0x1a1e cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_ll_usb.c.obj
+ .debug_info    0x0002f208      0xd82 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_rcc.c.obj
+ .debug_info    0x0002ff8a     0x120b cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_rcc_ex.c.obj
+ .debug_info    0x00031195      0xc6b cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_gpio.c.obj
+ .debug_info    0x00031e00      0xb71 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_dma.c.obj
+ .debug_info    0x00032971      0xdce cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pwr_ex.c.obj
+ .debug_info    0x0003373f     0x10a5 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_cortex.c.obj
+ .debug_info    0x000347e4     0x1698 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal.c.obj
+ .debug_info    0x00035e7c     0x2321 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_adc.c.obj
+ .debug_info    0x0003819d     0x22fb cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_adc_ex.c.obj
+ .debug_info    0x0003a498     0x2bae cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_tim.c.obj
+ .debug_info    0x0003d046     0x18c1 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_tim_ex.c.obj
+ .debug_info    0x0003e907      0xe20 cmake/stm32cubemx/CMakeFiles/USB_Device_Library.dir/__/__/Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_core.c.obj
+ .debug_info    0x0003f727      0xaf9 cmake/stm32cubemx/CMakeFiles/USB_Device_Library.dir/__/__/Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ctlreq.c.obj
+ .debug_info    0x00040220      0x770 cmake/stm32cubemx/CMakeFiles/USB_Device_Library.dir/__/__/Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ioreq.c.obj
+ .debug_info    0x00040990     0x1331 cmake/stm32cubemx/CMakeFiles/USB_Device_Library.dir/__/__/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Src/usbd_cdc.c.obj
 
 .debug_abbrev   0x00000000     0x7c30
  .debug_abbrev  0x00000000      0x332 CMakeFiles/Motor_Drive.dir/USB_DEVICE/Target/usbd_conf.c.obj
@@ -13286,102 +13285,102 @@ LOAD linker stubs
  .debug_macro   0x00044902      0x3b5 cmake/stm32cubemx/CMakeFiles/USB_Device_Library.dir/__/__/Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ioreq.c.obj
  .debug_macro   0x00044cb7      0x3c8 cmake/stm32cubemx/CMakeFiles/USB_Device_Library.dir/__/__/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Src/usbd_cdc.c.obj
 
-.debug_line     0x00000000    0x3157a
- .debug_line    0x00000000      0xd5b CMakeFiles/Motor_Drive.dir/USB_DEVICE/Target/usbd_conf.c.obj
- .debug_line    0x00000d5b      0x980 CMakeFiles/Motor_Drive.dir/USB_DEVICE/App/usb_device.c.obj
- .debug_line    0x000016db      0xa21 CMakeFiles/Motor_Drive.dir/USB_DEVICE/App/usbd_desc.c.obj
- .debug_line    0x000020fc      0x9d1 CMakeFiles/Motor_Drive.dir/USB_DEVICE/App/usbd_cdc_if.c.obj
- .debug_line    0x00002acd      0x9e6 CMakeFiles/Motor_Drive.dir/Core/Src/main.c.obj
- .debug_line    0x000034b3      0x7b5 CMakeFiles/Motor_Drive.dir/Core/Src/gpio.c.obj
- .debug_line    0x00003c68      0xa76 CMakeFiles/Motor_Drive.dir/Core/Src/adc.c.obj
- .debug_line    0x000046de      0x757 CMakeFiles/Motor_Drive.dir/Core/Src/dma.c.obj
- .debug_line    0x00004e35      0xd8c CMakeFiles/Motor_Drive.dir/Core/Src/tim.c.obj
- .debug_line    0x00005bc1      0x940 CMakeFiles/Motor_Drive.dir/Core/Src/stm32h7xx_it.c.obj
- .debug_line    0x00006501      0x757 CMakeFiles/Motor_Drive.dir/Core/Src/stm32h7xx_hal_msp.c.obj
- .debug_line    0x00006c58      0x2c4 CMakeFiles/Motor_Drive.dir/Core/Src/sysmem.c.obj
- .debug_line    0x00006f1c      0x5e8 CMakeFiles/Motor_Drive.dir/Core/Src/syscalls.c.obj
- .debug_line    0x00007504       0x7b CMakeFiles/Motor_Drive.dir/startup_stm32h725xx.s.obj
- .debug_line    0x0000757f     0x383f CMakeFiles/Motor_Drive.dir/Core/Src/main.cpp.obj
- .debug_line    0x0000adbe     0x136e CMakeFiles/Motor_Drive.dir/Core/Src/pwm3phase_timer.cpp.obj
- .debug_line    0x0000c12c      0xcfd CMakeFiles/Motor_Drive.dir/Core/Src/digitalio.cpp.obj
- .debug_line    0x0000ce29     0x1388 CMakeFiles/Motor_Drive.dir/Core/Src/encoder.cpp.obj
- .debug_line    0x0000e1b1      0xeb6 CMakeFiles/Motor_Drive.dir/Core/Src/hallsensor.cpp.obj
- .debug_line    0x0000f067     0x15d0 CMakeFiles/Motor_Drive.dir/Core/Src/modulation.cpp.obj
- .debug_line    0x00010637      0xe97 CMakeFiles/Motor_Drive.dir/Core/Src/ustimer.cpp.obj
- .debug_line    0x000114ce     0x157d CMakeFiles/Motor_Drive.dir/Core/Src/adc_sampler.cpp.obj
- .debug_line    0x00012a4b     0x1084 CMakeFiles/Motor_Drive.dir/Core/Src/timer.cpp.obj
- .debug_line    0x00013acf     0x12da CMakeFiles/Motor_Drive.dir/Core/Src/foc.cpp.obj
- .debug_line    0x00014da9     0x104d CMakeFiles/Motor_Drive.dir/Core/Src/cmd.cpp.obj
- .debug_line    0x00015df6      0xe60 CMakeFiles/Motor_Drive.dir/Core/Src/math_helpers.cpp.obj
- .debug_line    0x00016c56      0x94d cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Core/Src/system_stm32h7xx.c.obj
- .debug_line    0x000175a3     0x1497 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pcd.c.obj
- .debug_line    0x00018a3a      0x95d cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pcd_ex.c.obj
- .debug_line    0x00019397     0x1d4b cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_ll_usb.c.obj
- .debug_line    0x0001b0e2     0x133d cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_rcc.c.obj
- .debug_line    0x0001c41f     0x1bf1 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_rcc_ex.c.obj
- .debug_line    0x0001e010      0xba4 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_gpio.c.obj
- .debug_line    0x0001ebb4     0x26b3 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_dma.c.obj
- .debug_line    0x00021267      0xe31 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pwr_ex.c.obj
- .debug_line    0x00022098      0xd19 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_cortex.c.obj
- .debug_line    0x00022db1      0xdc0 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal.c.obj
- .debug_line    0x00023b71     0x2652 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_adc.c.obj
- .debug_line    0x000261c3     0x20e2 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_adc_ex.c.obj
- .debug_line    0x000282a5     0x3f0f cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_tim.c.obj
- .debug_line    0x0002c1b4     0x1d4d cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_tim_ex.c.obj
- .debug_line    0x0002df01      0xe7b cmake/stm32cubemx/CMakeFiles/USB_Device_Library.dir/__/__/Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_core.c.obj
- .debug_line    0x0002ed7c     0x1075 cmake/stm32cubemx/CMakeFiles/USB_Device_Library.dir/__/__/Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ctlreq.c.obj
- .debug_line    0x0002fdf1      0x991 cmake/stm32cubemx/CMakeFiles/USB_Device_Library.dir/__/__/Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ioreq.c.obj
- .debug_line    0x00030782      0xdf8 cmake/stm32cubemx/CMakeFiles/USB_Device_Library.dir/__/__/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Src/usbd_cdc.c.obj
+.debug_line     0x00000000    0x3179e
+ .debug_line    0x00000000      0xd6d CMakeFiles/Motor_Drive.dir/USB_DEVICE/Target/usbd_conf.c.obj
+ .debug_line    0x00000d6d      0x992 CMakeFiles/Motor_Drive.dir/USB_DEVICE/App/usb_device.c.obj
+ .debug_line    0x000016ff      0xa31 CMakeFiles/Motor_Drive.dir/USB_DEVICE/App/usbd_desc.c.obj
+ .debug_line    0x00002130      0x9e3 CMakeFiles/Motor_Drive.dir/USB_DEVICE/App/usbd_cdc_if.c.obj
+ .debug_line    0x00002b13      0x9f8 CMakeFiles/Motor_Drive.dir/Core/Src/main.c.obj
+ .debug_line    0x0000350b      0x7c1 CMakeFiles/Motor_Drive.dir/Core/Src/gpio.c.obj
+ .debug_line    0x00003ccc      0xa82 CMakeFiles/Motor_Drive.dir/Core/Src/adc.c.obj
+ .debug_line    0x0000474e      0x763 CMakeFiles/Motor_Drive.dir/Core/Src/dma.c.obj
+ .debug_line    0x00004eb1      0xd98 CMakeFiles/Motor_Drive.dir/Core/Src/tim.c.obj
+ .debug_line    0x00005c49      0x94c CMakeFiles/Motor_Drive.dir/Core/Src/stm32h7xx_it.c.obj
+ .debug_line    0x00006595      0x763 CMakeFiles/Motor_Drive.dir/Core/Src/stm32h7xx_hal_msp.c.obj
+ .debug_line    0x00006cf8      0x2c6 CMakeFiles/Motor_Drive.dir/Core/Src/sysmem.c.obj
+ .debug_line    0x00006fbe      0x5ea CMakeFiles/Motor_Drive.dir/Core/Src/syscalls.c.obj
+ .debug_line    0x000075a8       0x7b CMakeFiles/Motor_Drive.dir/startup_stm32h725xx.s.obj
+ .debug_line    0x00007623     0x3844 CMakeFiles/Motor_Drive.dir/Core/Src/main.cpp.obj
+ .debug_line    0x0000ae67     0x137a CMakeFiles/Motor_Drive.dir/Core/Src/pwm3phase_timer.cpp.obj
+ .debug_line    0x0000c1e1      0xd09 CMakeFiles/Motor_Drive.dir/Core/Src/digitalio.cpp.obj
+ .debug_line    0x0000ceea     0x1394 CMakeFiles/Motor_Drive.dir/Core/Src/encoder.cpp.obj
+ .debug_line    0x0000e27e      0xec2 CMakeFiles/Motor_Drive.dir/Core/Src/hallsensor.cpp.obj
+ .debug_line    0x0000f140     0x15dc CMakeFiles/Motor_Drive.dir/Core/Src/modulation.cpp.obj
+ .debug_line    0x0001071c      0xea3 CMakeFiles/Motor_Drive.dir/Core/Src/ustimer.cpp.obj
+ .debug_line    0x000115bf     0x1589 CMakeFiles/Motor_Drive.dir/Core/Src/adc_sampler.cpp.obj
+ .debug_line    0x00012b48     0x1090 CMakeFiles/Motor_Drive.dir/Core/Src/timer.cpp.obj
+ .debug_line    0x00013bd8     0x12df CMakeFiles/Motor_Drive.dir/Core/Src/foc.cpp.obj
+ .debug_line    0x00014eb7     0x1061 CMakeFiles/Motor_Drive.dir/Core/Src/cmd.cpp.obj
+ .debug_line    0x00015f18      0xe6c CMakeFiles/Motor_Drive.dir/Core/Src/math_helpers.cpp.obj
+ .debug_line    0x00016d84      0x959 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Core/Src/system_stm32h7xx.c.obj
+ .debug_line    0x000176dd     0x14a3 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pcd.c.obj
+ .debug_line    0x00018b80      0x969 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pcd_ex.c.obj
+ .debug_line    0x000194e9     0x1d57 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_ll_usb.c.obj
+ .debug_line    0x0001b240     0x1349 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_rcc.c.obj
+ .debug_line    0x0001c589     0x1bfd cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_rcc_ex.c.obj
+ .debug_line    0x0001e186      0xbb0 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_gpio.c.obj
+ .debug_line    0x0001ed36     0x26bf cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_dma.c.obj
+ .debug_line    0x000213f5      0xe3d cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pwr_ex.c.obj
+ .debug_line    0x00022232      0xd25 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_cortex.c.obj
+ .debug_line    0x00022f57      0xdcc cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal.c.obj
+ .debug_line    0x00023d23     0x265e cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_adc.c.obj
+ .debug_line    0x00026381     0x20ee cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_adc_ex.c.obj
+ .debug_line    0x0002846f     0x3f1b cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_tim.c.obj
+ .debug_line    0x0002c38a     0x1d59 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_tim_ex.c.obj
+ .debug_line    0x0002e0e3      0xe8b cmake/stm32cubemx/CMakeFiles/USB_Device_Library.dir/__/__/Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_core.c.obj
+ .debug_line    0x0002ef6e     0x1085 cmake/stm32cubemx/CMakeFiles/USB_Device_Library.dir/__/__/Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ctlreq.c.obj
+ .debug_line    0x0002fff3      0x9a1 cmake/stm32cubemx/CMakeFiles/USB_Device_Library.dir/__/__/Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ioreq.c.obj
+ .debug_line    0x00030994      0xe0a cmake/stm32cubemx/CMakeFiles/USB_Device_Library.dir/__/__/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Src/usbd_cdc.c.obj
 
-.debug_str      0x00000000   0x17d6e1
- .debug_str     0x00000000   0x17d6e1 CMakeFiles/Motor_Drive.dir/USB_DEVICE/Target/usbd_conf.c.obj
-                             0x159fde (size before relaxing)
- .debug_str     0x0017d6e1   0x158cfc CMakeFiles/Motor_Drive.dir/USB_DEVICE/App/usb_device.c.obj
- .debug_str     0x0017d6e1   0x158850 CMakeFiles/Motor_Drive.dir/USB_DEVICE/App/usbd_desc.c.obj
- .debug_str     0x0017d6e1   0x158d2b CMakeFiles/Motor_Drive.dir/USB_DEVICE/App/usbd_cdc_if.c.obj
- .debug_str     0x0017d6e1   0x158aa9 CMakeFiles/Motor_Drive.dir/Core/Src/main.c.obj
- .debug_str     0x0017d6e1   0x157cb8 CMakeFiles/Motor_Drive.dir/Core/Src/gpio.c.obj
- .debug_str     0x0017d6e1   0x157cc7 CMakeFiles/Motor_Drive.dir/Core/Src/adc.c.obj
- .debug_str     0x0017d6e1   0x157bea CMakeFiles/Motor_Drive.dir/Core/Src/dma.c.obj
- .debug_str     0x0017d6e1   0x1588c3 CMakeFiles/Motor_Drive.dir/Core/Src/tim.c.obj
- .debug_str     0x0017d6e1   0x157e21 CMakeFiles/Motor_Drive.dir/Core/Src/stm32h7xx_it.c.obj
- .debug_str     0x0017d6e1   0x1573fa CMakeFiles/Motor_Drive.dir/Core/Src/stm32h7xx_hal_msp.c.obj
- .debug_str     0x0017d6e1     0x7222 CMakeFiles/Motor_Drive.dir/Core/Src/sysmem.c.obj
- .debug_str     0x0017d6e1     0x951d CMakeFiles/Motor_Drive.dir/Core/Src/syscalls.c.obj
- .debug_str     0x0017d6e1      0x108 CMakeFiles/Motor_Drive.dir/startup_stm32h725xx.s.obj
- .debug_str     0x0017d6e1   0x1726c6 CMakeFiles/Motor_Drive.dir/Core/Src/main.cpp.obj
- .debug_str     0x0017d6e1   0x16dbf1 CMakeFiles/Motor_Drive.dir/Core/Src/pwm3phase_timer.cpp.obj
- .debug_str     0x0017d6e1   0x160b38 CMakeFiles/Motor_Drive.dir/Core/Src/digitalio.cpp.obj
- .debug_str     0x0017d6e1   0x16202f CMakeFiles/Motor_Drive.dir/Core/Src/encoder.cpp.obj
- .debug_str     0x0017d6e1   0x160d30 CMakeFiles/Motor_Drive.dir/Core/Src/hallsensor.cpp.obj
- .debug_str     0x0017d6e1   0x161491 CMakeFiles/Motor_Drive.dir/Core/Src/modulation.cpp.obj
- .debug_str     0x0017d6e1   0x161c57 CMakeFiles/Motor_Drive.dir/Core/Src/ustimer.cpp.obj
- .debug_str     0x0017d6e1   0x1620e3 CMakeFiles/Motor_Drive.dir/Core/Src/adc_sampler.cpp.obj
- .debug_str     0x0017d6e1   0x16dab7 CMakeFiles/Motor_Drive.dir/Core/Src/timer.cpp.obj
- .debug_str     0x0017d6e1   0x161c91 CMakeFiles/Motor_Drive.dir/Core/Src/foc.cpp.obj
- .debug_str     0x0017d6e1   0x162a2b CMakeFiles/Motor_Drive.dir/Core/Src/cmd.cpp.obj
- .debug_str     0x0017d6e1   0x16120d CMakeFiles/Motor_Drive.dir/Core/Src/math_helpers.cpp.obj
- .debug_str     0x0017d6e1   0x1576a0 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Core/Src/system_stm32h7xx.c.obj
- .debug_str     0x0017d6e1   0x157e5e cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pcd.c.obj
- .debug_str     0x0017d6e1   0x1577fc cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pcd_ex.c.obj
- .debug_str     0x0017d6e1   0x157d58 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_ll_usb.c.obj
- .debug_str     0x0017d6e1   0x157a2f cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_rcc.c.obj
- .debug_str     0x0017d6e1   0x157f47 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_rcc_ex.c.obj
- .debug_str     0x0017d6e1   0x1576ac cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_gpio.c.obj
- .debug_str     0x0017d6e1   0x157e16 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_dma.c.obj
- .debug_str     0x0017d6e1   0x157ab4 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pwr_ex.c.obj
- .debug_str     0x0017d6e1   0x158005 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_cortex.c.obj
- .debug_str     0x0017d6e1   0x1586eb cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal.c.obj
- .debug_str     0x0017d6e1   0x158710 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_adc.c.obj
- .debug_str     0x0017d6e1   0x158630 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_adc_ex.c.obj
- .debug_str     0x0017d6e1   0x15882d cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_tim.c.obj
- .debug_str     0x0017d6e1   0x1581da cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_tim_ex.c.obj
- .debug_str     0x0017d6e1   0x158c09 cmake/stm32cubemx/CMakeFiles/USB_Device_Library.dir/__/__/Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_core.c.obj
- .debug_str     0x0017d6e1   0x158a34 cmake/stm32cubemx/CMakeFiles/USB_Device_Library.dir/__/__/Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ctlreq.c.obj
- .debug_str     0x0017d6e1   0x158909 cmake/stm32cubemx/CMakeFiles/USB_Device_Library.dir/__/__/Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ioreq.c.obj
- .debug_str     0x0017d6e1   0x1592f4 cmake/stm32cubemx/CMakeFiles/USB_Device_Library.dir/__/__/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Src/usbd_cdc.c.obj
+.debug_str      0x00000000   0x17d75a
+ .debug_str     0x00000000   0x17d75a CMakeFiles/Motor_Drive.dir/USB_DEVICE/Target/usbd_conf.c.obj
+                             0x159fe2 (size before relaxing)
+ .debug_str     0x0017d75a   0x158d00 CMakeFiles/Motor_Drive.dir/USB_DEVICE/App/usb_device.c.obj
+ .debug_str     0x0017d75a   0x158854 CMakeFiles/Motor_Drive.dir/USB_DEVICE/App/usbd_desc.c.obj
+ .debug_str     0x0017d75a   0x158d2f CMakeFiles/Motor_Drive.dir/USB_DEVICE/App/usbd_cdc_if.c.obj
+ .debug_str     0x0017d75a   0x158aad CMakeFiles/Motor_Drive.dir/Core/Src/main.c.obj
+ .debug_str     0x0017d75a   0x157cbc CMakeFiles/Motor_Drive.dir/Core/Src/gpio.c.obj
+ .debug_str     0x0017d75a   0x157ccb CMakeFiles/Motor_Drive.dir/Core/Src/adc.c.obj
+ .debug_str     0x0017d75a   0x157bee CMakeFiles/Motor_Drive.dir/Core/Src/dma.c.obj
+ .debug_str     0x0017d75a   0x1588c7 CMakeFiles/Motor_Drive.dir/Core/Src/tim.c.obj
+ .debug_str     0x0017d75a   0x157e25 CMakeFiles/Motor_Drive.dir/Core/Src/stm32h7xx_it.c.obj
+ .debug_str     0x0017d75a   0x1573fe CMakeFiles/Motor_Drive.dir/Core/Src/stm32h7xx_hal_msp.c.obj
+ .debug_str     0x0017d75a     0x7226 CMakeFiles/Motor_Drive.dir/Core/Src/sysmem.c.obj
+ .debug_str     0x0017d75a     0x9521 CMakeFiles/Motor_Drive.dir/Core/Src/syscalls.c.obj
+ .debug_str     0x0017d75a      0x10c CMakeFiles/Motor_Drive.dir/startup_stm32h725xx.s.obj
+ .debug_str     0x0017d75a   0x1726f9 CMakeFiles/Motor_Drive.dir/Core/Src/main.cpp.obj
+ .debug_str     0x0017d75a   0x16dbf5 CMakeFiles/Motor_Drive.dir/Core/Src/pwm3phase_timer.cpp.obj
+ .debug_str     0x0017d75a   0x160b3c CMakeFiles/Motor_Drive.dir/Core/Src/digitalio.cpp.obj
+ .debug_str     0x0017d75a   0x162033 CMakeFiles/Motor_Drive.dir/Core/Src/encoder.cpp.obj
+ .debug_str     0x0017d75a   0x160d34 CMakeFiles/Motor_Drive.dir/Core/Src/hallsensor.cpp.obj
+ .debug_str     0x0017d75a   0x161495 CMakeFiles/Motor_Drive.dir/Core/Src/modulation.cpp.obj
+ .debug_str     0x0017d75a   0x161c5b CMakeFiles/Motor_Drive.dir/Core/Src/ustimer.cpp.obj
+ .debug_str     0x0017d75a   0x1620e7 CMakeFiles/Motor_Drive.dir/Core/Src/adc_sampler.cpp.obj
+ .debug_str     0x0017d75a   0x16dabb CMakeFiles/Motor_Drive.dir/Core/Src/timer.cpp.obj
+ .debug_str     0x0017d75a   0x161c95 CMakeFiles/Motor_Drive.dir/Core/Src/foc.cpp.obj
+ .debug_str     0x0017d75a   0x162a2f CMakeFiles/Motor_Drive.dir/Core/Src/cmd.cpp.obj
+ .debug_str     0x0017d75a   0x161211 CMakeFiles/Motor_Drive.dir/Core/Src/math_helpers.cpp.obj
+ .debug_str     0x0017d75a   0x1576a4 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Core/Src/system_stm32h7xx.c.obj
+ .debug_str     0x0017d75a   0x157e62 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pcd.c.obj
+ .debug_str     0x0017d75a   0x157800 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pcd_ex.c.obj
+ .debug_str     0x0017d75a   0x157d5c cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_ll_usb.c.obj
+ .debug_str     0x0017d75a   0x157a33 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_rcc.c.obj
+ .debug_str     0x0017d75a   0x157f4b cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_rcc_ex.c.obj
+ .debug_str     0x0017d75a   0x1576b0 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_gpio.c.obj
+ .debug_str     0x0017d75a   0x157e1a cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_dma.c.obj
+ .debug_str     0x0017d75a   0x157ab8 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pwr_ex.c.obj
+ .debug_str     0x0017d75a   0x158009 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_cortex.c.obj
+ .debug_str     0x0017d75a   0x1586ef cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal.c.obj
+ .debug_str     0x0017d75a   0x158714 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_adc.c.obj
+ .debug_str     0x0017d75a   0x158634 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_adc_ex.c.obj
+ .debug_str     0x0017d75a   0x158831 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_tim.c.obj
+ .debug_str     0x0017d75a   0x1581de cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_tim_ex.c.obj
+ .debug_str     0x0017d75a   0x158c0d cmake/stm32cubemx/CMakeFiles/USB_Device_Library.dir/__/__/Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_core.c.obj
+ .debug_str     0x0017d75a   0x158a38 cmake/stm32cubemx/CMakeFiles/USB_Device_Library.dir/__/__/Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ctlreq.c.obj
+ .debug_str     0x0017d75a   0x15890d cmake/stm32cubemx/CMakeFiles/USB_Device_Library.dir/__/__/Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ioreq.c.obj
+ .debug_str     0x0017d75a   0x1592f8 cmake/stm32cubemx/CMakeFiles/USB_Device_Library.dir/__/__/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Src/usbd_cdc.c.obj
 
-.debug_frame    0x00000000     0xa8b0
+.debug_frame    0x00000000     0xa8a0
  .debug_frame   0x00000000      0x47c CMakeFiles/Motor_Drive.dir/USB_DEVICE/Target/usbd_conf.c.obj
  .debug_frame   0x0000047c       0x2c CMakeFiles/Motor_Drive.dir/USB_DEVICE/App/usb_device.c.obj
  .debug_frame   0x000004a8      0x188 CMakeFiles/Motor_Drive.dir/USB_DEVICE/App/usbd_desc.c.obj
@@ -13395,131 +13394,131 @@ LOAD linker stubs
  .debug_frame   0x00000d70       0x34 CMakeFiles/Motor_Drive.dir/Core/Src/stm32h7xx_hal_msp.c.obj
  .debug_frame   0x00000da4       0x34 CMakeFiles/Motor_Drive.dir/Core/Src/sysmem.c.obj
  .debug_frame   0x00000dd8      0x2ac CMakeFiles/Motor_Drive.dir/Core/Src/syscalls.c.obj
- .debug_frame   0x00001084      0x690 CMakeFiles/Motor_Drive.dir/Core/Src/main.cpp.obj
- .debug_frame   0x00001714      0x284 CMakeFiles/Motor_Drive.dir/Core/Src/pwm3phase_timer.cpp.obj
- .debug_frame   0x00001998       0xcc CMakeFiles/Motor_Drive.dir/Core/Src/digitalio.cpp.obj
- .debug_frame   0x00001a64      0x3cc CMakeFiles/Motor_Drive.dir/Core/Src/encoder.cpp.obj
- .debug_frame   0x00001e30      0x208 CMakeFiles/Motor_Drive.dir/Core/Src/hallsensor.cpp.obj
- .debug_frame   0x00002038      0x41c CMakeFiles/Motor_Drive.dir/Core/Src/modulation.cpp.obj
- .debug_frame   0x00002454      0x1c8 CMakeFiles/Motor_Drive.dir/Core/Src/ustimer.cpp.obj
- .debug_frame   0x0000261c      0x264 CMakeFiles/Motor_Drive.dir/Core/Src/adc_sampler.cpp.obj
- .debug_frame   0x00002880      0x224 CMakeFiles/Motor_Drive.dir/Core/Src/timer.cpp.obj
- .debug_frame   0x00002aa4      0x198 CMakeFiles/Motor_Drive.dir/Core/Src/foc.cpp.obj
- .debug_frame   0x00002c3c      0x108 CMakeFiles/Motor_Drive.dir/Core/Src/cmd.cpp.obj
- .debug_frame   0x00002d44      0x120 CMakeFiles/Motor_Drive.dir/Core/Src/math_helpers.cpp.obj
- .debug_frame   0x00002e64       0x78 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Core/Src/system_stm32h7xx.c.obj
- .debug_frame   0x00002edc      0x590 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pcd.c.obj
- .debug_frame   0x0000346c      0x174 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pcd_ex.c.obj
- .debug_frame   0x000035e0      0x7c0 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_ll_usb.c.obj
- .debug_frame   0x00003da0      0x1fc cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_rcc.c.obj
- .debug_frame   0x00003f9c      0x414 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_rcc_ex.c.obj
- .debug_frame   0x000043b0      0x14c cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_gpio.c.obj
- .debug_frame   0x000044fc      0x2b4 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_dma.c.obj
- .debug_frame   0x000047b0      0x540 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pwr_ex.c.obj
- .debug_frame   0x00004cf0      0x508 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_cortex.c.obj
- .debug_frame   0x000051f8      0x760 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal.c.obj
- .debug_frame   0x00005958      0xb68 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_adc.c.obj
- .debug_frame   0x000064c0      0x92c cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_adc_ex.c.obj
- .debug_frame   0x00006dec     0x121c cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_tim.c.obj
- .debug_frame   0x00008008      0x724 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_tim_ex.c.obj
- .debug_frame   0x0000872c      0x390 cmake/stm32cubemx/CMakeFiles/USB_Device_Library.dir/__/__/Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_core.c.obj
- .debug_frame   0x00008abc      0x23c cmake/stm32cubemx/CMakeFiles/USB_Device_Library.dir/__/__/Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ctlreq.c.obj
- .debug_frame   0x00008cf8      0x10c cmake/stm32cubemx/CMakeFiles/USB_Device_Library.dir/__/__/Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ioreq.c.obj
- .debug_frame   0x00008e04      0x23c cmake/stm32cubemx/CMakeFiles/USB_Device_Library.dir/__/__/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Src/usbd_cdc.c.obj
- .debug_frame   0x00009040       0x20 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libm.a(libm_a-wf_atan2.o)
- .debug_frame   0x00009060       0x44 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libm.a(libm_a-wf_hypot.o)
- .debug_frame   0x000090a4       0x20 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libm.a(libm_a-sf_finite.o)
- .debug_frame   0x000090c4       0x48 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libm.a(libm_a-sinf.o)
- .debug_frame   0x0000910c       0x38 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libm.a(libm_a-cosf.o)
- .debug_frame   0x00009144       0x98 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libm.a(libm_a-math_errf.o)
- .debug_frame   0x000091dc       0x20 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libm.a(libm_a-ef_sqrt.o)
- .debug_frame   0x000091fc       0x20 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libm.a(libm_a-sf_ceil.o)
- .debug_frame   0x0000921c       0x44 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libm.a(libm_a-ef_atan2.o)
- .debug_frame   0x00009260       0x34 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libm.a(libm_a-ef_hypot.o)
- .debug_frame   0x00009294       0x2c C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libm.a(libm_a-sf_atan.o)
- .debug_frame   0x000092c0       0x20 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libm.a(libm_a-sf_fabs.o)
- .debug_frame   0x000092e0       0xac C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libgcc.a(_arm_addsubdf3.o)
- .debug_frame   0x0000938c       0x4c C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libgcc.a(_arm_addsubsf3.o)
- .debug_frame   0x000093d8       0x2c C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libgcc.a(_aeabi_uldivmod.o)
- .debug_frame   0x00009404       0x34 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libgcc.a(_udivmoddi4.o)
- .debug_frame   0x00009438       0x20 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-atof.o)
- .debug_frame   0x00009458       0x30 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-atoi.o)
- .debug_frame   0x00009488      0x104 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-strtod.o)
- .debug_frame   0x0000958c       0x64 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-strtol.o)
- .debug_frame   0x000095f0       0x9c C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-nano-vfprintf_float.o)
- .debug_frame   0x0000968c       0x60 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-nano-vfprintf_i.o)
- .debug_frame   0x000096ec      0x144 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-findfp.o)
- .debug_frame   0x00009830       0x34 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-fwalk.o)
- .debug_frame   0x00009864       0x7c C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-snprintf.o)
- .debug_frame   0x000098e0       0x88 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-stdio.o)
- .debug_frame   0x00009968       0x4c C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-vsnprintf.o)
- .debug_frame   0x000099b4       0x20 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-memset.o)
- .debug_frame   0x000099d4       0x28 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-strncmp.o)
- .debug_frame   0x000099fc       0x28 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-strncpy.o)
- .debug_frame   0x00009a24       0x34 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-strtok.o)
- .debug_frame   0x00009a58       0x40 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-strtok_r.o)
- .debug_frame   0x00009a98       0x48 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-locale.o)
- .debug_frame   0x00009ae0       0x40 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-localeconv.o)
- .debug_frame   0x00009b20       0x2c C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-closer.o)
- .debug_frame   0x00009b4c       0x38 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-reent.o)
- .debug_frame   0x00009b84       0x2c C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-lseekr.o)
- .debug_frame   0x00009bb0       0x2c C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-readr.o)
- .debug_frame   0x00009bdc       0x2c C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-writer.o)
- .debug_frame   0x00009c08       0x20 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-errno.o)
- .debug_frame   0x00009c28       0x2c C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-init.o)
- .debug_frame   0x00009c54       0xb0 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-lock.o)
- .debug_frame   0x00009d04       0x20 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-strcmp.o)
- .debug_frame   0x00009d24       0x4c C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-memchr.o)
- .debug_frame   0x00009d70       0x28 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-memcpy-stub.o)
- .debug_frame   0x00009d98       0x20 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-strlen.o)
- .debug_frame   0x00009db8       0x20 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libm_a-s_nan.o)
- .debug_frame   0x00009dd8       0x40 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-assert.o)
- .debug_frame   0x00009e18       0x7c C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-dtoa.o)
- .debug_frame   0x00009e94       0x38 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-freer.o)
- .debug_frame   0x00009ecc       0x74 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-gdtoa-gethex.o)
- .debug_frame   0x00009f40       0x78 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-gdtoa-hexnan.o)
- .debug_frame   0x00009fb8       0x30 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-malloc.o)
- .debug_frame   0x00009fe8       0x50 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-mallocr.o)
- .debug_frame   0x0000a038       0x48 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-mbtowc_r.o)
- .debug_frame   0x0000a080       0x30 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-mlock.o)
- .debug_frame   0x0000a0b0      0x254 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-mprec.o)
- .debug_frame   0x0000a304       0x3c C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-wctomb_r.o)
- .debug_frame   0x0000a340       0x90 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-nano-svfprintf.o)
- .debug_frame   0x0000a3d0       0x5c C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-fflush.o)
- .debug_frame   0x0000a42c       0x64 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-fprintf.o)
- .debug_frame   0x0000a490       0x28 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-memmove.o)
- .debug_frame   0x0000a4b8       0x2c C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-sbrkr.o)
- .debug_frame   0x0000a4e4       0x28 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-abort.o)
- .debug_frame   0x0000a50c       0x2c C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-callocr.o)
- .debug_frame   0x0000a538       0x3c C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-reallocr.o)
- .debug_frame   0x0000a574       0xa8 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-nano-vfprintf.o)
- .debug_frame   0x0000a61c       0x40 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-wbuf.o)
- .debug_frame   0x0000a65c       0x2c C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-wsetup.o)
- .debug_frame   0x0000a688       0xcc C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-signal.o)
- .debug_frame   0x0000a754       0x3c C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-signalr.o)
- .debug_frame   0x0000a790       0x20 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-msizer.o)
- .debug_frame   0x0000a7b0       0x58 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-makebuf.o)
- .debug_frame   0x0000a808       0x2c C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-fstatr.o)
- .debug_frame   0x0000a834       0x2c C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-isattyr.o)
- .debug_frame   0x0000a860       0x30 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libgcc.a(_fixdfdi.o)
- .debug_frame   0x0000a890       0x20 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libgcc.a(_fixunsdfdi.o)
+ .debug_frame   0x00001084      0x680 CMakeFiles/Motor_Drive.dir/Core/Src/main.cpp.obj
+ .debug_frame   0x00001704      0x284 CMakeFiles/Motor_Drive.dir/Core/Src/pwm3phase_timer.cpp.obj
+ .debug_frame   0x00001988       0xcc CMakeFiles/Motor_Drive.dir/Core/Src/digitalio.cpp.obj
+ .debug_frame   0x00001a54      0x3cc CMakeFiles/Motor_Drive.dir/Core/Src/encoder.cpp.obj
+ .debug_frame   0x00001e20      0x208 CMakeFiles/Motor_Drive.dir/Core/Src/hallsensor.cpp.obj
+ .debug_frame   0x00002028      0x41c CMakeFiles/Motor_Drive.dir/Core/Src/modulation.cpp.obj
+ .debug_frame   0x00002444      0x1c8 CMakeFiles/Motor_Drive.dir/Core/Src/ustimer.cpp.obj
+ .debug_frame   0x0000260c      0x264 CMakeFiles/Motor_Drive.dir/Core/Src/adc_sampler.cpp.obj
+ .debug_frame   0x00002870      0x224 CMakeFiles/Motor_Drive.dir/Core/Src/timer.cpp.obj
+ .debug_frame   0x00002a94      0x198 CMakeFiles/Motor_Drive.dir/Core/Src/foc.cpp.obj
+ .debug_frame   0x00002c2c      0x108 CMakeFiles/Motor_Drive.dir/Core/Src/cmd.cpp.obj
+ .debug_frame   0x00002d34      0x120 CMakeFiles/Motor_Drive.dir/Core/Src/math_helpers.cpp.obj
+ .debug_frame   0x00002e54       0x78 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Core/Src/system_stm32h7xx.c.obj
+ .debug_frame   0x00002ecc      0x590 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pcd.c.obj
+ .debug_frame   0x0000345c      0x174 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pcd_ex.c.obj
+ .debug_frame   0x000035d0      0x7c0 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_ll_usb.c.obj
+ .debug_frame   0x00003d90      0x1fc cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_rcc.c.obj
+ .debug_frame   0x00003f8c      0x414 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_rcc_ex.c.obj
+ .debug_frame   0x000043a0      0x14c cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_gpio.c.obj
+ .debug_frame   0x000044ec      0x2b4 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_dma.c.obj
+ .debug_frame   0x000047a0      0x540 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pwr_ex.c.obj
+ .debug_frame   0x00004ce0      0x508 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_cortex.c.obj
+ .debug_frame   0x000051e8      0x760 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal.c.obj
+ .debug_frame   0x00005948      0xb68 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_adc.c.obj
+ .debug_frame   0x000064b0      0x92c cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_adc_ex.c.obj
+ .debug_frame   0x00006ddc     0x121c cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_tim.c.obj
+ .debug_frame   0x00007ff8      0x724 cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_tim_ex.c.obj
+ .debug_frame   0x0000871c      0x390 cmake/stm32cubemx/CMakeFiles/USB_Device_Library.dir/__/__/Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_core.c.obj
+ .debug_frame   0x00008aac      0x23c cmake/stm32cubemx/CMakeFiles/USB_Device_Library.dir/__/__/Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ctlreq.c.obj
+ .debug_frame   0x00008ce8      0x10c cmake/stm32cubemx/CMakeFiles/USB_Device_Library.dir/__/__/Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ioreq.c.obj
+ .debug_frame   0x00008df4      0x23c cmake/stm32cubemx/CMakeFiles/USB_Device_Library.dir/__/__/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Src/usbd_cdc.c.obj
+ .debug_frame   0x00009030       0x20 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libm.a(libm_a-wf_atan2.o)
+ .debug_frame   0x00009050       0x44 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libm.a(libm_a-wf_hypot.o)
+ .debug_frame   0x00009094       0x20 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libm.a(libm_a-sf_finite.o)
+ .debug_frame   0x000090b4       0x48 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libm.a(libm_a-sinf.o)
+ .debug_frame   0x000090fc       0x38 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libm.a(libm_a-cosf.o)
+ .debug_frame   0x00009134       0x98 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libm.a(libm_a-math_errf.o)
+ .debug_frame   0x000091cc       0x20 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libm.a(libm_a-ef_sqrt.o)
+ .debug_frame   0x000091ec       0x20 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libm.a(libm_a-sf_ceil.o)
+ .debug_frame   0x0000920c       0x44 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libm.a(libm_a-ef_atan2.o)
+ .debug_frame   0x00009250       0x34 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libm.a(libm_a-ef_hypot.o)
+ .debug_frame   0x00009284       0x2c C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libm.a(libm_a-sf_atan.o)
+ .debug_frame   0x000092b0       0x20 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libm.a(libm_a-sf_fabs.o)
+ .debug_frame   0x000092d0       0xac C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libgcc.a(_arm_addsubdf3.o)
+ .debug_frame   0x0000937c       0x4c C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libgcc.a(_arm_addsubsf3.o)
+ .debug_frame   0x000093c8       0x2c C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libgcc.a(_aeabi_uldivmod.o)
+ .debug_frame   0x000093f4       0x34 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libgcc.a(_udivmoddi4.o)
+ .debug_frame   0x00009428       0x20 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-atof.o)
+ .debug_frame   0x00009448       0x30 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-atoi.o)
+ .debug_frame   0x00009478      0x104 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-strtod.o)
+ .debug_frame   0x0000957c       0x64 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-strtol.o)
+ .debug_frame   0x000095e0       0x9c C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-nano-vfprintf_float.o)
+ .debug_frame   0x0000967c       0x60 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-nano-vfprintf_i.o)
+ .debug_frame   0x000096dc      0x144 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-findfp.o)
+ .debug_frame   0x00009820       0x34 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-fwalk.o)
+ .debug_frame   0x00009854       0x7c C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-snprintf.o)
+ .debug_frame   0x000098d0       0x88 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-stdio.o)
+ .debug_frame   0x00009958       0x4c C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-vsnprintf.o)
+ .debug_frame   0x000099a4       0x20 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-memset.o)
+ .debug_frame   0x000099c4       0x28 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-strncmp.o)
+ .debug_frame   0x000099ec       0x28 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-strncpy.o)
+ .debug_frame   0x00009a14       0x34 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-strtok.o)
+ .debug_frame   0x00009a48       0x40 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-strtok_r.o)
+ .debug_frame   0x00009a88       0x48 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-locale.o)
+ .debug_frame   0x00009ad0       0x40 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-localeconv.o)
+ .debug_frame   0x00009b10       0x2c C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-closer.o)
+ .debug_frame   0x00009b3c       0x38 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-reent.o)
+ .debug_frame   0x00009b74       0x2c C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-lseekr.o)
+ .debug_frame   0x00009ba0       0x2c C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-readr.o)
+ .debug_frame   0x00009bcc       0x2c C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-writer.o)
+ .debug_frame   0x00009bf8       0x20 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-errno.o)
+ .debug_frame   0x00009c18       0x2c C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-init.o)
+ .debug_frame   0x00009c44       0xb0 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-lock.o)
+ .debug_frame   0x00009cf4       0x20 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-strcmp.o)
+ .debug_frame   0x00009d14       0x4c C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-memchr.o)
+ .debug_frame   0x00009d60       0x28 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-memcpy-stub.o)
+ .debug_frame   0x00009d88       0x20 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-strlen.o)
+ .debug_frame   0x00009da8       0x20 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libm_a-s_nan.o)
+ .debug_frame   0x00009dc8       0x40 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-assert.o)
+ .debug_frame   0x00009e08       0x7c C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-dtoa.o)
+ .debug_frame   0x00009e84       0x38 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-freer.o)
+ .debug_frame   0x00009ebc       0x74 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-gdtoa-gethex.o)
+ .debug_frame   0x00009f30       0x78 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-gdtoa-hexnan.o)
+ .debug_frame   0x00009fa8       0x30 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-malloc.o)
+ .debug_frame   0x00009fd8       0x50 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-mallocr.o)
+ .debug_frame   0x0000a028       0x48 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-mbtowc_r.o)
+ .debug_frame   0x0000a070       0x30 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-mlock.o)
+ .debug_frame   0x0000a0a0      0x254 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-mprec.o)
+ .debug_frame   0x0000a2f4       0x3c C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-wctomb_r.o)
+ .debug_frame   0x0000a330       0x90 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-nano-svfprintf.o)
+ .debug_frame   0x0000a3c0       0x5c C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-fflush.o)
+ .debug_frame   0x0000a41c       0x64 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-fprintf.o)
+ .debug_frame   0x0000a480       0x28 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-memmove.o)
+ .debug_frame   0x0000a4a8       0x2c C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-sbrkr.o)
+ .debug_frame   0x0000a4d4       0x28 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-abort.o)
+ .debug_frame   0x0000a4fc       0x2c C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-callocr.o)
+ .debug_frame   0x0000a528       0x3c C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-reallocr.o)
+ .debug_frame   0x0000a564       0xa8 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-nano-vfprintf.o)
+ .debug_frame   0x0000a60c       0x40 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-wbuf.o)
+ .debug_frame   0x0000a64c       0x2c C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-wsetup.o)
+ .debug_frame   0x0000a678       0xcc C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-signal.o)
+ .debug_frame   0x0000a744       0x3c C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-signalr.o)
+ .debug_frame   0x0000a780       0x20 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-msizer.o)
+ .debug_frame   0x0000a7a0       0x58 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-makebuf.o)
+ .debug_frame   0x0000a7f8       0x2c C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-fstatr.o)
+ .debug_frame   0x0000a824       0x2c C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-isattyr.o)
+ .debug_frame   0x0000a850       0x30 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libgcc.a(_fixdfdi.o)
+ .debug_frame   0x0000a880       0x20 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libgcc.a(_fixunsdfdi.o)
 
 .debug_line_str
-                0x00000000      0x2e1
+                0x00000000      0x2e5
  .debug_line_str
-                0x00000000      0x2e1 CMakeFiles/Motor_Drive.dir/startup_stm32h725xx.s.obj
-                                 0xec (size before relaxing)
+                0x00000000      0x2e5 CMakeFiles/Motor_Drive.dir/startup_stm32h725xx.s.obj
+                                 0xf0 (size before relaxing)
  .debug_line_str
-                0x000002e1       0xce C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libgcc.a(_arm_addsubdf3.o)
+                0x000002e5       0xce C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libgcc.a(_arm_addsubdf3.o)
  .debug_line_str
-                0x000002e1       0xce C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libgcc.a(_arm_addsubsf3.o)
+                0x000002e5       0xce C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libgcc.a(_arm_addsubsf3.o)
  .debug_line_str
-                0x000002e1       0xc9 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libgcc.a(_aeabi_uldivmod.o)
+                0x000002e5       0xc9 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libgcc.a(_aeabi_uldivmod.o)
  .debug_line_str
-                0x000002e1       0xcd C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libgcc.a(_dvmd_tls.o)
+                0x000002e5       0xcd C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libgcc.a(_dvmd_tls.o)
  .debug_line_str
-                0x000002e1       0xea C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-strcmp.o)
+                0x000002e5       0xea C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-strcmp.o)
  .debug_line_str
-                0x000002e1       0xe1 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-memchr.o)
+                0x000002e5       0xe1 C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-memchr.o)
  .debug_line_str
-                0x000002e1       0xeb C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-strlen.o)
+                0x000002e5       0xeb C:/PROGRA~2/ARMGNU~1/14EFD8~1.2RE/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+dp/hard\libg_nano.a(libc_a-strlen.o)
