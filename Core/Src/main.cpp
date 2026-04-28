@@ -103,7 +103,7 @@ volatile uint32_t error_flag = 0;
 
 ADCGain_t adc_gain;
 
-volatile Target_t target = { .speed = 0.0f, .torque = 0.0f, .time = 0.0f };
+volatile Target_t target = { .speed = 0.0f, .torque = 0.0f, .time = 0.0f, .is_torque_control = false };
 
 ModulationType modulation_type = ModulationType::SVPWM;
 
@@ -868,6 +868,7 @@ void printTelemetryBinary(void) {
 void speedControl(void) {
   static float ramp_speed_increment = 0.0f;
   static uint32_t ramp_tick = 0;
+  static float iq_torque_clamp;
 
   foc_state.ts_speed = 1.0f / (float)speedControlTimer.getFrequency();
   
@@ -880,6 +881,8 @@ void speedControl(void) {
       target.speed -= ramp_down_step;
       if (target.speed < 0.0f) {
         target.speed = 0.0f;
+        target.torque = 0.0f;
+        foc_state.target_rpm = 0.0f;
         motorPWM.stop();
         control_mode = MotorControlMode::MOTOR_STOP;
         relay.write(0);
@@ -889,6 +892,8 @@ void speedControl(void) {
       target.speed += ramp_down_step;
       if (target.speed > 0.0f) {
         target.speed = 0.0f;
+        target.torque = 0.0f;
+        foc_state.target_rpm = 0.0f;
         motorPWM.stop();
         control_mode = MotorControlMode::MOTOR_STOP;
         relay.write(0);
@@ -896,41 +901,58 @@ void speedControl(void) {
     }
   }
 
-  // Check if target speed has changed and update foc_state.target_rpm accordingly, with optional ramping
-  if (target.speed != foc_state.target_rpm) {
-    // Check if new target contains ramp flag
-    if (system_flag & FLAG_TARGET_RAMP) {
-      // Set up ramp parameters if this is the first tick of a new speed target
-      if (system_flag & FLAG_SPEED_RAMP_INIT) {
-        float speed_delta = target.speed - foc_state.target_rpm;
-        ramp_tick = (uint32_t)(target.time * (float)SPEEDLOOP_FREQ_HZ + 0.5f) + 1;
-        ramp_speed_increment = speed_delta / (float)ramp_tick;
-        if (ramp_speed_increment > (FOC_RAMP_RATE / SPEEDLOOP_FREQ_HZ)) {
-          ramp_speed_increment = FOC_RAMP_RATE / SPEEDLOOP_FREQ_HZ;
-          ramp_tick = (uint32_t)(fabsf(speed_delta / ramp_speed_increment)) + 1;
+  if (!target.is_torque_control) {
+  /* =========================================================================
+  *   Speed Ramping
+  * ========================================================================= */
+    // Check if target speed has changed and update foc_state.target_rpm accordingly, with optional ramping
+    if (target.speed != foc_state.target_rpm) {
+      // Check if new target contains ramp flag
+      if (system_flag & FLAG_TARGET_RAMP) {
+        // Set up ramp parameters if this is the first tick of a new speed target
+        if (system_flag & FLAG_SPEED_RAMP_INIT) {
+          float speed_delta = target.speed - foc_state.target_rpm;
+          ramp_tick = (uint32_t)(target.time * (float)SPEEDLOOP_FREQ_HZ + 0.5f) + 1;
+          ramp_speed_increment = speed_delta / (float)ramp_tick;
+          if (ramp_speed_increment > (FOC_RAMP_RATE / SPEEDLOOP_FREQ_HZ)) {
+            ramp_speed_increment = FOC_RAMP_RATE / SPEEDLOOP_FREQ_HZ;
+            ramp_tick = (uint32_t)(fabsf(speed_delta / ramp_speed_increment)) + 1;
+          }
+          if (ramp_speed_increment < -(FOC_RAMP_RATE / SPEEDLOOP_FREQ_HZ)) {
+            ramp_speed_increment = -FOC_RAMP_RATE / SPEEDLOOP_FREQ_HZ;
+            ramp_tick = (uint32_t)(fabsf(speed_delta / ramp_speed_increment)) + 1;
+          }
+          system_flag &= ~FLAG_SPEED_RAMP_INIT;
         }
-        if (ramp_speed_increment < -(FOC_RAMP_RATE / SPEEDLOOP_FREQ_HZ)) {
-          ramp_speed_increment = -FOC_RAMP_RATE / SPEEDLOOP_FREQ_HZ;
-          ramp_tick = (uint32_t)(fabsf(speed_delta / ramp_speed_increment)) + 1;
+        if (ramp_tick > 0) {
+          foc_state.target_rpm += ramp_speed_increment;
+          ramp_tick--;
         }
-        system_flag &= ~FLAG_SPEED_RAMP_INIT;
+        if (ramp_tick == 0) {
+          foc_state.target_rpm = target.speed;
+        }
       }
-      if (ramp_tick > 0) {
-        foc_state.target_rpm += ramp_speed_increment;
-        ramp_tick--;
-      }
-      if (ramp_tick == 0) {
+      // If no ramping, update target RPM immediately
+      else {
         foc_state.target_rpm = target.speed;
       }
     }
-    // If no ramping, update target RPM immediately
-    else {
-      foc_state.target_rpm = target.speed;
+    else if (system_flag & FLAG_TARGET_RAMP) {
+      ramp_speed_increment = 0.0f;
+      system_flag &= ~FLAG_TARGET_RAMP;
     }
+    iq_torque_clamp = FOC_I_CLAMP_UPPER_SP;
   }
-  else if (system_flag & FLAG_TARGET_RAMP) {
-    ramp_speed_increment = 0.0f;
-    system_flag &= ~FLAG_TARGET_RAMP;
+
+  else {
+  /* =========================================================================
+  *   Torque Ramping
+  * ========================================================================= */
+    iq_torque_clamp = target.torque / FOC_KT;
+    foc_state.target_rpm = 0.0f;
+    if (system_flag & FLAG_SPEED_RAMP_INIT) {
+      system_flag &= ~FLAG_SPEED_RAMP_INIT;
+    }
   }
   
   /* =========================================================================
@@ -954,6 +976,10 @@ void speedControl(void) {
   float err_sp = foc_state.omega_ref - omega_m;
   float new_Iq_ref = PI_update(&foc_state.pi_speed, err_sp, foc_state.ts_speed);
 
+  // Clamp Iq reference based on torque limits
+  if (new_Iq_ref > iq_torque_clamp) new_Iq_ref = iq_torque_clamp;
+  if (new_Iq_ref < -iq_torque_clamp) new_Iq_ref = -iq_torque_clamp;
+
   
   /* =========================================================================
   *   Field-weakening Loop
@@ -961,7 +987,7 @@ void speedControl(void) {
   float U_max_fw   = (foc_state.Vdc / SQRT3) * 0.95f;
   float u_mag_prev = foc_state.u_mag;
   float new_Id_ref;
-  if (fabsf(foc_state.omega_m) > 20.0f) {
+  if (fabsf(foc_state.omega_m) > 20.0f && target.is_torque_control == false) {
       float fw_error = (U_max_fw - u_mag_prev) / fabsf(foc_state.omega_m);
       //foc_state.pi_fw.integrator += foc_state.pi_fw.ki * fw_error * foc_state.ts_speed;
       //if (foc_state.pi_fw.integrator > 0.0f) foc_state.pi_fw.integrator = 0.0f;
@@ -1598,6 +1624,8 @@ void cmd_speed(int argc, char** argv) {
         }
     }
     target.speed = speed;
+    target.torque = 0.0f;
+    target.is_torque_control = false;
 
     // Setting system flag
     if (argc >= 3) {
@@ -1636,6 +1664,8 @@ void cmd_torque(int argc, char** argv) {
         }
     }
     target.torque = torque;
+    target.speed = 0.0f;
+    target.is_torque_control = true;
 
     // Setting system flag
     if (argc >= 3) {

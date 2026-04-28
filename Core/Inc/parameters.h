@@ -153,6 +153,7 @@ typedef struct {
     float speed;
     float torque;
     float time;
+    bool is_torque_control;
 } Target_t;
 
 enum PrintData : uint32_t {
