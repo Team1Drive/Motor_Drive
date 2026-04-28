@@ -11,6 +11,7 @@
 #include "foc.h"
 #include "cmd.h"
 #include "math_helpers.h"
+#include "protection.h"
 #include <cstdint>
 
 #include "usbd_cdc_if.h"
@@ -26,6 +27,9 @@ void MPU_Config(void);
 void timer2IRQ(void);
 void timer3IRQ(void);
 void timer6IRQ(void);
+
+void underVoltageProtection(void);
+void overCurrentProtection(void);
 
 void printTelemetryUTF8(void);
 void printTelemetryBinary(void);
@@ -77,12 +81,20 @@ extern DMA_HandleTypeDef hdma_adc1;
 extern DMA_HandleTypeDef hdma_adc2;
 extern DMA_HandleTypeDef hdma_adc3;
 
+/* Declare COMP & DAC handles */
+extern COMP_HandleTypeDef hcomp1;
+extern DAC_HandleTypeDef hdac1;
+
 /* Custom Class Objects */
 ThreePhasePWMOut motorPWM(&htim8);
 
 ADCSampler adc1(&hadc1, &hdma_adc1, adc1_buffer, ADC1_BUF_LEN);
 ADCSampler adc2(&hadc2, &hdma_adc2, adc2_buffer, ADC2_BUF_LEN);
 ADCSampler adc3(&hadc3, &hdma_adc3, adc3_buffer, ADC3_BUF_LEN);
+
+COMP_Protection uv_protection(&hcomp1, &hdac1, DAC_CHANNEL_1);
+
+AWD_Protection oc_protection_1(&hadc1, ADC_ANALOGWATCHDOG_1), oc_protection_2(&hadc2, ADC_ANALOGWATCHDOG_1), oc_protection_3(&hadc3, ADC_ANALOGWATCHDOG_1);
 
 Timer adcTimer(&htim1), printTimer(&htim2), ledTimer(&htim3), encoderTimer(&htim4), binaryLogTimer(&htim6), speedControlTimer(&htim16);
 
@@ -161,6 +173,8 @@ int main(void)
   MX_ADC1_Init();
   MX_ADC2_Init();
   MX_ADC3_Init();
+  MX_DAC1_Init();
+  MX_COMP1_Init();
   MX_TIM1_Init();
   MX_TIM2_Init();
   MX_TIM3_Init();
@@ -359,6 +373,13 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
   }
 }
 
+void HAL_TIMEx_BreakCallback(TIM_HandleTypeDef *htim) {
+  if (htim->Instance == TIM8) {
+    // Emergency stop triggered (e.g., overcurrent protection)
+    underVoltageProtection();
+  }
+}
+
 /* ADC Conversion HalfComplete callback */
 void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* hadc) {
   ADCSampler::irqConvHalfCplt(hadc);
@@ -367,6 +388,21 @@ void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* hadc) {
 /* ADC Conversion Complete callback */
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
   ADCSampler::irqConvCplt(hadc);
+}
+
+/* ADC Watchdog callback */
+void HAL_ADC_LevelOutOfWindowCallback(ADC_HandleTypeDef* hadc) {
+  // Handle ADC analog watchdog event (e.g., overcurrent protection)
+  if (hadc->Instance == ADC1) {
+
+  }
+  else if (hadc->Instance == ADC2) {
+
+  }
+  else if (hadc->Instance == ADC3) {
+
+  }
+  overCurrentProtection();
 }
 
 /* USB CDC Receive Handler */
@@ -476,6 +512,14 @@ void timer3IRQ(void) {
  */
 void timer6IRQ(void) {
 
+}
+
+void underVoltageProtection(void) {
+
+}
+
+void overCurrentProtection(void) {
+  
 }
 
 /**

@@ -36,6 +36,7 @@ HAL_StatusTypeDef ThreePhasePWMOut::init(void) {
         return HAL_ERROR;
     }
     __HAL_TIM_ENABLE_IT(htim_, TIM_IT_UPDATE);
+    __HAL_TIM_ENABLE_IT(htim_, TIM_IT_BREAK);
     return HAL_OK;
 }
 
