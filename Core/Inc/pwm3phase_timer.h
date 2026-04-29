@@ -66,4 +66,10 @@ class ThreePhasePWMOut {
          * @return Current PWM frequency in Hertz.
          */
         uint32_t getFrequency(void) const;
+
+        /**
+         * Reset the Main Output Enable (MOE) bit in the timer's Break and Dead-Time Register (BDTR). This is necessary after a break event occurs, which disables the outputs for safety. Calling this function will clear the break flag and re-enable the MOE bit, allowing the PWM outputs to be restarted.
+         * This function should be called after handling a break event (e.g., overcurrent fault)
+         */
+        void resetMOE(void);
 };

@@ -41,6 +41,7 @@ class DAC {
 class COMP {
     private:
         COMP_HandleTypeDef* hcomp_;
+
     public:
         COMP(COMP_HandleTypeDef* hcomp);
 
@@ -73,6 +74,7 @@ class COMP_Protection {
     private:
         COMP comp;
         DAC dac;
+        bool is_enabled_;
 
     public:
         COMP_Protection(COMP_HandleTypeDef* hcomp, DAC_HandleTypeDef* hdac, uint32_t dac_channel);
@@ -81,13 +83,25 @@ class COMP_Protection {
          * @brief Start the comparator-based protection mechanism
          * @return HAL status code indicating success or failure
          */
-        HAL_StatusTypeDef start(void);
+        HAL_StatusTypeDef startDAC(void);
 
         /**
          * @brief Stop the comparator-based protection mechanism
          * @return HAL status code indicating success or failure
          */
-        HAL_StatusTypeDef stop(void);
+        HAL_StatusTypeDef stopDAC(void);
+
+        /**
+         * @brief Enable the comparator output for protection. This will start the comparator and DAC if they are not already running.
+         * @return HAL status code indicating success or failure of enabling the comparator output
+         */
+        HAL_StatusTypeDef enableCOMP(void);
+
+        /**
+         * @brief Disable the comparator output for protection. This will stop the comparator and DAC if they are running.
+         * @return HAL status code indicating success or failure of disabling the comparator output
+         */
+        HAL_StatusTypeDef disableCOMP(void);
 
         /**
          * @brief Set the protection threshold
@@ -136,6 +150,8 @@ class AWD_Protection {
          * @return HAL status code indicating success or failure
          */
         void stop(void);
+
+        void init(uint32_t initial_upper_threshold, uint32_t initial_lower_threshold);
 
         /**
          * @brief Set the upper protection threshold

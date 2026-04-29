@@ -40,7 +40,7 @@ void MX_COMP1_Init(void)
   hcomp1.Instance = COMP1;
   hcomp1.Init.InvertingInput = COMP_INPUT_MINUS_DAC1_CH1;
   hcomp1.Init.NonInvertingInput = COMP_INPUT_PLUS_IO1;
-  hcomp1.Init.OutputPol = COMP_OUTPUTPOL_NONINVERTED;
+  hcomp1.Init.OutputPol = COMP_OUTPUTPOL_INVERTED;
   hcomp1.Init.Hysteresis = COMP_HYSTERESIS_NONE;
   hcomp1.Init.BlankingSrce = COMP_BLANKINGSRC_NONE;
   hcomp1.Init.Mode = COMP_POWERMODE_HIGHSPEED;

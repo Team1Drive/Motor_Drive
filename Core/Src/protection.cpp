@@ -45,18 +45,28 @@ COMP_Protection::COMP_Protection(COMP_HandleTypeDef* hcomp, DAC_HandleTypeDef* h
         comp.setPolarity(LL_COMP_OUTPUTPOL_NONINVERTED);
     }
 
-HAL_StatusTypeDef COMP_Protection::start(void) {
-    HAL_StatusTypeDef status = HAL_OK;
-    if (dac.start() != HAL_OK) status = HAL_ERROR;
-    if (comp.start() != HAL_OK) status = HAL_ERROR;
-    return status;
+HAL_StatusTypeDef COMP_Protection::startDAC(void) {
+    return dac.start();
 }
 
-HAL_StatusTypeDef COMP_Protection::stop(void) {
-    HAL_StatusTypeDef status = HAL_OK;
-    if (comp.stop() != HAL_OK) status = HAL_ERROR;
-    if (dac.stop() != HAL_OK) status = HAL_ERROR;
-    return status;
+HAL_StatusTypeDef COMP_Protection::stopDAC(void) {
+    return dac.stop();
+}
+
+HAL_StatusTypeDef COMP_Protection::enableCOMP(void) {
+    if (!is_enabled_) {
+        is_enabled_ = true;
+        return comp.start();
+    }
+    return HAL_OK; // Already enabled
+}
+
+HAL_StatusTypeDef COMP_Protection::disableCOMP(void) {
+    if (is_enabled_) {
+        is_enabled_ = false;
+        return comp.stop();
+    }
+    return HAL_OK; // Already disabled
 }
 
 HAL_StatusTypeDef COMP_Protection::setThreshold(uint32_t threshold) {
@@ -76,9 +86,7 @@ uint32_t COMP_Protection::getPolarity(void) const {
 }
 
 /* ----------------------------- AWD_Protection ----------------------------- */
-AWD_Protection::AWD_Protection(ADC_HandleTypeDef* hadc, uint32_t watchdog) : hadc_(hadc), watchdog_(watchdog) {
-    resolution_ = LL_ADC_GetResolution(hadc_->Instance);
-}
+AWD_Protection::AWD_Protection(ADC_HandleTypeDef* hadc, uint32_t watchdog) : hadc_(hadc), watchdog_(watchdog) {}
 
 void AWD_Protection::start(void) {
     switch (watchdog_) {
@@ -110,6 +118,13 @@ void AWD_Protection::stop(void) {
         default:
             break;
     }
+}
+
+void AWD_Protection::init(uint32_t initial_upper_threshold, uint32_t initial_lower_threshold) {
+    resolution_ = LL_ADC_GetResolution(hadc_->Instance);
+    setUpperThreshold(initial_upper_threshold);
+    setLowerThreshold(initial_lower_threshold);
+    stop();
 }
 
 void AWD_Protection::setUpperThreshold(uint32_t threshold) {

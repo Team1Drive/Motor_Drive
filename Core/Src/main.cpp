@@ -42,6 +42,8 @@ void vvvfRampUp(void);
 void sixStepCommutation(void);
 
 void clearRunningFlags(void);
+bool setComparator(void);
+void updateComparator(void);
 void loadAdcCalibration(ADCGain_t* adc_gain, uint8_t preset_num);
 
 /* Forward declaration for FOC ISR helper */
@@ -129,6 +131,8 @@ FOC_State_t foc_state;
 
 RollingMax ia_max, ib_max, ic_max, ibatt_max;
 
+uint32_t current_vdc;
+
 
 
 
@@ -193,7 +197,7 @@ int main(void)
   HAL_PWREx_EnableUSBReg();
 
   /* Start Under-voltage Protection */
-  //if (uv_protection.start() != HAL_OK) error_flag |= ERROR_COMP_DAC_CONFIG;
+  if (uv_protection.startDAC() != HAL_OK) error_flag |= ERROR_COMP_DAC_CONFIG;
   
   /* Start ADC */
   if (HAL_ADCEx_Calibration_Start(&hadc1, ADC_CALIB_OFFSET, ADC_SINGLE_ENDED) != HAL_OK) error_flag |= ERROR_ADC_CONFIG;
@@ -210,10 +214,18 @@ int main(void)
   if (adc3.startDMA() != HAL_OK) error_flag |= ERROR_DMA_CONFIG;
 
   /* Start Over-voltage Protection */
-  //oc_protection_1.start();
-  //oc_protection_2.start();
-  //oc_protection_3.start();
+  loadAdcCalibration(&adc_gain, 1);
+  uint32_t threshold_upper_ia = currentToDac(AWD_OC_THRESHOLD_A, 3.3f, 4095, 50.0f, 1.65f + adc_gain.ia_offset, adc_gain.ia_shunt);
+  uint32_t threshold_lower_ia = currentToDac(-AWD_OC_THRESHOLD_A, 3.3f, 4095, 50.0f, 1.65f + adc_gain.ia_offset, adc_gain.ia_shunt);
+  uint32_t threshold_upper_ib = currentToDac(AWD_OC_THRESHOLD_A, 3.3f, 4095, 50.0f, 1.65f + adc_gain.ib_offset, adc_gain.ib_shunt);
+  uint32_t threshold_lower_ib = currentToDac(-AWD_OC_THRESHOLD_A, 3.3f, 4095, 50.0f, 1.65f + adc_gain.ib_offset, adc_gain.ib_shunt);
+  uint32_t threshold_upper_ic = currentToDac(AWD_OC_THRESHOLD_A, 3.3f, 4095, 50.0f, 1.65f + adc_gain.ic_offset, adc_gain.ic_shunt);
+  uint32_t threshold_lower_ic = currentToDac(-AWD_OC_THRESHOLD_A, 3.3f, 4095, 50.0f, 1.65f + adc_gain.ic_offset, adc_gain.ic_shunt);
   
+  oc_protection_1.init(threshold_upper_ia, threshold_lower_ia);
+  oc_protection_2.init(threshold_upper_ib, threshold_lower_ib);
+  oc_protection_3.init(threshold_upper_ic, threshold_lower_ic);
+
   //while (adc1.startADC() != HAL_OK) usb_printf("Failed to start ADC1 Error code: 0x%lx\r\n", HAL_ADC_GetError(&hadc1));
   //while (adc2.startADC() != HAL_OK) usb_printf("Failed to start ADC2 Error code: 0x%lx\r\n", HAL_ADC_GetError(&hadc2));
   //while (adc3.startADC() != HAL_OK) usb_printf("Failed to start ADC3 Error code: 0x%lx\r\n", HAL_ADC_GetError(&hadc3));
@@ -238,8 +250,6 @@ int main(void)
   SCB_EnableDCache();
 
   usb_printf("HAL Initialized\n");
-
-  loadAdcCalibration(&adc_gain, 1);
   
   if (motorPWM.setFrequency(PWM_FREQ_DEFAULT_HZ) != HAL_OK) error_flag |= ERROR_PWM_CONFIG;
   if (motorPWM.setDeadTime(PWM_DEADTIME_DEFAULT_NS) != HAL_OK) error_flag |= ERROR_PWM_CONFIG;
@@ -345,6 +355,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
       default:
         break;
     }
+    updateComparator();
   }
   else if (htim->Instance == TIM16) {
     Encoder::irqHandlerSpeed();
@@ -498,7 +509,7 @@ void timer3IRQ(void) {
         led_green.write(0);
         led_yellow_1.write(0);
         led_yellow_2.write(0);
-        if (error_flag & ERROR_OVERCURRENT_INT) {
+        if (error_flag & ERROR_OVERCURRENT_INT || error_flag & ERROR_UNDERVOLTAGE) {
           led_red.toggle();
         }
        break;
@@ -525,14 +536,18 @@ void timer6IRQ(void) {
 
 void underVoltageProtection(void) {
   relay.write(0);
+  uv_protection.disableCOMP();
   motorPWM.stop();
   control_mode = MotorControlMode::MOTOR_PROTECTION;
+  error_flag |= ERROR_UNDERVOLTAGE;
 }
 
 void overCurrentProtection(void) {
   relay.write(0);
+  uv_protection.disableCOMP();
   motorPWM.stop();
   control_mode = MotorControlMode::MOTOR_PROTECTION;
+  error_flag |= ERROR_OVERCURRENT_AWD;
 }
 
 /**
@@ -940,6 +955,7 @@ void speedControl(void) {
         motorPWM.stop();
         control_mode = MotorControlMode::MOTOR_STOP;
         relay.write(0);
+        uv_protection.disableCOMP();
       }
     }
     else {
@@ -949,6 +965,7 @@ void speedControl(void) {
         motorPWM.stop();
         control_mode = MotorControlMode::MOTOR_STOP;
         relay.write(0);
+        uv_protection.disableCOMP();
       }
     }
   }
@@ -1130,6 +1147,7 @@ void alignRotor(void) {
     control_mode = MotorControlMode::MOTOR_STOP;
     motorPWM.stop();
     relay.write(0);
+    uv_protection.disableCOMP();
     rpm = 0.0f;
     angle = 0.0f;
 
@@ -1284,6 +1302,7 @@ void vvvfRampUp(void) {
         motorPWM.setDuty(-1.0f, -1.0f, -1.0f);
         motorPWM.setFrequency(PWM_FREQ_DEFAULT_HZ);
         relay.write(0);
+        uv_protection.disableCOMP();
         return;
       }
     }
@@ -1407,6 +1426,32 @@ void clearRunningFlags(void) {
     foc_reset(&foc_state);
 }
 
+bool setComparator(void) {
+    current_vdc = adc1.getLatestChannelMean(2, FOC_OVERSAMPLING_SIZE);
+    float vdc = adcToVoltage(current_vdc, 3.3f, 65536, adc_gain.vbatt_gain, adc_gain.vbatt_offset);
+    if (vdc < BATTERY_START_V_THRESHOLD) {
+      return false;
+    }
+    uint32_t threshold = ((uint32_t)((float)current_vdc * BATTERY_UV_THRESHOLD_BEGIN) >> 4);
+    uv_protection.setThreshold(threshold);
+    uv_protection.setPolarity(LL_COMP_OUTPUTPOL_INVERTED);
+    HAL_Delay(2);
+    uv_protection.enableCOMP();
+    motorPWM.resetMOE();
+    if (LL_COMP_ReadOutputLevel(COMP1) == LL_COMP_OUTPUT_LEVEL_HIGH) {
+        return false; // Don't even try to start
+    }
+    return true;
+}
+
+void updateComparator(void) {
+    uint32_t threshold_end = ((uint32_t)((float)current_vdc * BATTERY_UV_THRESHOLD_END) >> 4);
+    uint32_t threshold = uv_protection.getThreshold();
+    if (threshold >= threshold_end) return;
+    threshold += (threshold_end - threshold) >> 6;
+    uv_protection.setThreshold(threshold);
+}
+
 void loadAdcCalibration(ADCGain_t* adc_gain, uint8_t preset_num) {
   switch (preset_num) {
     case 1:
@@ -1474,6 +1519,7 @@ void loadAdcCalibration(ADCGain_t* adc_gain, uint8_t preset_num) {
 void cmd_start(int argc, char** argv) {
     if (control_mode == MotorControlMode::MOTOR_PROTECTION) {protectionModePrint(); return;}
     control_mode = MotorControlMode::MOTOR_STARTUP;
+    if (!setComparator()) {usb_printf("Bus voltage too low\r\n"); return;}
     clearRunningFlags();
     relay.write(1);
     if (strcmp(argv[1], "foc") == 0) startUpSequence(MotorControlMode::MOTOR_FOC_LINEAR);
@@ -1488,6 +1534,7 @@ void cmd_start(int argc, char** argv) {
  * @note If currently in VVVF ramp-up, it will start ramping down instead of an immediate stop.
  */
 void cmd_stop(int argc, char** argv) {
+    if (control_mode == MotorControlMode::MOTOR_PROTECTION) {protectionModePrint(); return;}
     if ((control_mode == MotorControlMode::MOTOR_FOC_DPWM || control_mode == MotorControlMode::MOTOR_FOC_LINEAR) && (system_flag & FLAG_FOC_RUNNING)) {
         system_flag &= ~FLAG_FOC_RUNNING; // Start FOC ramp down
         usb_printf("FOC ramping down\r\n");
@@ -1502,6 +1549,7 @@ void cmd_stop(int argc, char** argv) {
         motorPWM.stop();
         foc_reset(&foc_state);
         relay.write(0);
+        uv_protection.disableCOMP();
         usb_printf("Stopping\r\n");
     }
 }
@@ -1532,10 +1580,15 @@ void cmd_reset(int argc, char** argv) {
     control_mode = MotorControlMode::MOTOR_STOP;
     clearRunningFlags();
     error_flag &= ~ERROR_OVERCURRENT_INT;
+    error_flag &= ~ERROR_OVERCURRENT_AWD;
+    error_flag &= ~ERROR_UNDERVOLTAGE;
+    error_flag &= ~ERROR_OVERHEAT;
     motorPWM.stop();
+    motorPWM.resetMOE();
     led_red.write(0);
     foc_reset(&foc_state);
     relay.write(0);
+    uv_protection.disableCOMP();
     usb_printf("Resetting\r\n");
 }
 
@@ -2210,6 +2263,52 @@ void cmd_audible(int argc, char** argv) {
     }
 }
 
+void cmd_info(int argc, char** argv) {
+    if (argc < 2) {
+        usb_printf("Usage: info [all|foc|adc]\r\n");
+        return;
+    }
+
+    if (strcmp(argv[1], "error") == 0) {
+        usb_printf("Error flag: 0x%08X\r\n", error_flag);
+        if (error_flag & ERROR_PWM_CONFIG) {
+            usb_printf("- PWM configuration error\r\n");
+        }
+        if (error_flag & ERROR_ADC_CONFIG) {
+            usb_printf("- ADC configuration error\r\n");
+        }
+        if (error_flag & ERROR_DMA_CONFIG) {
+            usb_printf("- DMA configuration error\r\n");
+        }
+        if (error_flag & ERROR_TIM_CONFIG) {
+            usb_printf("- Timer configuration error\r\n");
+        }
+        if (error_flag & ERROR_ENCODER_CONFIG) {
+            usb_printf("- Encoder configuration error\r\n");
+        }
+        if (error_flag & ERROR_FOC_CONFIG) {
+            usb_printf("- FOC configuration error\r\n");
+        }
+        if (error_flag & ERROR_COMP_DAC_CONFIG) {
+            usb_printf("- COMP DAC configuration error\r\n");
+        }
+        if (error_flag & ERROR_OVERCURRENT_AWD) {
+            usb_printf("- ADC watchdog overcurrent\r\n");
+        }
+        if (error_flag & ERROR_OVERCURRENT_INT) {
+            usb_printf("- Hesterosis overcurrent\r\n");
+        }
+        if (error_flag & ERROR_OVERHEAT) {
+            usb_printf("- Overheat error\r\n");
+        }
+        if (error_flag & ERROR_UNDERVOLTAGE) {
+            usb_printf("- Undervoltage error\r\n");
+        }
+    } else {
+        usb_printf("Invalid info option\r\n");
+    }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 //  FOC ISR tick — called from TIM8 update interrupt at 20 kHz
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2250,6 +2349,7 @@ static void foc_isr_tick(void)
       motorPWM.stop();
       // De-energize relay
       relay.write(0);
+      uv_protection.disableCOMP();
       // Set fault flag
       error_flag |= ERROR_OVERCURRENT_INT;
       // Set control mode to PROTECTION and clear FOC running flag

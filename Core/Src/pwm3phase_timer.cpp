@@ -214,3 +214,10 @@ HAL_StatusTypeDef ThreePhasePWMOut::setFrequency(uint32_t freq_Hz) {
 uint32_t ThreePhasePWMOut::getFrequency(void) const {
     return pwm_freq_Hz;
 }
+
+void ThreePhasePWMOut::resetMOE(void) {
+    // Clear the break flag to allow restarting the timer after a break event
+    __HAL_TIM_CLEAR_FLAG(htim_, TIM_FLAG_BREAK);
+    // Re-enable the MOE bit to allow outputs again
+    __HAL_TIM_MOE_ENABLE(htim_);
+}

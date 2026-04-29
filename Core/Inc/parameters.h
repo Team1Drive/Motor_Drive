@@ -51,6 +51,8 @@
 #define ADC_VBATT_GAIN_2    0.12952f // Battery voltage channel gain (voltage divider)
 #define ADC_VBATT_OFFSET_2  0.00749f // Battery voltage channel offset
 
+#define AWD_OC_THRESHOLD_A  2.0f // Overcurrent threshold ADC watchdog (in amps)
+
 #define TIM6_FREQ_HZ        1000U
 #define TIM15_FREQ_HZ       1000000U
 #define SPEEDLOOP_FREQ_HZ   1000U
@@ -69,7 +71,7 @@
 #define SIXSTEP_DUTYCYCLE           1.0f // Range 1.0 to 0.5
 
 #define VVVF_RAMP_UP_SPEED          60U // 60 RPM/s
-#define VVVF_MAX_RPM                3000U // Max RPM for VVVF mod
+#define VVVF_MAX_RPM                5000U // Max RPM for VVVF mod
 #define VVVF_THRESHOLD_RPM          1500U // Minimum RPM to maintain after ramp-up
 
 #define FOC_ALLOWED                 false // Allow FOC mode in the system (set to false to disable FOC-related code and save flash/RAM)
@@ -79,8 +81,9 @@
 
 #define MASTER_MODE                 true // Set master or slave mode in load testing
 #define BATTERY_PROTECTION          false // Set to true when powered with supply without current limit
-#define BATTERY_LOW_VOLTAGE_THRESHOLD   4.0f // Voltage threshold for low battery protection (in volts)
-#define BATTERY_OVERVOLTAGE_THRESHOLD   5.0f // Voltage threshold for overvoltage protection (in volts)
+#define BATTERY_UV_THRESHOLD_BEGIN  0.01f //  Voltage threshold for undervoltage protection (in volts) - set to 0.0f to disable undervoltage protection
+#define BATTERY_UV_THRESHOLD_END    0.8f //  Voltage threshold for undervoltage protection (in volts) - set to 0.0f to disable undervoltage protection
+#define BATTERY_START_V_THRESHOLD   10.0f // Voltage threshold for allowing motor start (in volts) - set to 0.0f to disable start voltage check
 
 #define ENCODER_PPR                 2048U // Pulses per revolution for the encoder
 #define ENCODER_T_THRESHOLD         250U // Threshold in RPM for using T method (with hysteresis)
