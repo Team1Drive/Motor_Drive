@@ -191,6 +191,9 @@ int main(void)
 
   /* Enable USB regulator */
   HAL_PWREx_EnableUSBReg();
+
+  /* Start Under-voltage Protection */
+  //if (uv_protection.start() != HAL_OK) error_flag |= ERROR_COMP_DAC_CONFIG;
   
   /* Start ADC */
   if (HAL_ADCEx_Calibration_Start(&hadc1, ADC_CALIB_OFFSET, ADC_SINGLE_ENDED) != HAL_OK) error_flag |= ERROR_ADC_CONFIG;
@@ -205,6 +208,11 @@ int main(void)
   if (adc1.startDMA() != HAL_OK) error_flag |= ERROR_DMA_CONFIG;
   if (adc2.startDMA() != HAL_OK) error_flag |= ERROR_DMA_CONFIG;
   if (adc3.startDMA() != HAL_OK) error_flag |= ERROR_DMA_CONFIG;
+
+  /* Start Over-voltage Protection */
+  //oc_protection_1.start();
+  //oc_protection_2.start();
+  //oc_protection_3.start();
   
   //while (adc1.startADC() != HAL_OK) usb_printf("Failed to start ADC1 Error code: 0x%lx\r\n", HAL_ADC_GetError(&hadc1));
   //while (adc2.startADC() != HAL_OK) usb_printf("Failed to start ADC2 Error code: 0x%lx\r\n", HAL_ADC_GetError(&hadc2));
@@ -373,6 +381,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
   }
 }
 
+/* TIM Break callback */
 void HAL_TIMEx_BreakCallback(TIM_HandleTypeDef *htim) {
   if (htim->Instance == TIM8) {
     // Emergency stop triggered (e.g., overcurrent protection)
@@ -489,7 +498,7 @@ void timer3IRQ(void) {
         led_green.write(0);
         led_yellow_1.write(0);
         led_yellow_2.write(0);
-        if (error_flag & ERROR_OVERCURRENT) {
+        if (error_flag & ERROR_OVERCURRENT_INT) {
           led_red.toggle();
         }
        break;
@@ -515,11 +524,15 @@ void timer6IRQ(void) {
 }
 
 void underVoltageProtection(void) {
-
+  relay.write(0);
+  motorPWM.stop();
+  control_mode = MotorControlMode::MOTOR_PROTECTION;
 }
 
 void overCurrentProtection(void) {
-  
+  relay.write(0);
+  motorPWM.stop();
+  control_mode = MotorControlMode::MOTOR_PROTECTION;
 }
 
 /**
@@ -1518,7 +1531,7 @@ void cmd_align(int argc, char** argv) {
 void cmd_reset(int argc, char** argv) {
     control_mode = MotorControlMode::MOTOR_STOP;
     clearRunningFlags();
-    error_flag &= ~ERROR_OVERCURRENT;
+    error_flag &= ~ERROR_OVERCURRENT_INT;
     motorPWM.stop();
     led_red.write(0);
     foc_reset(&foc_state);
@@ -2238,7 +2251,7 @@ static void foc_isr_tick(void)
       // De-energize relay
       relay.write(0);
       // Set fault flag
-      error_flag |= ERROR_OVERCURRENT;
+      error_flag |= ERROR_OVERCURRENT_INT;
       // Set control mode to PROTECTION and clear FOC running flag
       control_mode = MotorControlMode::MOTOR_PROTECTION;
       system_flag &= ~FLAG_FOC_RUNNING;

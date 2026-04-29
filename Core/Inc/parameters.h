@@ -128,7 +128,11 @@ enum ErrorFlag : uint32_t {
     ERROR_TIM_CONFIG        = 1 << 3,
     ERROR_ENCODER_CONFIG    = 1 << 4,
     ERROR_FOC_CONFIG        = 1 << 5,
-    ERROR_OVERCURRENT       = 1 << 6
+    ERROR_COMP_DAC_CONFIG   = 1 << 6,
+    ERROR_OVERCURRENT_AWD   = 1 << 7,
+    ERROR_OVERCURRENT_INT   = 1 << 8,
+    ERROR_OVERHEAT          = 1 << 9,
+    ERROR_UNDERVOLTAGE      = 1 << 10
 };
 
 typedef struct {
