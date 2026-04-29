@@ -1609,7 +1609,7 @@ void cmd_sixstep(int argc, char** argv) {
  */
 void cmd_speed(int argc, char** argv) {
     float speed = atof(argv[1]);
-    if (speed < -5000.0f || speed > 5000.0f) {
+    if (speed < -MOTOR_SPEED_LIMIT_RPM || speed > MOTOR_SPEED_LIMIT_RPM) {
         usb_printf("Invalid speed value: %s\r\n", argv[1]);
         return;
     }

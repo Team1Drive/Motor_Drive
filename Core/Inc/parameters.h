@@ -65,6 +65,7 @@
 #define MOTOR_ALIGNMENT_POS_WINDOW  2048 // Counts of the encoder position within which alignment is considered successful (tuned experimentally)
 #define MOTOR_ALIGNMENT_THRESHOLD   1 // Encoder position delta window for successful alignment
 #define MOTOR_ALIGNMENT_VOLTAGE     5 // Volts to apply during encoder alignment
+#define MOTOR_SPEED_LIMIT_RPM       7500.0f
 
 #define SIXSTEP_DUTYCYCLE           1.0f // Range 1.0 to 0.5
 
