@@ -2331,6 +2331,17 @@ void focTick(void) {
     float ic = adcToCurrent(adc3.getLatestChannelMean(0, FOC_OVERSAMPLING_SIZE), 3.3f, 4096, 50.0f, 1.65f + adc_gain.ic_offset, adc_gain.ic_shunt);
     //float ic = -ia - ib;
     float vdc = adcToVoltage(adc1.getLatestChannelMean(2, FOC_OVERSAMPLING_SIZE), 3.3f, 65536, adc_gain.vbatt_gain, adc_gain.vbatt_offset);
+    //float idc = adcToCurrent(adc3.getLatestChannelMean(1, FOC_OVERSAMPLING_SIZE), 3.3f, 4096, 50.0f, 1.65f + adc_gain.ibatt_offset, adc_gain.ibatt_shunt);
+
+    if (fabsf(ia) > MOTOR_MAX_PHASE_CURRENT || fabsf(ib) > MOTOR_MAX_PHASE_CURRENT || fabsf(ic) > MOTOR_MAX_PHASE_CURRENT || vdc < MOTOR_MIN_VOLTAGE) {
+      motorPWM.stop();
+      relay.write(0);
+      error_flag |= ERROR_OVERCURRENT;
+      control_mode = MotorControlMode::MOTOR_PROTECTION;
+      system_flag &= ~FLAG_FOC_RUNNING;
+      foc_state.fault = true;
+      return;
+    }
 
     float theta_e = encoder.getElecPos_rad();
     float omega_m = encoder.getRPM() * RPM_TO_RAD_S;
