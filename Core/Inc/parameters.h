@@ -67,7 +67,7 @@
 #define MOTOR_ALIGNMENT_VOLTAGE     5 // Volts to apply during encoder alignment
 #define MOTOR_SPEED_LIMIT_RPM       7500.0f
 
-#define MOTOR_MAX_PHASE_CURRENT     4.0f // Maximum phase current for safety (in amps)
+#define MOTOR_MAX_PHASE_CURRENT     4.5f // Maximum phase current for safety (in amps)
 #define MOTOR_MAX_CURRENT           5.0f // Maximum current for safety (in amps), including battery current
 #define MOTOR_MIN_VOLTAGE           6.0f // Minimum voltage for operation (in volts) 
 
