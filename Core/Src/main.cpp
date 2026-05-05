@@ -456,7 +456,7 @@ void timer3IRQ(void) {
         led_green.write(0);
         led_yellow_1.write(0);
         led_yellow_2.write(0);
-        if (error_flag & ERROR_OVERCURRENT) {
+        if ((error_flag & ERROR_OVERCURRENT) || (error_flag & ERROR_UNDERVOLTAGE)) {
           led_red.toggle();
         }
        break;
@@ -698,10 +698,19 @@ void printTelemetryBinary(void) {
   // Construct a binary packet
   uint8_t buffer[128];
   uint8_t* ptr = buffer;
+
+  uint32_t error = error_flag;
+  uint8_t mode = static_cast<uint8_t>(control_mode);
   uint32_t mask = print_mask;
 
   *ptr++ = 0xAA;
   *ptr++ = 0x55;
+
+  memcpy(ptr, &error, 4);
+  ptr += 4;
+
+  memcpy(ptr, &mode, 1);
+  ptr += 1;
   
   memcpy(ptr, &mask, 4);
   ptr += 4;
@@ -1529,6 +1538,7 @@ void cmd_reset(int argc, char** argv) {
     control_mode = MotorControlMode::MOTOR_STOP;
     clearRunningFlags();
     error_flag &= ~ERROR_OVERCURRENT;
+    error_flag &= ~ERROR_UNDERVOLTAGE;
     motorPWM.stop();
     led_red.write(0);
     foc_reset(&foc_state);
@@ -2418,9 +2428,16 @@ void focTick(void) {
     float vdc = adcToVoltage(adc1.getLatestChannelMean(2, FOC_OVERSAMPLING_SIZE), 3.3f, 65536, adc_gain.vbatt_gain, adc_gain.vbatt_offset);
     //float idc = adcToCurrent(adc3.getLatestChannelMean(1, FOC_OVERSAMPLING_SIZE), 3.3f, 4096, 50.0f, 1.65f + adc_gain.ibatt_offset, adc_gain.ibatt_shunt); */
 
-    if (fabsf(ia) > MOTOR_MAX_PHASE_CURRENT || fabsf(ib) > MOTOR_MAX_PHASE_CURRENT || fabsf(ic) > MOTOR_MAX_PHASE_CURRENT || vdc < MOTOR_MIN_VOLTAGE) {
+    if (fabsf(ia) > MOTOR_MAX_PHASE_CURRENT || fabsf(ib) > MOTOR_MAX_PHASE_CURRENT || fabsf(ic) > MOTOR_MAX_PHASE_CURRENT) {
         trip();
         error_flag |= ERROR_OVERCURRENT;
+        foc_state.fault = true;
+        return;
+    }
+
+    if (vdc < MOTOR_MIN_VOLTAGE) {
+        trip();
+        error_flag |= ERROR_UNDERVOLTAGE;
         foc_state.fault = true;
         return;
     }
