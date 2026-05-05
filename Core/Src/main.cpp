@@ -871,6 +871,7 @@ void speedControl(void) {
   static float ramp_speed_increment = 0.0f;
   static uint32_t ramp_tick = 0;
   static float iq_torque_clamp;
+  static bool fw_active = false;
 
   foc_state.ts_speed = 1.0f / (float)speedControlTimer.getFrequency();
   
@@ -986,20 +987,34 @@ void speedControl(void) {
   /* =========================================================================
   *   Field-weakening Loop
   * ========================================================================= */
-  float U_max_fw   = (foc_state.Vdc / SQRT3) * 0.95f;
-  float u_mag_prev = foc_state.u_mag;
+  const float u_max_linear = foc_state.Vdc / SQRT3;
+  const float u_fw_start   = 0.92f * u_max_linear;
+  const float u_fw_release = 0.88f * u_max_linear;
+  const float u_mag_prev = foc_state.u_mag;
   float new_Id_ref;
   if (fabsf(foc_state.omega_m) > 20.0f && target.is_torque_control == false) {
-      float fw_error = (U_max_fw - u_mag_prev) / fabsf(foc_state.omega_m);
-      //foc_state.pi_fw.integrator += foc_state.pi_fw.ki * fw_error * foc_state.ts_speed;
-      //if (foc_state.pi_fw.integrator > 0.0f) foc_state.pi_fw.integrator = 0.0f;
-      //if (foc_state.pi_fw.integrator < FOC_ID_FW_MIN) foc_state.pi_fw.integrator = FOC_ID_FW_MIN;
-      //new_Id_ref = foc_state.pi_fw.integrator;
-      new_Id_ref = PI_update(&foc_state.pi_fw, fw_error, foc_state.ts_speed);
-      if (new_Id_ref > 0.0f) new_Id_ref = 0.0f;
+      if (!fw_active && u_mag_prev > u_fw_start) {
+          fw_active = true;
+      } else if (fw_active && u_mag_prev < u_fw_release) {
+          fw_active = false;
+      }
+
+      if (fw_active) {
+        float fw_error = (u_fw_start - u_mag_prev) / fabsf(foc_state.omega_m);
+        //foc_state.pi_fw.integrator += foc_state.pi_fw.ki * fw_error * foc_state.ts_speed;
+        //if (foc_state.pi_fw.integrator > 0.0f) foc_state.pi_fw.integrator = 0.0f;
+        //if (foc_state.pi_fw.integrator < FOC_ID_FW_MIN) foc_state.pi_fw.integrator = FOC_ID_FW_MIN;
+        //new_Id_ref = foc_state.pi_fw.integrator;
+        new_Id_ref = PI_update(&foc_state.pi_fw, fw_error, foc_state.ts_speed);
+        if (new_Id_ref > 0.0f) new_Id_ref = 0.0f;
+      } else {
+        new_Id_ref = 0.0f;
+        PI_reset(&foc_state.pi_fw);
+      }
   } else {
       new_Id_ref = 0.0f;
       PI_reset(&foc_state.pi_fw);
+      fw_active = false;
   }
 
   
