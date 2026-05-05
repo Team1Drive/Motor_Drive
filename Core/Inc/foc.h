@@ -145,14 +145,14 @@
 #define FOC_INT_I_CLAMP     6.0f
 
 /** Speed PI output clamp (V). Symmetric ±clamp. */
-#define FOC_I_CLAMP_UPPER_SP 2.0f
+#define FOC_I_CLAMP_UPPER_SP 3.5f
 
-#define FOC_I_CLAMP_LOWER_SP -2.0f
+#define FOC_I_CLAMP_LOWER_SP -3.5f
 
 /** Field-weakening PI output clamp (V). Symmetric ±clamp. */
 #define FOC_I_CLAMP_UPPER_FW 0.0f
 
-#define FOC_I_CLAMP_LOWER_FW -2.0f
+#define FOC_I_CLAMP_LOWER_FW -3.0f
 
 /* =========================================================================
  * PI CONTROLLER — inline struct and update function (ISR-safe, no malloc)

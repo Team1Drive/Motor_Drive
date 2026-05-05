@@ -987,36 +987,21 @@ void speedControl(void) {
   /* =========================================================================
   *   Field-weakening Loop
   * ========================================================================= */
-  const float u_max_linear = foc_state.Vdc / SQRT3;
-  const float u_fw_start   = 0.92f * u_max_linear;
-  const float u_fw_release = 0.88f * u_max_linear;
-  const float u_mag_prev = foc_state.u_mag;
+  float U_max_fw   = (foc_state.Vdc / SQRT3) * 0.95f;
+  float u_mag_prev = foc_state.u_mag;
   float new_Id_ref;
-  if (fabsf(foc_state.omega_m) > 20.0f && target.is_torque_control == false) {
-      if (!fw_active && u_mag_prev > u_fw_start) {
-          fw_active = true;
-      } else if (fw_active && u_mag_prev < u_fw_release) {
-          fw_active = false;
-      }
-
-      if (fw_active) {
-        float fw_error = (u_fw_start - u_mag_prev) / fabsf(foc_state.omega_m);
-        //foc_state.pi_fw.integrator += foc_state.pi_fw.ki * fw_error * foc_state.ts_speed;
-        //if (foc_state.pi_fw.integrator > 0.0f) foc_state.pi_fw.integrator = 0.0f;
-        //if (foc_state.pi_fw.integrator < FOC_ID_FW_MIN) foc_state.pi_fw.integrator = FOC_ID_FW_MIN;
-        //new_Id_ref = foc_state.pi_fw.integrator;
-        new_Id_ref = PI_update(&foc_state.pi_fw, fw_error, foc_state.ts_speed);
-        if (new_Id_ref > 0.0f) new_Id_ref = 0.0f;
-      } else {
-        new_Id_ref = 0.0f;
-        PI_reset(&foc_state.pi_fw);
-      }
+  if (fabsf(foc_state.omega_m) > 20.0f) {
+      float fw_error = (U_max_fw - u_mag_prev) / fabsf(foc_state.omega_m);
+      //foc_state.pi_fw.integrator += foc_state.pi_fw.ki * fw_error * foc_state.ts_speed;
+      //if (foc_state.pi_fw.integrator > 0.0f) foc_state.pi_fw.integrator = 0.0f;
+      //if (foc_state.pi_fw.integrator < FOC_ID_FW_MIN) foc_state.pi_fw.integrator = FOC_ID_FW_MIN;
+      //new_Id_ref = foc_state.pi_fw.integrator;
+      new_Id_ref = PI_update(&foc_state.pi_fw, fw_error, foc_state.ts_speed);
+      if (new_Id_ref > 0.0f) new_Id_ref = 0.0f;
   } else {
       new_Id_ref = 0.0f;
       PI_reset(&foc_state.pi_fw);
-      fw_active = false;
   }
-
   
   /* =========================================================================
   *   Setting new Id and Iq setpoints
@@ -2339,7 +2324,7 @@ static void foc_isr_tick(void)
 }
 
 void focTick(void) {
-    /* uint16_t adc1_raw[3];
+    uint16_t adc1_raw[3];
     uint16_t adc2_raw[2];
     uint16_t adc3_raw[2];
 
@@ -2349,15 +2334,16 @@ void focTick(void) {
 
     float ia = adcToCurrent(adc1_raw[0], 3.3f, 65536, 50.0f, 1.65f + adc_gain.ia_offset, adc_gain.ia_shunt);
     float ib = adcToCurrent(adc2_raw[0], 3.3f, 65536, 50.0f, 1.65f + adc_gain.ib_offset, adc_gain.ib_shunt);
-    float ic = adcToCurrent(adc3_raw[0], 3.3f,  4096, 50.0f, 1.65f + adc_gain.ic_offset, adc_gain.ic_shunt);
-    float vdc = adcToVoltage(adc1_raw[2], 3.3f, 65536, adc_gain.vbatt_gain, adc_gain.vbatt_offset); */
+    //float ic = adcToCurrent(adc3_raw[0], 3.3f,  4096, 50.0f, 1.65f + adc_gain.ic_offset, adc_gain.ic_shunt);
+    float ic = -ia - ib;
+    float vdc = adcToVoltage(adc1_raw[2], 3.3f, 65536, adc_gain.vbatt_gain, adc_gain.vbatt_offset);
 
-    float ia = adcToCurrent(adc1.getLatestChannelMean(0, FOC_OVERSAMPLING_SIZE), 3.3f, 65536, 50.0f, 1.65f + adc_gain.ia_offset, adc_gain.ia_shunt);
+    /* float ia = adcToCurrent(adc1.getLatestChannelMean(0, FOC_OVERSAMPLING_SIZE), 3.3f, 65536, 50.0f, 1.65f + adc_gain.ia_offset, adc_gain.ia_shunt);
     float ib = adcToCurrent(adc2.getLatestChannelMean(0, FOC_OVERSAMPLING_SIZE), 3.3f, 65536, 50.0f, 1.65f + adc_gain.ib_offset, adc_gain.ib_shunt);
     //float ic = adcToCurrent(adc3.getLatestChannelMean(0, FOC_OVERSAMPLING_SIZE), 3.3f, 4096, 50.0f, 1.65f + adc_gain.ic_offset, adc_gain.ic_shunt);
     float ic = -ia - ib;
     float vdc = adcToVoltage(adc1.getLatestChannelMean(2, FOC_OVERSAMPLING_SIZE), 3.3f, 65536, adc_gain.vbatt_gain, adc_gain.vbatt_offset);
-    //float idc = adcToCurrent(adc3.getLatestChannelMean(1, FOC_OVERSAMPLING_SIZE), 3.3f, 4096, 50.0f, 1.65f + adc_gain.ibatt_offset, adc_gain.ibatt_shunt);
+    //float idc = adcToCurrent(adc3.getLatestChannelMean(1, FOC_OVERSAMPLING_SIZE), 3.3f, 4096, 50.0f, 1.65f + adc_gain.ibatt_offset, adc_gain.ibatt_shunt); */
 
     if (fabsf(ia) > MOTOR_MAX_PHASE_CURRENT || fabsf(ib) > MOTOR_MAX_PHASE_CURRENT || fabsf(ic) > MOTOR_MAX_PHASE_CURRENT || vdc < MOTOR_MIN_VOLTAGE) {
         trip();

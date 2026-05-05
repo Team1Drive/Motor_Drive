@@ -345,7 +345,6 @@ void focTest(FOC_State_t* foc,
 
     foc->Vd_cmd = vd_cmd;
     foc->Vq_cmd = vq_cmd;
-    foc->u_mag  = hypotf(vd_cmd, vq_cmd);
 
     //float v_max = vdc / SQRT3;  // Maximum voltage magnitude for SVPWM (line-line voltage limit)
     //float v_max = 2 * vdc / M_PI;
