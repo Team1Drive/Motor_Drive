@@ -871,7 +871,6 @@ void speedControl(void) {
   static float ramp_speed_increment = 0.0f;
   static uint32_t ramp_tick = 0;
   static float iq_torque_clamp;
-  static bool fw_active = false;
 
   foc_state.ts_speed = 1.0f / (float)speedControlTimer.getFrequency();
   
@@ -987,8 +986,9 @@ void speedControl(void) {
   /* =========================================================================
   *   Field-weakening Loop
   * ========================================================================= */
-  float U_max_fw   = (foc_state.Vdc / SQRT3) * 0.95f;
-  float u_mag_prev = foc_state.u_mag;
+  //const float U_max_fw   = (foc_state.Vdc / SQRT3) * 0.95f;
+  const float U_max_fw   = (2.0f * foc_state.Vdc / M_PI) * 0.95f;
+  const float u_mag_prev = foc_state.u_mag;
   float new_Id_ref;
   if (fabsf(foc_state.omega_m) > 20.0f) {
       float fw_error = (U_max_fw - u_mag_prev) / fabsf(foc_state.omega_m);

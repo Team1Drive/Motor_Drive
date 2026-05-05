@@ -172,7 +172,8 @@ static void svpwm_superposition(float v_alpha, float v_beta, float v_dc, float T
 
     // Compute normalised modulation index from voltage vector magnitude
     float v_ref = hypotf(v_alpha, v_beta);
-    float m     = v_ref / (v_dc * 0.5f);                // [0..1], >1 = overmod
+    //float m     = v_ref / (v_dc * 0.5f);                // [0..1], >1 = overmod
+    float m = v_ref / (2.0f * v_dc / M_PI);
     m = std::min(m, 1.0f);                              // hard cap at six-step
 
     float s1  = sinf(M_PI / 3.0f - theta_s);
