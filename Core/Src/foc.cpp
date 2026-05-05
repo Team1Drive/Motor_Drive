@@ -22,6 +22,19 @@
 #include <cmath>
 #include <algorithm>
 
+static inline float clampf(float value, float lower, float upper) {
+    return std::min(std::max(value, lower), upper);
+}
+
+static inline void limitVoltageVector(float* vd, float* vq, float max_mag) {
+    float mag = hypotf(*vd, *vq);
+    if (mag > max_mag && mag > 1e-6f) {
+        float scale = max_mag / mag;
+        *vd *= scale;
+        *vq *= scale;
+    }
+}
+
 /* =========================================================================
  * foc_init
  * ========================================================================= */
@@ -322,9 +335,17 @@ void focTest(FOC_State_t* foc,
     float vq_pi = PI_update(&foc->pi_q, err_iq, foc->ts);
 
     // Calculate voltage commands with decoupling feed-forward
-    foc->Vd_cmd = vd_pi - foc->omega_e * FOC_L * iq;
-    foc->Vq_cmd = vq_pi + foc->omega_e * FOC_L * id + foc->omega_e * FOC_PSI_F;
-    foc->u_mag  = hypotf(foc->Vd_cmd, foc->Vq_cmd);
+    float vd_req = vd_pi - foc->omega_e * FOC_L * iq;
+    float vq_req = vq_pi + foc->omega_e * FOC_L * id + foc->omega_e * FOC_PSI_F;
+
+    const float u_abs_limit = 2.0f * vdc / M_PI;
+    float vd_cmd = vd_req;
+    float vq_cmd = vq_req;
+    limitVoltageVector(&vd_cmd, &vq_cmd, u_abs_limit);
+
+    foc->Vd_cmd = vd_cmd;
+    foc->Vq_cmd = vq_cmd;
+    foc->u_mag  = hypotf(vd_cmd, vq_cmd);
 
     //float v_max = vdc / SQRT3;  // Maximum voltage magnitude for SVPWM (line-line voltage limit)
     //float v_max = 2 * vdc / M_PI;
