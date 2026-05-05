@@ -119,5 +119,6 @@ void modulate(
     float v_beta,
     float v_dc,
     float Ts,
-    float* dutyA, float* dutyB, float* dutyC
+    float* dutyA, float* dutyB, float* dutyC,
+    float* applied_mag = nullptr
 );

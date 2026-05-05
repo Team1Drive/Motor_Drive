@@ -82,7 +82,7 @@ void inv_park(float d, float q, float theta, float* alpha, float* beta)
 //     Inputs: v_alpha, v_beta, v_dc
 // ─────────────────────────────────────────────
 static void svpwm_standard(float v_alpha, float v_beta, float v_dc,
-                           float* da, float* db, float* dc)
+                           float* da, float* db, float* dc, float* applied_mag)
 {
     int   sector;
     float theta_s;
@@ -105,11 +105,20 @@ static void svpwm_standard(float v_alpha, float v_beta, float v_dc,
     float d0 = 1.0f - d1 - d2;
 
     // Normalise d1 and d2 proportionally
+    bool saturated = false;
+    float scale = 1.0f;
+
     if (d0 < 0.0f) {
         float sum = d1 + d2;
-        d1 /= sum;
-        d2 /= sum;
+        scale = 1.0f / sum;
+        d1 *= scale;
+        d2 *= scale;
         d0 = 0.0f;
+        saturated = true;
+    }
+
+    if (applied_mag != nullptr) {
+        *applied_mag = saturated ? (v_ref * scale) : v_ref;
     }
 
     float Ta, Tb, Tc;
@@ -317,13 +326,15 @@ void modulate(
     float v_beta,
     float v_dc,
     float Ts,
-    float* dutyA, float* dutyB, float* dutyC)
+    float* dutyA, float* dutyB, float* dutyC,
+    float* applied_mag) 
 {
     switch (type)
     {
         case ModulationType::SVPWM:
             svpwm_standard(v_alpha, v_beta, v_dc,
-                           dutyA, dutyB, dutyC);
+                           dutyA, dutyB, dutyC,
+                           applied_mag);
             break;
 
         case ModulationType::SVPWM_COMP:

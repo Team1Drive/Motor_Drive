@@ -338,7 +338,7 @@ void focTest(FOC_State_t* foc,
     float vd_req = vd_pi - foc->omega_e * FOC_L * iq;
     float vq_req = vq_pi + foc->omega_e * FOC_L * id + foc->omega_e * FOC_PSI_F;
 
-    const float u_abs_limit = 2.0f * vdc / M_PI;
+    float u_abs_limit = 2.0f * vdc / M_PI;
     float vd_cmd = vd_req;
     float vq_cmd = vq_req;
     limitVoltageVector(&vd_cmd, &vq_cmd, u_abs_limit);
@@ -354,11 +354,15 @@ void focTest(FOC_State_t* foc,
     float v_alpha, v_beta;
     inv_park(foc->Vd_cmd, foc->Vq_cmd, theta_e, &v_alpha, &v_beta);
 
+    float u_mag;
     modulate(ModulationType::SVPWM,
              v_alpha, v_beta,
              vdc,
              foc->ts,
-             dutyA, dutyB, dutyC);
+             dutyA, dutyB, dutyC, 
+             &u_mag);
+
+    foc->u_mag = u_mag;
 }
 
 void focInjection(FOC_State_t* foc, float freq) {
