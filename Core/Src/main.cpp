@@ -2136,7 +2136,7 @@ void cmd_log(int argc, char** argv) {
                 break;
 
             case 4:
-                print_mask = PRINT_RPM | PRINT_RPMSP | PRINT_IA | PRINT_IB | PRINT_IC | PRINT_FOC_ID | PRINT_FOC_IQ | PRINT_FOC_VD | PRINT_FOC_VQ | PRINT_FOC_IDSP | PRINT_FOC_IQSP;
+                print_mask = PRINT_RPM | PRINT_RPMSP | PRINT_DUTY_A | PRINT_DUTY_B | PRINT_DUTY_C | PRINT_IA | PRINT_IB | PRINT_IC | PRINT_VBATT | PRINT_FOC_ID | PRINT_FOC_IQ | PRINT_FOC_VD | PRINT_FOC_VQ | PRINT_FOC_IDSP | PRINT_FOC_IQSP;
                 usb_printf("Preset %d active\r\n", preset_id);
                 break;
                 
