@@ -294,12 +294,12 @@ void focResetPI(FOC_State_t* foc);
  */
 void focAlignZero(FOC_State_t* foc, float Vmag, float Vdc, float* dutyA, float* dutyB, float* dutyC);
 
-void focTest(ModulationType modulation_type,
-             FOC_State_t* foc,
-             float va, float vb, float vc,
-             float vdc,
-             float theta_e, float omega_m,
-             float* dutyA, float* dutyB, float* dutyC);
+void foc(ModulationType modulation_type,
+         FOC_State_t* foc,
+         float va, float vb, float vc,
+         float vdc,
+         float theta_e, float omega_m,
+         float* dutyA, float* dutyB, float* dutyC);
 
 void focInjection(FOC_State_t* foc, float freq);
 

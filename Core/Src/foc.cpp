@@ -295,13 +295,18 @@ void focAlignZero(FOC_State_t* foc, float Vmag, float Vdc, float* dutyA, float* 
              dutyA, dutyB, dutyC);
 }
 
-void focTest(ModulationType modulation_type,
-             FOC_State_t* foc,
-             float ia, float ib, float ic,
-             float vdc,
-             float theta_e, float omega_m,
-             float* dutyA, float* dutyB, float* dutyC) {
-
+/* =========================================================================
+ * foc_run  — called from focTick in main.cpp at 20 kHz
+ * ========================================================================= */
+void foc(ModulationType modulation_type,
+         FOC_State_t* foc,
+         float ia, float ib, float ic,
+         float vdc,
+         float theta_e, float omega_m,
+         float* dutyA, float* dutyB, float* dutyC) {
+    /* ------------------------------------------------------------------
+     * 0. Store observables
+     * ------------------------------------------------------------------ */
     foc->Ia = ia;
     foc->Ib = ib;
     foc->Ic = ic;
@@ -310,17 +315,42 @@ void focTest(ModulationType modulation_type,
     foc->omega_m = omega_m;
     foc->omega_e  = omega_m * (float)MOTOR_POLE_PAIRS;
 
-    // Current Clarke Transform
+    /* ------------------------------------------------------------------
+     * 1. Clarke transform: Ia,Ib,Ic → Iα,Iβ  (stationary frame)
+     *
+     *   Iα = (2·Ia − Ib − Ic) / 3
+     *   Iβ = (Ib − Ic) / √3
+     *
+     * Uses clarke() from modulation.h (same formula).
+     * ------------------------------------------------------------------ */
     float i_alpha, i_beta;
     clarke(ia, ib, ic, &i_alpha, &i_beta);
 
-    // Current Park Transform
+    /* ------------------------------------------------------------------
+     * 2. Park transform: Iα,Iβ,θe → Id,Iq  (rotating frame)
+     *
+     *   Id =  Iα·cos(θe) + Iβ·sin(θe)
+     *   Iq = −Iα·sin(θe) + Iβ·cos(θe)
+     *
+     * Uses park() from modulation.h (same formula).
+     * ------------------------------------------------------------------ */
     float id, iq;
     park(i_alpha, i_beta, theta_e, &id, &iq);
 
     foc->Id = id;
     foc->Iq = iq;
 
+    /* ------------------------------------------------------------------
+     * 3. Current PI controllers with decoupling feed-forward
+     *
+     * Mirrors MATLAB exactly:
+     *   vd_cmd = Kp·err_id + Ki·∫err_id + R·Id − ωe·L·Iq
+     *   vq_cmd = Kp·err_iq + Ki·∫err_iq + R·Iq + ωe·L·Id + ωe·ψf
+     *
+     * The feed-forward terms cancel cross-coupling and back-EMF so the
+     * PI only needs to correct residual error.
+     * Output hard-clamped to ±Vdc/2 (inverter rail limit).
+     * ------------------------------------------------------------------ */
     if (system_flag & FLAG_AUDIBLE) {
       focInjection(foc, 500.0f);
       //if (foc->rpm < 800.0f) focInjection(foc, 500.0f);
@@ -328,8 +358,8 @@ void focTest(ModulationType modulation_type,
     }
     
     // Calculate PI outputs
-    float err_id = foc->Id_ref - id;
-    float err_iq = foc->Iq_ref - iq;
+    const float err_id = foc->Id_ref - id;
+    const float err_iq = foc->Iq_ref - iq;
     
     float vd_pi = PI_update(&foc->pi_d, err_id, foc->ts);
     float vq_pi = PI_update(&foc->pi_q, err_iq, foc->ts);
@@ -350,10 +380,21 @@ void focTest(ModulationType modulation_type,
     //float v_max = vdc / SQRT3;  // Maximum voltage magnitude for SVPWM (line-line voltage limit)
     //float v_max = 2 * vdc / M_PI;
     //if (foc->u_mag > v_max) foc->Vq_cmd = sqrt(v_max * v_max - foc->Vd_cmd * foc->Vd_cmd);
-    
+   
+    /* ------------------------------------------------------------------
+     * 4. Inverse Park: Vd,Vq,θe → Vα,Vβ
+     *
+     *   Vα =  Vd·cos(θe) − Vq·sin(θe)
+     *   Vβ =  Vd·sin(θe) + Vq·cos(θe)
+     * ------------------------------------------------------------------ */
     float v_alpha, v_beta;
     inv_park(foc->Vd_cmd, foc->Vq_cmd, theta_e, &v_alpha, &v_beta);
 
+    /* ------------------------------------------------------------------
+     * 5. Modulation: Vα,Vβ → dA,dB,dC
+     *     Use specified modulation type (e.g. SVPWM, DPWM) for testing.
+     *     Ts passed for compensated timing calculation.
+     * ------------------------------------------------------------------ */
     float u_mag;
     modulate(modulation_type,
              v_alpha, v_beta,

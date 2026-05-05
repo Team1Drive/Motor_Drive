@@ -38,14 +38,14 @@ void alignRotor(void);
 void vvvfRampUp(void);
 void sixStepCommutation(void);
 
+int8_t sampleAndProtect(Sampling_t* sample);
 void trip(void);
 
 void clearRunningFlags(void);
 void loadAdcCalibration(ADCGain_t* adc_gain, uint8_t preset_num);
 
 /* Forward declaration for FOC ISR helper */
-static void foc_isr_tick(void);
-void focTick(void);
+void focTick(Sampling_t* sample);
 
 void test_PWM(void);
 void test_PWM_sweep(void);
@@ -305,14 +305,17 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
   if (htim->Instance == TIM8) {
     // PWM update interrupt
+    Sampling_t sample;
+    if (sampleAndProtect(&sample) != 0) return;
+
     switch (control_mode) {
       case MotorControlMode::MOTOR_FOC_LINEAR:
       case MotorControlMode::MOTOR_FOC_DPWM:
-        focTick();
+        focTick(&sample);
         break;
 
       case MotorControlMode::MOTOR_FOC_MANUAL:
-        focTick();
+        focTick(&sample);
         break;
 
       case MotorControlMode::MOTOR_VVVF:
@@ -1163,8 +1166,11 @@ void startUpSequence(MotorControlMode mode) {
       if (target.speed == 0.0f) target.speed = FOC_INITIAL_RPM;
       control_mode = MotorControlMode::MOTOR_FOC_LINEAR;
       system_flag |= FLAG_FOC_RUNNING;
+
+      Sampling_t sample;
+      if (sampleAndProtect(&sample) != 0) return;
       speedControl();
-      focTick();
+      focTick(&sample);
       usb_printf("Starting FOC linear startup sequence...\r\n");
       break;
     case MotorControlMode::MOTOR_VVVF:
@@ -1397,6 +1403,41 @@ const int8_t commutation_acw[8][3] = {
   motorPWM.setDuty(dutyA, dutyB, dutyC);
 }
 
+int8_t sampleAndProtect(Sampling_t* sample) {
+    uint16_t adc1_raw[3];
+    uint16_t adc2_raw[2];
+    uint16_t adc3_raw[2];
+
+    adc1.getLatestDataMean(adc1_raw, FOC_OVERSAMPLING_SIZE);
+    adc2.getLatestDataMean(adc2_raw, FOC_OVERSAMPLING_SIZE);
+    adc3.getLatestDataMean(adc3_raw, FOC_OVERSAMPLING_SIZE);
+
+    sample->ia = adcToCurrent(adc1_raw[0], 3.3f, 65536, 50.0f, 1.65f + adc_gain.ia_offset, adc_gain.ia_shunt);
+    sample->ib = adcToCurrent(adc2_raw[0], 3.3f, 65536, 50.0f, 1.65f + adc_gain.ib_offset, adc_gain.ib_shunt);
+    //sample->ic = adcToCurrent(adc3_raw[0], 3.3f, 4096, 50.0f, 1.65f + adc_gain.ic_offset, adc_gain.ic_shunt);
+    sample->ic = -(sample->ia + sample->ib); // Reconstruct Ic from Ia and Ib for better accuracy
+    sample->va = adcToVoltage(adc2_raw[1], 3.3f, 65536, adc_gain.va_gain, 1.65f + adc_gain.va_offset);
+    sample->vb = adcToVoltage(adc1_raw[1], 3.3f, 65536, adc_gain.vb_gain, 1.65f + adc_gain.vb_offset);
+    sample->vbatt = adcToVoltage(adc1_raw[2], 3.3f, 65536, adc_gain.vbatt_gain, 0.0f + adc_gain.vbatt_offset);
+    sample->ibatt = adcToCurrent(adc3_raw[1], 3.3f, 4096, 50.0f, 1.65f + adc_gain.ibatt_offset, adc_gain.ibatt_shunt);
+
+    if (fabsf(sample->ia) > MOTOR_MAX_PHASE_CURRENT || fabsf(sample->ib) > MOTOR_MAX_PHASE_CURRENT || fabsf(sample->ic) > MOTOR_MAX_PHASE_CURRENT) {
+        trip();
+        error_flag |= ERROR_OVERCURRENT;
+        foc_state.fault = true;
+        return -1;
+    }
+
+    if (sample->vbatt < MOTOR_MIN_VOLTAGE) {
+        trip();
+        error_flag |= ERROR_UNDERVOLTAGE;
+        foc_state.fault = true;
+        return -1;
+    }
+
+    return 0;
+}
+
 void trip(void) {
     motorPWM.stop();
     relay.write(0);
@@ -1578,7 +1619,9 @@ void cmd_foc(int argc, char** argv) {
         if ((system_flag & FLAG_FOC_RUNNING) == 0) {
             system_flag |= FLAG_FOC_RUNNING;
             relay.write(1);
-            focTick();
+            Sampling_t sample;
+            if (sampleAndProtect(&sample) != 0) return;
+            focTick(&sample);
         }
         focResetPI(&foc_state);
         usb_printf("FOC Vd set to %.2f V\r\n", foc_state.Vd_cmd);
@@ -1592,7 +1635,9 @@ void cmd_foc(int argc, char** argv) {
         if ((system_flag & FLAG_FOC_RUNNING) == 0) {
             system_flag |= FLAG_FOC_RUNNING;
             relay.write(1);
-            focTick();
+            Sampling_t sample;
+            if (sampleAndProtect(&sample) != 0) return;
+            focTick(&sample);
         }
         focResetPI(&foc_state);
         usb_printf("FOC Vq set to %.2f V\r\n", foc_state.Vq_cmd);
@@ -1606,7 +1651,9 @@ void cmd_foc(int argc, char** argv) {
         if ((system_flag & FLAG_FOC_RUNNING) == 0) {
             system_flag |= FLAG_FOC_RUNNING;
             relay.write(1);
-            focTick();
+            Sampling_t sample;
+            if (sampleAndProtect(&sample) != 0) return;
+            focTick(&sample);
         }
         focResetPI(&foc_state);
         usb_printf("FOC Id set to %.3f A\r\n", foc_state.Id_ref);
@@ -1620,7 +1667,9 @@ void cmd_foc(int argc, char** argv) {
         if ((system_flag & FLAG_FOC_RUNNING) == 0) {
             system_flag |= FLAG_FOC_RUNNING;
             relay.write(1);
-            focTick();
+            Sampling_t sample;
+            if (sampleAndProtect(&sample) != 0) return;
+            focTick(&sample);
         }
         focResetPI(&foc_state);
         usb_printf("FOC Iq set to %.3f A\r\n", foc_state.Iq_ref);
@@ -2278,11 +2327,11 @@ void cmd_hypot(int argc, char** argv) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  FOC ISR tick — called from TIM8 update interrupt at 20 kHz
+//  FOC tick — called from TIM8 update interrupt at 20 kHz
 // ─────────────────────────────────────────────────────────────────────────────
 
 /*
- * foc_isr_tick
+ * focTick
  *
  * Reads ADC and encoder, converts to SI units using the same formula and
  * adc_gain struct as the rest of the codebase, then calls foc_run() and
@@ -2299,33 +2348,7 @@ void cmd_hypot(int argc, char** argv) {
  *
  * Must complete within one PWM period (50 µs at 20 kHz).
  */
-static void foc_isr_tick(void)
-{
-    /* Guard: fault latched — stop inverter and return to STOP mode */
-    static uint32_t tick_counter = 0;
-    if (foc_state.fault) {
-      // Prints out the current FOC state for debugging before stopping
-      usb_printf("\r\n------------------------\r\nFOC fault at tick %u\r\nRPM=%.1f  Ia=%.3fA  Ib=%.3fA  Ic=%.3fA\r\nId=%.3fA  Iq=%.3fA  Vd=%.2fV  Vq=%.2fV  Vdc=%.2fV  |u|=%.2fV  fault=%d\r\n------------------------\r\n",
-              tick_counter,
-              foc_state.rpm,
-              foc_state.Ia,  foc_state.Ib,  foc_state.Ic,
-              foc_state.Id,  foc_state.Iq,
-              foc_state.Vd_cmd, foc_state.Vq_cmd,
-              foc_state.Vdc, foc_state.u_mag,
-              (int)foc_state.fault);
-      // Stop all 3 phases PWM output
-      motorPWM.stop();
-      // De-energize relay
-      relay.write(0);
-      // Set fault flag
-      error_flag |= ERROR_OVERCURRENT;
-      // Set control mode to PROTECTION and clear FOC running flag
-      control_mode = MotorControlMode::MOTOR_PROTECTION;
-      system_flag &= ~FLAG_FOC_RUNNING;
-      tick_counter = 0;
-      return;
-    }
-
+void focTick(Sampling_t* sample) {
     /* -----------------------------------------------------------------------
      * 1. Read ADC — latest DMA sample (interrupt-safe via NDTR)
      *
@@ -2338,39 +2361,10 @@ static void foc_isr_tick(void)
      *   ADC3[0] = I_C   (PC1,  INP11, 12-bit → 4096 counts)
      *   ADC3[1] = I_BATT(PC0,  INP10, 12-bit)  — not used in FOC loop
      * --------------------------------------------------------------------- */
-    uint16_t adc1_raw[3];
-    uint16_t adc2_raw[2];
-    uint16_t adc3_raw[2];
-
-    adc1.getLatestDataMean(adc1_raw, FOC_OVERSAMPLING_SIZE);
-    adc2.getLatestDataMean(adc2_raw, FOC_OVERSAMPLING_SIZE);
-    adc3.getLatestDataMean(adc3_raw, FOC_OVERSAMPLING_SIZE);
-
-    /*
-     * Convert raw ADC to amps using the real formula:
-     *   adcToVoltage: ((raw/resolution)*vref - offset) / gain
-     *   adcToCurrent: adcToVoltage(..., gain=1) / shunt
-     *
-     * offset = 1.65f (op-amp Vref/2) + adc_gain.i*_offset (per-board trim)
-     * shunt  = adc_gain.i*_shunt  (from parameters.h, e.g. ADC_IA_SHUNT)
-     *
-     * Note: gain parameter passed as 1.0f to adcToVoltage for current
-     *       channels — the op-amp gain of 50 is already embedded in the
-     *       shunt value (effective sensitivity = 50 × shunt V/A).
-     */
-    float Ia = adcToCurrent(adc1_raw[0], 3.3f, 65536, 50.0f,
-                            1.65f + adc_gain.ia_offset, adc_gain.ia_shunt);
-    float Ib = adcToCurrent(adc2_raw[0], 3.3f, 65536, 50.0f,
-                            1.65f + adc_gain.ib_offset, adc_gain.ib_shunt);
-    float Ic = adcToCurrent(adc3_raw[0], 3.3f,  4096, 50.0f,
-                            1.65f + adc_gain.ic_offset, adc_gain.ic_shunt);
-
-    /* DC bus voltage */
-    float Vdc = adcToVoltage(adc1_raw[2], 3.3f, 65536,
-                             adc_gain.vbatt_gain, adc_gain.vbatt_offset);
-
-    /* Guard: Vdc too low — SVPWM would divide by zero */
-    if (Vdc < 1.0f) return;
+    const float ia = sample->ia;
+    const float ib = sample->ib;
+    const float ic = sample->ic;
+    const float vdc = sample->vbatt;
 
     /* -----------------------------------------------------------------------
      * 2. Read encoder
@@ -2380,82 +2374,26 @@ static void foc_isr_tick(void)
      *    theta_e = theta_mech × pole_pairs, wrapped to [0, 2π)
      *    omega_m = mechanical angular velocity (rad/s)
      * --------------------------------------------------------------------- */
-    //float theta_mech = encoder.getPos_rad();
-    //float theta_e    = fmodf(theta_mech * (float)MOTOR_POLE_PAIRS, 2.0f * M_PI);
-    //if (theta_e < 0.0f) theta_e += 2.0f * M_PI;
-    float theta_e    = encoder.getElecPos_rad();
-
-    float omega_m = encoder.getRPM() * (2.0f * M_PI / 60.0f);
-
-    /* -----------------------------------------------------------------------
-     * 3. Run one FOC tick
-     * --------------------------------------------------------------------- */
-    float dutyA, dutyB, dutyC;
-    foc_state.ts = 1.0f / (float)motorPWM.getFrequency();  // Update FOC state with actual PWM period
-    foc_run(&foc_state,
-            Ia, Ib, Ic,
-            Vdc,
-            theta_e, omega_m,
-            &dutyA, &dutyB, &dutyC);
-
-    /* -----------------------------------------------------------------------
-     * 4. Apply to inverter
-     * --------------------------------------------------------------------- */
-    motorPWM.setDuty(dutyA, dutyB, dutyC);
-
-    tick_counter++;
-}
-
-void focTick(void) {
-    uint16_t adc1_raw[3];
-    uint16_t adc2_raw[2];
-    uint16_t adc3_raw[2];
-
-    adc1.getLatestDataMean(adc1_raw, FOC_OVERSAMPLING_SIZE);
-    adc2.getLatestDataMean(adc2_raw, FOC_OVERSAMPLING_SIZE);
-    adc3.getLatestDataMean(adc3_raw, FOC_OVERSAMPLING_SIZE);
-
-    float ia = adcToCurrent(adc1_raw[0], 3.3f, 65536, 50.0f, 1.65f + adc_gain.ia_offset, adc_gain.ia_shunt);
-    float ib = adcToCurrent(adc2_raw[0], 3.3f, 65536, 50.0f, 1.65f + adc_gain.ib_offset, adc_gain.ib_shunt);
-    //float ic = adcToCurrent(adc3_raw[0], 3.3f,  4096, 50.0f, 1.65f + adc_gain.ic_offset, adc_gain.ic_shunt);
-    float ic = -ia - ib;
-    float vdc = adcToVoltage(adc1_raw[2], 3.3f, 65536, adc_gain.vbatt_gain, adc_gain.vbatt_offset);
-
-    /* float ia = adcToCurrent(adc1.getLatestChannelMean(0, FOC_OVERSAMPLING_SIZE), 3.3f, 65536, 50.0f, 1.65f + adc_gain.ia_offset, adc_gain.ia_shunt);
-    float ib = adcToCurrent(adc2.getLatestChannelMean(0, FOC_OVERSAMPLING_SIZE), 3.3f, 65536, 50.0f, 1.65f + adc_gain.ib_offset, adc_gain.ib_shunt);
-    //float ic = adcToCurrent(adc3.getLatestChannelMean(0, FOC_OVERSAMPLING_SIZE), 3.3f, 4096, 50.0f, 1.65f + adc_gain.ic_offset, adc_gain.ic_shunt);
-    float ic = -ia - ib;
-    float vdc = adcToVoltage(adc1.getLatestChannelMean(2, FOC_OVERSAMPLING_SIZE), 3.3f, 65536, adc_gain.vbatt_gain, adc_gain.vbatt_offset);
-    //float idc = adcToCurrent(adc3.getLatestChannelMean(1, FOC_OVERSAMPLING_SIZE), 3.3f, 4096, 50.0f, 1.65f + adc_gain.ibatt_offset, adc_gain.ibatt_shunt); */
-
-    if (fabsf(ia) > MOTOR_MAX_PHASE_CURRENT || fabsf(ib) > MOTOR_MAX_PHASE_CURRENT || fabsf(ic) > MOTOR_MAX_PHASE_CURRENT) {
-        trip();
-        error_flag |= ERROR_OVERCURRENT;
-        foc_state.fault = true;
-        return;
-    }
-
-    if (vdc < MOTOR_MIN_VOLTAGE) {
-        trip();
-        error_flag |= ERROR_UNDERVOLTAGE;
-        foc_state.fault = true;
-        return;
-    }
-
     float theta_e = encoder.getElecPos_rad();
     float omega_m = encoder.getRPM() * RPM_TO_RAD_S;
 
     foc_state.ts = 1.0f / (float)motorPWM.getFrequency();
 
+    /* -----------------------------------------------------------------------
+     * 3. Run one FOC tick
+     * --------------------------------------------------------------------- */
     float dutyA, dutyB, dutyC;
 
-    focTest(modulation_type,
-            &foc_state,
-            ia, ib, ic,
-            vdc,
-            theta_e, omega_m,
-            &dutyA, &dutyB, &dutyC);
+    foc(modulation_type,
+        &foc_state,
+        ia, ib, ic,
+        vdc,
+        theta_e, omega_m,
+        &dutyA, &dutyB, &dutyC);
 
+    /* -----------------------------------------------------------------------
+     * 4. Apply to inverter
+     * --------------------------------------------------------------------- */
     motorPWM.setDuty(dutyA, dutyB, dutyC);
 }
 

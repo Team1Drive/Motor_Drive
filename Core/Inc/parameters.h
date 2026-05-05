@@ -201,6 +201,16 @@ enum class PrintFormat : uint8_t {
     PRINT_BINARY
 };
 
+typedef struct {
+    float ia;
+    float ib;
+    float ic;
+    float va;
+    float vb;
+    float vbatt;
+    float ibatt;
+} Sampling_t;
+
 /*
 Timer allocation
 
