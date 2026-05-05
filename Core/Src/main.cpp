@@ -759,7 +759,7 @@ void printTelemetryBinary(void) {
     ptr += 4;
   }
   if (print_mask & PRINT_VA) {
-    float val = va;
+    float val = foc_state.u_mag;
     memcpy(ptr, &val, 4);
     ptr += 4;
   }
@@ -872,6 +872,7 @@ void speedControl(void) {
   static float ramp_speed_increment = 0.0f;
   static uint32_t ramp_tick = 0;
   static float iq_torque_clamp;
+  static bool fw_active = false;
 
   foc_state.ts_speed = 1.0f / (float)speedControlTimer.getFrequency();
   
@@ -987,21 +988,38 @@ void speedControl(void) {
   /* =========================================================================
   *   Field-weakening Loop
   * ========================================================================= */
-  //const float U_max_fw   = (foc_state.Vdc / SQRT3) * 0.95f;
-  const float U_max_fw   = (2.0f * foc_state.Vdc / M_PI) * 0.95f;
-  const float u_mag_prev = foc_state.u_mag;
+  const float u_fw_entry_vscaled = 0.56f * foc_state.Vdc;
+  const float u_fw_release_vscaled = 0.52f * foc_state.Vdc;
+  const float u_fw_entry = (u_fw_entry_vscaled < 12.5f) ? u_fw_entry_vscaled : 12.5f;
+  const float u_fw_release = (u_fw_release_vscaled < 11.8f) ? u_fw_release_vscaled : 11.8f;
+  const float u_req = foc_state.u_mag;
+  const float omega_abs = fabsf(foc_state.omega_m);
   float new_Id_ref;
-  if (fabsf(foc_state.omega_m) > 20.0f) {
-      float fw_error = (U_max_fw - u_mag_prev) / fabsf(foc_state.omega_m);
-      //foc_state.pi_fw.integrator += foc_state.pi_fw.ki * fw_error * foc_state.ts_speed;
-      //if (foc_state.pi_fw.integrator > 0.0f) foc_state.pi_fw.integrator = 0.0f;
-      //if (foc_state.pi_fw.integrator < FOC_ID_FW_MIN) foc_state.pi_fw.integrator = FOC_ID_FW_MIN;
-      //new_Id_ref = foc_state.pi_fw.integrator;
-      new_Id_ref = PI_update(&foc_state.pi_fw, fw_error, foc_state.ts_speed);
-      if (new_Id_ref > 0.0f) new_Id_ref = 0.0f;
+
+  if (omega_abs > 20.0f) {
+      if (!fw_active && u_req > u_fw_entry) {
+          fw_active = true;
+      } else if (fw_active && u_req < u_fw_release && foc_state.Id_ref > -0.05f) {
+          fw_active = false;
+      }
+
+      if (fw_active) {
+          float fw_error = (u_fw_entry - u_req) / omega_abs;
+          //foc_state.pi_fw.integrator += foc_state.pi_fw.ki * fw_error * foc_state.ts_speed;
+          //if (foc_state.pi_fw.integrator > 0.0f) foc_state.pi_fw.integrator = 0.0f;
+          //if (foc_state.pi_fw.integrator < FOC_ID_FW_MIN) foc_state.pi_fw.integrator = FOC_ID_FW_MIN;
+          //new_Id_ref = foc_state.pi_fw.integrator;
+          new_Id_ref = PI_update(&foc_state.pi_fw, fw_error, foc_state.ts_speed);
+          if (new_Id_ref > 0.0f) new_Id_ref = 0.0f;
+          if (new_Id_ref < FOC_ID_FW_MIN) new_Id_ref = FOC_ID_FW_MIN;
+      } else {
+          new_Id_ref = 0.0f;
+          PI_reset(&foc_state.pi_fw);
+      }
   } else {
       new_Id_ref = 0.0f;
       PI_reset(&foc_state.pi_fw);
+      fw_active = false;
   }
   
   /* =========================================================================
@@ -1698,6 +1716,10 @@ void cmd_mod(int argc, char** argv) {
     if (strcmp(argv[1], "svpwm") == 0) {
         modulation_type = ModulationType::SVPWM;
         usb_printf("Modulation set to SVPWM\r\n");
+    }
+    else if (strcmp(argv[1], "svpwms") == 0) {
+        modulation_type = ModulationType::SVPWM_SUPERPOS;
+        usb_printf("Modulation set to SVPWM Superposition\r\n");
     }
     else if (strcmp(argv[1], "sym") == 0) {
         modulation_type = ModulationType::SYM_PWM;
@@ -2410,7 +2432,8 @@ void focTick(void) {
 
     float dutyA, dutyB, dutyC;
 
-    focTest(&foc_state,
+    focTest(modulation_type,
+            &foc_state,
             ia, ib, ic,
             vdc,
             theta_e, omega_m,

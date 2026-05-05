@@ -18,7 +18,6 @@
  */
 
 #include "foc.h"
-#include "modulation.h"   /* clarke, park, inv_park, modulate, ModulationType */
 #include <cmath>
 #include <algorithm>
 
@@ -296,7 +295,8 @@ void focAlignZero(FOC_State_t* foc, float Vmag, float Vdc, float* dutyA, float* 
              dutyA, dutyB, dutyC);
 }
 
-void focTest(FOC_State_t* foc,
+void focTest(ModulationType modulation_type,
+             FOC_State_t* foc,
              float ia, float ib, float ic,
              float vdc,
              float theta_e, float omega_m,
@@ -355,11 +355,12 @@ void focTest(FOC_State_t* foc,
     inv_park(foc->Vd_cmd, foc->Vq_cmd, theta_e, &v_alpha, &v_beta);
 
     float u_mag;
-    modulate(ModulationType::SVPWM_SUPERPOS,
+    modulate(modulation_type,
              v_alpha, v_beta,
              vdc,
              foc->ts,
              dutyA, dutyB, dutyC, 
+             foc->omega_e,
              &u_mag);
 
     //foc->u_mag = u_mag;

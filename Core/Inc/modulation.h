@@ -6,6 +6,8 @@
 #define M_PI   3.14159265358979323846264338327950288f
 #define SQRT3  1.73205080756887729352744634150587236f
 
+#define COMP_RATIO  1.0f   /* SVPWM_COMP timing compensation ratio (0.5 = mid-point) */
+
 // ─────────────────────────────────────────────────────────────────────────────
 //  Modulation type selector
 // ─────────────────────────────────────────────────────────────────────────────
@@ -120,5 +122,6 @@ void modulate(
     float v_dc,
     float Ts,
     float* dutyA, float* dutyB, float* dutyC,
+    float omega_e = 0.0f,
     float* applied_mag = nullptr
 );

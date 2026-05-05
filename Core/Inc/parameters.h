@@ -67,7 +67,7 @@
 #define MOTOR_ALIGNMENT_VOLTAGE     5 // Volts to apply during encoder alignment
 #define MOTOR_SPEED_LIMIT_RPM       7500.0f
 
-#define MOTOR_MAX_PHASE_CURRENT     4.5f // Maximum phase current for safety (in amps)
+#define MOTOR_MAX_PHASE_CURRENT     4.8f // Maximum phase current for safety (in amps)
 #define MOTOR_MAX_CURRENT           5.0f // Maximum current for safety (in amps), including battery current
 #define MOTOR_MIN_VOLTAGE           6.0f // Minimum voltage for operation (in volts) 
 
@@ -79,7 +79,7 @@
 
 #define FOC_ALLOWED                 false // Allow FOC mode in the system (set to false to disable FOC-related code and save flash/RAM)
 #define FOC_INITIAL_RPM             1500U // Target RPM for FOC mode (used when FOC is enabled and selected)
-#define FOC_OVERSAMPLING_SIZE       16U // Number of samples to average for oversampling (must be a power of 2 for efficient averaging)
+#define FOC_OVERSAMPLING_SIZE       4U // Number of samples to average for oversampling (must be a power of 2 for efficient averaging)
 #define FOC_RAMP_DOWN_SPEED         200U // 200 RPM/s
 
 #define MASTER_MODE                 true // Set master or slave mode in load testing

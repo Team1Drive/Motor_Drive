@@ -39,6 +39,7 @@
 
 #include "stm32h7xx_hal.h"
 #include "parameters.h"   /* MOTOR_POLE_PAIRS, ADCGain_t, M_PI */
+#include "modulation.h"   /* clarke, park, inv_park, modulate, ModulationType */
 #include <cmath>
 #include <algorithm>
 
@@ -293,7 +294,8 @@ void focResetPI(FOC_State_t* foc);
  */
 void focAlignZero(FOC_State_t* foc, float Vmag, float Vdc, float* dutyA, float* dutyB, float* dutyC);
 
-void focTest(FOC_State_t* foc,
+void focTest(ModulationType modulation_type,
+             FOC_State_t* foc,
              float va, float vb, float vc,
              float vdc,
              float theta_e, float omega_m,
