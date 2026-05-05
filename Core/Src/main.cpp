@@ -11,6 +11,7 @@
 #include "foc.h"
 #include "cmd.h"
 #include "math_helpers.h"
+#include "lut.h"
 #include <cstdint>
 
 #include "usbd_cdc_if.h"
@@ -2192,6 +2193,56 @@ void cmd_audible(int argc, char** argv) {
         system_flag |= FLAG_AUDIBLE;
         usb_printf("Audible frequency enabled\r\n");
     }
+}
+
+void cmd_sin(int argc, char** argv) {
+    float value = atof(argv[1]);
+    uint64_t start_tick = HighResTimer::getTicks();
+    float math_sin = sinf(value);
+    uint64_t math_ticks = HighResTimer::getTicksDelta(start_tick);
+    float cordic_sin = lut::sinf(value);
+    uint64_t cordic_ticks = HighResTimer::getTicksDelta(start_tick) - math_ticks;
+    float math_ns = (float)math_ticks * HighResTimer::TICK_PERIOD * 1000000000.0f;
+    float cordic_ns = (float)cordic_ticks * HighResTimer::TICK_PERIOD * 1000000000.0f;
+    usb_printf("sinf(%.2f) = %.5f, lut::sinf(%.2f) = %.5f\r\nMath: %.2f ns, LUT: %.2f ns\r\n", value, math_sin, value, cordic_sin, math_ns, cordic_ns);
+}
+
+void cmd_cos(int argc, char** argv) {
+    float value = atof(argv[1]);
+    uint64_t start_tick = HighResTimer::getTicks();
+    float math_cos = cosf(value);
+    uint64_t math_ticks = HighResTimer::getTicksDelta(start_tick);
+    float cordic_cos = lut::cosf(value);
+    uint64_t cordic_ticks = HighResTimer::getTicksDelta(start_tick) - math_ticks;
+    float math_ns = (float)math_ticks * HighResTimer::TICK_PERIOD * 1000000000.0f;
+    float cordic_ns = (float)cordic_ticks * HighResTimer::TICK_PERIOD * 1000000000.0f;
+    usb_printf("cosf(%.2f) = %.5f, lut::cosf(%.2f) = %.5f\r\nMath: %.2f ns, LUT: %.2f ns\r\n", value, math_cos, value, cordic_cos, math_ns, cordic_ns);
+}
+
+void cmd_arctan(int argc, char** argv) {
+    float y = atof(argv[1]);
+    float x = atof(argv[2]);
+    uint64_t start_tick = HighResTimer::getTicks();
+    float math_atan2 = atan2f(y, x);
+    uint64_t math_ticks = HighResTimer::getTicksDelta(start_tick);
+    float cordic_atan2 = lut::atan2f(y, x);
+    uint64_t cordic_ticks = HighResTimer::getTicksDelta(start_tick) - math_ticks;
+    float math_ns = (float)math_ticks * HighResTimer::TICK_PERIOD * 1000000000.0f;
+    float cordic_ns = (float)cordic_ticks * HighResTimer::TICK_PERIOD * 1000000000.0f;
+    usb_printf("atan2f(%.2f, %.2f) = %.5f, lut::atan2f(%.2f, %.2f) = %.5f\r\nMath: %.2f ns, LUT: %.2f ns\r\n", y, x, math_atan2, y, x, cordic_atan2, math_ns, cordic_ns);
+}
+
+void cmd_hypot(int argc, char** argv) {
+    float x = atof(argv[1]);
+    float y = atof(argv[2]);
+    uint64_t start_tick = HighResTimer::getTicks();
+    float math_hypot = hypotf(x, y);
+    uint64_t math_ticks = HighResTimer::getTicksDelta(start_tick);
+    float cordic_hypot = lut::hypotf(x, y);
+    uint64_t cordic_ticks = HighResTimer::getTicksDelta(start_tick) - math_ticks;
+    float math_ns = (float)math_ticks * HighResTimer::TICK_PERIOD * 1000000000.0f;
+    float cordic_ns = (float)cordic_ticks * HighResTimer::TICK_PERIOD * 1000000000.0f;
+    usb_printf("hypotf(%.2f, %.2f) = %.5f, lut::hypotf(%.2f, %.2f) = %.5f\r\nMath: %.2f ns, LUT: %.2f ns\r\n", x, y, math_hypot, x, y, cordic_hypot, math_ns, cordic_ns);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

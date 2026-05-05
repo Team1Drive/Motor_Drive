@@ -1,4 +1,5 @@
 #include "modulation.h"
+#include "lut.h"
 #include <cmath>
 #include <algorithm>
 
@@ -58,16 +59,16 @@ void inv_clarke(float alpha, float beta, float* a, float* b, float* c)
 
 void park(float alpha, float beta, float theta, float* d, float* q)
 {
-    float cos_t = cosf(theta);
-    float sin_t = sinf(theta);
+    float cos_t = lut::cosf(theta);
+    float sin_t = lut::sinf(theta);
     *d =  alpha * cos_t + beta * sin_t;
     *q = -alpha * sin_t + beta * cos_t;
 }
 
 void inv_park(float d, float q, float theta, float* alpha, float* beta)
 {
-    float cos_t = cosf(theta);
-    float sin_t = sinf(theta);
+    float cos_t = lut::cosf(theta);
+    float sin_t = lut::sinf(theta);
     *alpha = d * cos_t - q * sin_t;
     *beta  = d * sin_t + q * cos_t;
 }
@@ -176,9 +177,9 @@ static void svpwm_superposition(float v_alpha, float v_beta, float v_dc, float T
     float m = v_ref / (2.0f * v_dc / M_PI);
     m = std::min(m, 1.0f);                              // hard cap at six-step
 
-    float s1  = sinf(M_PI / 3.0f - theta_s);
-    float s2  = sinf(theta_s);
-    float cd  = std::max(cosf(theta_s - M_PI / 6.0f), 1e-6f);
+    float s1  = lut::sinf(M_PI / 3.0f - theta_s);
+    float s2  = lut::sinf(theta_s);
+    float cd  = std::max(lut::cosf(theta_s - M_PI / 6.0f), 1e-6f);
 
     float T1, T2;
 
