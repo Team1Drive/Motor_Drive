@@ -65,7 +65,9 @@
 #define MOTOR_ALIGNMENT_POS_WINDOW  2048 // Counts of the encoder position within which alignment is considered successful (tuned experimentally)
 #define MOTOR_ALIGNMENT_THRESHOLD   1 // Encoder position delta window for successful alignment
 #define MOTOR_ALIGNMENT_VOLTAGE     5 // Volts to apply during encoder alignment
-#define MOTOR_SPEED_LIMIT_RPM       7500.0f
+#define MOTOR_ALIGNMENT_ID_REF      0.5f
+#define MOTOR_ALIGNMENT_IQ_REF      0.0f
+#define MOTOR_SPEED_LIMIT_RPM       8000.0f
 
 #define MOTOR_MAX_PHASE_CURRENT     4.8f // Maximum phase current for safety (in amps)
 #define MOTOR_MAX_CURRENT           5.0f // Maximum current for safety (in amps), including battery current

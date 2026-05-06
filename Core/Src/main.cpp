@@ -35,10 +35,10 @@ void speedControl(void);
 
 void startUpSequence(MotorControlMode mode);
 void alignRotor(void);
-void vvvfRampUp(void);
+void vvvfRampUp(Sampling_t* sample);
 void sixStepCommutation(void);
 
-int8_t sampleAndProtect(Sampling_t* sample);
+int8_t sampleAndProtect(Sampling_t* sample, bool bypass_protection = false);
 void trip(void);
 
 void clearRunningFlags(void);
@@ -108,7 +108,7 @@ ADCGain_t adc_gain;
 
 volatile Target_t target = { .speed = 0.0f, .torque = 0.0f, .time = 0.0f, .is_torque_control = false };
 
-ModulationType modulation_type = ModulationType::SVPWM;
+ModulationType modulation_type = ModulationType::SVPWM_SUPERPOS;
 
 volatile uint32_t print_mask = 0;
 volatile PrintFormat print_format = PrintFormat::PRINT_BINARY;
@@ -319,7 +319,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
         break;
 
       case MotorControlMode::MOTOR_VVVF:
-        vvvfRampUp();
+        vvvfRampUp(&sample);
         break;
 
       case MotorControlMode::MOTOR_ALIGN:
@@ -771,7 +771,7 @@ void printTelemetryBinary(void) {
     ptr += 4;
   }
   if (print_mask & PRINT_VA) {
-    float val = foc_state.u_mag;
+    float val = va;
     memcpy(ptr, &val, 4);
     ptr += 4;
   }
@@ -891,7 +891,7 @@ void speedControl(void) {
   /* =========================================================================
   *   Ramp up/down logic
   * ========================================================================= */
-  if ((system_flag & FLAG_FOC_RUNNING) == 0) {
+  if (((system_flag & FLAG_FOC_RUNNING) == 0) && (control_mode != MotorControlMode::MOTOR_FOC_MANUAL)) {
     float ramp_down_step = FOC_RAMP_RATE * foc_state.ts_speed;
     if (target.speed > 0.0f){
       target.speed -= ramp_down_step;
@@ -1056,21 +1056,14 @@ void alignRotor(void) {
 
   // Step 1: If electrical zero is not aligned, apply alignment voltage and monitor encoder position for settling
   if ((system_flag & FLAG_ELEC_ZERO_ALIGNED) == 0) {
+    // Set alignment voltage in D-axis to hold the rotor to electrical zero position
+    foc_state.Iq_ref = MOTOR_ALIGNMENT_IQ_REF;
+    foc_state.Id_ref = MOTOR_ALIGNMENT_ID_REF;
+    Sampling_t sample;
+    if (sampleAndProtect(&sample) != 0) return;
+    focTick(&sample);
 
-    if ((system_flag & FLAG_ROTOR_ALIGNING) == 0) {
-      uint16_t vdc_sample[FOC_OVERSAMPLING_SIZE];
-      adc1.getLatestChannel(2, vdc_sample, FOC_OVERSAMPLING_SIZE);
-      float Vdc = adcToVoltage(fastAverage(vdc_sample, FOC_OVERSAMPLING_SIZE), 3.3f, 65536,
-                              adc_gain.vbatt_gain, adc_gain.vbatt_offset);
-
-      float dutyA, dutyB, dutyC;
-      foc_state.ts = 1.0f / (float)motorPWM.getFrequency();
-      focAlignZero(&foc_state, MOTOR_ALIGNMENT_VOLTAGE, Vdc, &dutyA, &dutyB, &dutyC);
-      motorPWM.setDuty(dutyA, dutyB, dutyC);
-
-      system_flag |= FLAG_ROTOR_ALIGNING;
-    }
-
+    // Monitor encoder position to check for settling
     uint16_t pos = encoder.getPosBypass();
     
     int16_t delta_pos = (int16_t)(pos - p_pos);
@@ -1082,6 +1075,7 @@ void alignRotor(void) {
       settlement_counter = 0;
     }
 
+    // Once position has settled within threshold for sufficient time, consider aligned and set electrical zero
     if (settlement_counter > MOTOR_ALIGNMENT_POS_WINDOW) {
       encoder.elecZeroAlign();
 
@@ -1159,6 +1153,10 @@ void startUpSequence(MotorControlMode mode) {
     return;
   }
 
+  
+  Sampling_t sample;
+  if (sampleAndProtect(&sample, true) != 0) return;
+
   switch (mode) {
     case MotorControlMode::MOTOR_FOC_LINEAR:
       foc_reset(&foc_state);
@@ -1167,8 +1165,6 @@ void startUpSequence(MotorControlMode mode) {
       control_mode = MotorControlMode::MOTOR_FOC_LINEAR;
       system_flag |= FLAG_FOC_RUNNING;
 
-      Sampling_t sample;
-      if (sampleAndProtect(&sample) != 0) return;
       speedControl();
       focTick(&sample);
       usb_printf("Starting FOC linear startup sequence...\r\n");
@@ -1179,7 +1175,7 @@ void startUpSequence(MotorControlMode mode) {
       hallsensor.read();
       system_flag |= FLAG_VVVF_RAMP_UP;
       control_mode = MotorControlMode::MOTOR_VVVF;
-      vvvfRampUp();
+      vvvfRampUp(&sample);
       usb_printf("Starting VVVF ramp-up sequence...\r\n");
       break;
     default:
@@ -1195,7 +1191,7 @@ void startUpSequence(MotorControlMode mode) {
  * @brief Implements a VVVF ramp-up sequence for a BLDC motor. Gradually increases the frequency and amplitude of the PWM signals to smoothly accelerate the motor from standstill to a target speed defined by VVVF_THRESHOLD_RPM.
  * @note To be called in the TIM8 update interrupt when running in MOTOR_STARTUP mode.
  */
-void vvvfRampUp(void) {
+void vvvfRampUp(Sampling_t* sample) {
   if (control_mode != MotorControlMode::MOTOR_VVVF) return;
   const uint32_t ramp_up = VVVF_RAMP_UP_SPEED; // RPM/s
   static float rpm;  
@@ -1262,11 +1258,16 @@ void vvvfRampUp(void) {
   float step_increment = (float)ramp_up / frequency;
 
   // Ramp up or down the speed
+  const float v_dc = sample->vbatt;
+  uint8_t low_voltage;
+  if (v_dc < 16.0f) low_voltage = 1;
+  else low_voltage = 0;
+
   if (system_flag & FLAG_VVVF_RAMP_UP) {
-    if ((rpm < VVVF_MAX_RPM >> 1) && (rpm < target.speed / 2)) {
+    if ((rpm < VVVF_MAX_RPM >> low_voltage) && (rpm < target.speed / 2)) {
       rpm += step_increment;
-      if (rpm >= VVVF_MAX_RPM >> 1) {
-        rpm = VVVF_MAX_RPM >> 1;
+      if (rpm >= VVVF_MAX_RPM >> low_voltage) {
+        rpm = VVVF_MAX_RPM >> low_voltage;
       }
       else if (rpm >= (target.speed / 2)) {
         rpm = target.speed / 2;
@@ -1320,29 +1321,30 @@ void vvvfRampUp(void) {
   float dutyB = 0.5f + amplitude * 0.5f * sinf(angle - 2.0f * M_PI / 3.0f);
   float dutyC = 0.5f + amplitude * 0.5f * sinf(angle + 2.0f * M_PI / 3.0f); */
 
-  const float MIN_AMPLITUDE = 0.15f;
-  float amplitude = MIN_AMPLITUDE + (1.0f - MIN_AMPLITUDE) * rpm / ((float)VVVF_MAX_RPM * 0.5f);
-  if (amplitude < MIN_AMPLITUDE) amplitude = MIN_AMPLITUDE;
-  if (amplitude > 1.0f) amplitude = 1.0f;
+  float amplitude;
+  if (low_voltage) {
+    const float MIN_AMPLITUDE = 0.20f;
+    amplitude = MIN_AMPLITUDE + (1.0f - MIN_AMPLITUDE) * rpm / ((float)VVVF_MAX_RPM * 0.5f);
+    //amplitude = rpm / ((float)VVVF_MAX_RPM * 0.5f);
+    if (amplitude < MIN_AMPLITUDE) amplitude = MIN_AMPLITUDE;
+    if (amplitude > 1.0f) amplitude = 1.0f;
+  }
+  else {
+    const float MIN_AMPLITUDE = 0.10f;
+    amplitude = MIN_AMPLITUDE + (1.0f - MIN_AMPLITUDE) * rpm / ((float)VVVF_MAX_RPM);
+    if (amplitude < MIN_AMPLITUDE) amplitude = MIN_AMPLITUDE;
+    if (amplitude > 1.0f) amplitude = 1.0f;
+  }
 
-  float v_dc = adcToVoltage(adc1.getLatestChannelMean(2, FOC_OVERSAMPLING_SIZE), 3.3f, 65536, adc_gain.vbatt_gain, adc_gain.vbatt_offset);
-  float u_max_linear = v_dc / SQRT3;
-  float u_mag = amplitude * u_max_linear;
-  float v_alpha = u_mag * cosf(angle);
-  float v_beta = u_mag * sinf(angle);
-  float ts = 1.0f / frequency;
+  const float u_max_linear = v_dc / SQRT3;
+  const float u_mag = amplitude * u_max_linear;
+  const float v_alpha = u_mag * cosf(angle);
+  const float v_beta = u_mag * sinf(angle);
+  const float ts = 1.0f / frequency;
   float dutyA, dutyB, dutyC;
   modulate(modulation_type, v_alpha, v_beta, v_dc, ts, &dutyA, &dutyB, &dutyC);
 
   motorPWM.setDuty(dutyA, dutyB, dutyC);
-
-  if (FOC_ALLOWED && encoder.is_synchronized_ && encoder.is_zeroed_ && rpm >= VVVF_THRESHOLD_RPM >> 1) {
-    system_flag &= ~FLAG_VVVF_RUNNING;
-    system_flag |= FLAG_FOC_RUNNING;
-    foc_state.target_rpm = FOC_INITIAL_RPM;
-    control_mode = MotorControlMode::MOTOR_FOC_LINEAR;
-    usb_printf("Entering FOC mode\r\n");
-  }
 }
 
 /**
@@ -1403,7 +1405,9 @@ const int8_t commutation_acw[8][3] = {
   motorPWM.setDuty(dutyA, dutyB, dutyC);
 }
 
-int8_t sampleAndProtect(Sampling_t* sample) {
+int8_t sampleAndProtect(Sampling_t* sample, bool bypass_protection) {
+    if (adc1.data_ready_ == false || adc2.data_ready_ == false || adc3.data_ready_ == false) return 0;
+
     uint16_t adc1_raw[3];
     uint16_t adc2_raw[2];
     uint16_t adc3_raw[2];
@@ -1420,6 +1424,8 @@ int8_t sampleAndProtect(Sampling_t* sample) {
     sample->vb = adcToVoltage(adc1_raw[1], 3.3f, 65536, adc_gain.vb_gain, 1.65f + adc_gain.vb_offset);
     sample->vbatt = adcToVoltage(adc1_raw[2], 3.3f, 65536, adc_gain.vbatt_gain, 0.0f + adc_gain.vbatt_offset);
     sample->ibatt = adcToCurrent(adc3_raw[1], 3.3f, 4096, 50.0f, 1.65f + adc_gain.ibatt_offset, adc_gain.ibatt_shunt);
+
+    if (bypass_protection) return 0;
 
     if (fabsf(sample->ia) > MOTOR_MAX_PHASE_CURRENT || fabsf(sample->ib) > MOTOR_MAX_PHASE_CURRENT || fabsf(sample->ic) > MOTOR_MAX_PHASE_CURRENT) {
         trip();
@@ -1584,8 +1590,8 @@ void cmd_reset(int argc, char** argv) {
     led_red.write(0);
     foc_reset(&foc_state);
     relay.write(0);
-    foc_state.target_rpm = FOC_INITIAL_RPM;
-    target.speed = FOC_INITIAL_RPM;
+    if (foc_state.target_rpm != 0.0f) foc_state.target_rpm = FOC_INITIAL_RPM;
+    if (target.speed != 0.0f) target.speed = FOC_INITIAL_RPM;
     usb_printf("Resetting\r\n");
 }
 

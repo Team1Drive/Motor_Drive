@@ -65,7 +65,7 @@
 #define FOC_KT              4.1028e-2f
 
 /** Electrical damping factor */
-#define FOC_ZETA_I          0.707f
+#define FOC_ZETA_I          1.2f//0.707f
 
 /** Speed PI damping factor */
 #define FOC_ZETA_SP         0.707f
