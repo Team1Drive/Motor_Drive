@@ -235,7 +235,6 @@ static inline void get_phase_refs(float v_alpha, float v_beta, float v_dc,
                                   float& Va, float& Vb, float& Vc, float omega_e = 0.0f, float Ts = 0.0f)
 {
     // inv_clarke gives phase voltages in volts
-    float a, b, c;
     //float alpha_n = v_alpha / (v_dc * 0.5f);   // normalise to [-1,1]
     //float beta_n  = v_beta  / (v_dc * 0.5f);
     float alpha_n = v_alpha / (v_dc / SQRT3);   // Corrected: normalise to [-1,1] using Vdc/√3

@@ -1048,7 +1048,7 @@ void speedControl(void) {
 
   const float m_fw_entry    = 1.0f;
   const float m_fw_release  = 0.96;
-  const float m_fw_target   = 0.985f;
+  //const float m_fw_target   = 0.985f;
 
   const float u_fw_limit = 2 * foc_state.Vdc / M_PI * 0.95f;
   const float u_req = foc_state.u_mag;
@@ -1455,7 +1455,7 @@ const int8_t commutation_acw[8][3] = {
 }
 
 int8_t sampleAndProtect(Sampling_t* sample, bool bypass_protection) {
-    if (adc1.data_ready_ == false || adc2.data_ready_ == false || adc3.data_ready_ == false) return 0;
+    if (adc1.data_ready_ == false || adc2.data_ready_ == false || adc3.data_ready_ == false) return -2;
 
     uint16_t adc1_raw[3];
     uint16_t adc2_raw[2];
