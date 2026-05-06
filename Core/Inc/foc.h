@@ -40,6 +40,7 @@
 #include "stm32h7xx_hal.h"
 #include "parameters.h"   /* MOTOR_POLE_PAIRS, ADCGain_t, M_PI */
 #include "modulation.h"   /* clarke, park, inv_park, modulate, ModulationType */
+#include "lut.h"
 #include <cmath>
 #include <algorithm>
 
@@ -291,6 +292,11 @@ void foc_run(FOC_State_t* foc,
  *        Call on MOTOR_STOP or when re-arming after a fault.
  */
 void foc_reset(FOC_State_t* foc);
+
+static inline void focResetOuterPI(FOC_State_t* foc) {
+    PI_reset(&foc->pi_speed);
+    PI_reset(&foc->pi_fw);
+}
 
 void focResetPI(FOC_State_t* foc);
 

@@ -26,7 +26,7 @@ static inline float clampf(float value, float lower, float upper) {
 }
 
 static inline void limitVoltageVector(float* vd, float* vq, float max_mag) {
-    float mag = hypotf(*vd, *vq);
+    float mag = lut::hypotf(*vd, *vq);
     if (mag > max_mag && mag > 1e-6f) {
         float scale = max_mag / mag;
         *vd *= scale;
@@ -372,14 +372,20 @@ void foc(ModulationType modulation_type,
     float vd_req = vd_pi - foc->omega_e * FOC_L * iq;
     float vq_req = vq_pi + foc->omega_e * FOC_L * id + foc->omega_e * FOC_PSI_F;
 
-    float u_abs_limit = 2.0f * vdc / M_PI;
+    const float u_abs_limit = 2.0f * vdc / M_PI;
     float vd_cmd = vd_req;
     float vq_cmd = vq_req;
     limitVoltageVector(&vd_cmd, &vq_cmd, u_abs_limit);
 
     foc->Vd_cmd = vd_cmd;
     foc->Vq_cmd = vq_cmd;
-    foc->u_mag = hypotf(vd_req, vq_req);
+    foc->u_mag = lut::hypotf(vd_req, vq_req);
+
+    float m = foc->u_mag / (2.0f * vdc / M_PI);
+
+    if (m <= 0.907f)        foc->om = 0;
+    else if (m <= 0.9514f)  foc->om = 1;
+    else                    foc->om = 2;
 
     //float v_max = vdc / SQRT3;  // Maximum voltage magnitude for SVPWM (line-line voltage limit)
     //float v_max = 2 * vdc / M_PI;
@@ -405,7 +411,6 @@ void foc(ModulationType modulation_type,
              vdc,
              foc->ts,
              dutyA, dutyB, dutyC,
-             &foc->om,
              foc->omega_e,
              &u_mag);
 
@@ -445,5 +450,5 @@ void focInjection(FOC_State_t* foc, float freq) {
         inj_phase -= 2.0f * M_PI;
     }
 
-    foc->Id_ref += amplitude_max * sinf(inj_phase) * foc->Vdc;
+    foc->Id_ref += amplitude_max * lut::sinf(inj_phase) * foc->Vdc;
 }

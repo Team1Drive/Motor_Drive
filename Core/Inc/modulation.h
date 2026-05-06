@@ -122,7 +122,6 @@ void modulate(
     float v_dc,
     float Ts,
     float* dutyA, float* dutyB, float* dutyC,
-    uint8_t* om = nullptr,
     float omega_e = 0.0f,
     float* applied_mag = nullptr
 );

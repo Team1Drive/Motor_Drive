@@ -887,12 +887,12 @@ void printTelemetryBinary(void) {
     ptr += 4;
   }
   if (print_mask_ex & PRINT_OM) {
-    float val = foc_state.om;
+    uint8_t val = foc_state.om;
     memcpy(ptr, &val, 1);
     ptr += 1;
   }
   if (print_mask_ex & PRINT_FW) {
-    float val = foc_state.fw_active;
+    uint8_t val = foc_state.fw_active;
     memcpy(ptr, &val, 1);
     ptr += 1;
   }
@@ -1061,12 +1061,18 @@ void speedControl(void) {
   /* =========================================================================
   *   Setting new Id and Iq setpoints
   * ========================================================================= */
+  const float idq_mag = lut::hypotf(new_Id_ref, new_Iq_ref);
+  if (idq_mag > FOC_IMAX) {
+      float iq_ref_clamp = sqrtf(fmaxf(FOC_IMAX * FOC_IMAX - new_Id_ref * new_Id_ref, 0.0f));
+      if (new_Iq_ref > iq_ref_clamp) new_Iq_ref = iq_ref_clamp;
+      if (new_Iq_ref < -iq_ref_clamp) new_Iq_ref = -iq_ref_clamp;
+  }
   // In manual FOC mode, current setpoints are controlled directly by the user
   if (control_mode != MotorControlMode::MOTOR_FOC_MANUAL) {
-    __disable_irq();
-    foc_state.Iq_ref = new_Iq_ref;
-    foc_state.Id_ref = new_Id_ref;
-    __enable_irq();
+      __disable_irq();
+      foc_state.Iq_ref = new_Iq_ref;
+      foc_state.Id_ref = new_Id_ref;
+      __enable_irq();
   }
 }
 
@@ -1139,9 +1145,9 @@ void alignRotor(void) {
     // Limit output range
     if (amplitude > 1.0f) amplitude = 1.0f;
 
-    float dutyA = 0.5f + amplitude * 0.5f * sinf(angle);
-    float dutyB = 0.5f + amplitude * 0.5f * sinf(angle - 2.0f * M_PI / 3.0f);
-    float dutyC = 0.5f + amplitude * 0.5f * sinf(angle + 2.0f * M_PI / 3.0f);
+    float dutyA = 0.5f + amplitude * 0.5f * lut::sinf(angle);
+    float dutyB = 0.5f + amplitude * 0.5f * lut::sinf(angle - 2.0f * M_PI / 3.0f);
+    float dutyC = 0.5f + amplitude * 0.5f * lut::sinf(angle + 2.0f * M_PI / 3.0f);
 
     motorPWM.setDuty(dutyA, dutyB, dutyC);
   }
@@ -1362,8 +1368,8 @@ void vvvfRampUp(Sampling_t* sample) {
 
   const float u_max_linear = v_dc / SQRT3;
   const float u_mag = amplitude * u_max_linear;
-  const float v_alpha = u_mag * cosf(angle);
-  const float v_beta = u_mag * sinf(angle);
+  const float v_alpha = u_mag * lut::cosf(angle);
+  const float v_beta = u_mag * lut::sinf(angle);
   const float ts = 1.0f / frequency;
   float dutyA, dutyB, dutyC;
   modulate(modulation_type, v_alpha, v_beta, v_dc, ts, &dutyA, &dutyB, &dutyC);
@@ -1768,7 +1774,7 @@ void cmd_speed(int argc, char** argv) {
  */
 void cmd_torque(int argc, char** argv) {
     float torque = atof(argv[1]);
-    if (torque < -10.0f || torque > 10.0f) {
+    if (torque < 0.0f || torque > 10.0f) {
         usb_printf("Invalid torque value: %s\r\n", argv[1]);
         return;
     }

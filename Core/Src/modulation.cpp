@@ -32,7 +32,7 @@ static inline void sector_to_times(int sector,
 static inline void get_sector_and_angle(float v_alpha, float v_beta,
                                         int& sector, float& theta_s, float omega_e = 0.0f, float Ts = 0.0f)
 {
-    float theta = atan2f(v_beta, v_alpha);
+    float theta = lut::atan2f(v_beta, v_alpha);
     theta += omega_e * Ts * COMP_RATIO;
     if (theta >= 2.0f * M_PI) theta -= 2.0f * M_PI;
     if (theta < 0.0f) theta += 2.0f * M_PI;
@@ -91,15 +91,15 @@ static void svpwm_standard(float v_alpha, float v_beta, float v_dc,
     float theta_s;
     get_sector_and_angle(v_alpha, v_beta, sector, theta_s);
 
-    float v_ref   = hypotf(v_alpha, v_beta);
+    float v_ref   = lut::hypotf(v_alpha, v_beta);
     float v_ratio = v_ref * SQRT3 / v_dc;                        // normalised magnitude
     //const float csc60 = 2.0f / SQRT3;
     const float sin60 = SQRT3 / 2.0f;
     const float cos60 = 0.5f;
 
     float sin_theta_s, cos_theta_s;
-    sin_theta_s = sinf(theta_s);
-    cos_theta_s = cosf(theta_s);
+    sin_theta_s = lut::sinf(theta_s);
+    cos_theta_s = lut::cosf(theta_s);
     //cordic::sincosf(theta_s, &sin_theta_s, &cos_theta_s);
     float sin_comp_theta_s = sin60 * cos_theta_s - cos60 * sin_theta_s;   // sin(60°-θs) = √3/2·cos(θs) - 1/2·sin(θs)
 
@@ -145,11 +145,11 @@ static void svpwm_comp(float v_alpha, float v_beta, float v_dc, float Ts,
     float theta_s;
     get_sector_and_angle(v_alpha, v_beta, sector, theta_s);
 
-    float v_ref = hypotf(v_alpha, v_beta);
+    float v_ref = lut::hypotf(v_alpha, v_beta);
     float K     = (SQRT3 * Ts / v_dc) * v_ref;          // time scaling factor
 
-    float T1 = std::max(K * sinf(M_PI / 3.0f - theta_s), 0.0f);
-    float T2 = std::max(K * sinf(theta_s),                0.0f);
+    float T1 = std::max(K * lut::sinf(M_PI / 3.0f - theta_s), 0.0f);
+    float T2 = std::max(K * lut::sinf(theta_s),               0.0f);
     float T0 = std::max(Ts - T1 - T2,                    0.0f);
 
     float Ta, Tb, Tc;
@@ -167,14 +167,14 @@ static void svpwm_comp(float v_alpha, float v_beta, float v_dc, float Ts,
 //     Blends linearly into six-step as m → 1
 // ─────────────────────────────────────────────
 static void svpwm_superposition(float v_alpha, float v_beta, float v_dc, float Ts, float omega_e,
-                                float* da, float* db, float* dc, uint8_t* om)
+                                float* da, float* db, float* dc)
 {
     int   sector;
     float theta_s;
     get_sector_and_angle(v_alpha, v_beta, sector, theta_s, omega_e, Ts);
 
     // Compute normalised modulation index from voltage vector magnitude
-    float v_ref = hypotf(v_alpha, v_beta);
+    float v_ref = lut::hypotf(v_alpha, v_beta);
     //float m     = v_ref / (v_dc * 0.5f);                // [0..1], >1 = overmod
     float m = v_ref / (2.0f * v_dc / M_PI);
     m = std::min(m, 1.0f);                              // hard cap at six-step
@@ -191,7 +191,6 @@ static void svpwm_superposition(float v_alpha, float v_beta, float v_dc, float T
         float eta = (2.0f * SQRT3 / M_PI) * m;
         T1 = eta * s1 * Ts;
         T2 = eta * s2 * Ts;
-        if (om != nullptr) *om = 0;
     }
     else if (m <= 0.9514f)
     {
@@ -199,7 +198,6 @@ static void svpwm_superposition(float v_alpha, float v_beta, float v_dc, float T
         float e = (m - 0.907f) / (0.9514f - 0.907f);
         T1 = ((1.0f - e) * s1 + e * (s1 / cd)) * Ts;
         T2 = ((1.0f - e) * s2 + e * (s2 / cd)) * Ts;
-        if (om != nullptr) *om = 1;
     }
     else
     {
@@ -215,7 +213,6 @@ static void svpwm_superposition(float v_alpha, float v_beta, float v_dc, float T
             T1 = (1.0f - e) * (s1 / cd) * Ts;
             T2 = (1.0f - e) * (s2 / cd) * Ts + e * Ts;
         }
-        if (om != nullptr) *om = 2;
     }
 
     float T0 = std::max(Ts - T1 - T2, 0.0f);
@@ -334,7 +331,6 @@ void modulate(
     float v_dc,
     float Ts,
     float* dutyA, float* dutyB, float* dutyC,
-    uint8_t* om,
     float omega_e,
     float* applied_mag) 
 {
@@ -353,7 +349,7 @@ void modulate(
 
         case ModulationType::SVPWM_SUPERPOS:
             svpwm_superposition(v_alpha, v_beta, v_dc, Ts, omega_e,
-                                dutyA, dutyB, dutyC, om);
+                                dutyA, dutyB, dutyC);
             break;
 
         case ModulationType::SYM_PWM:
