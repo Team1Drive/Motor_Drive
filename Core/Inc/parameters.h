@@ -200,8 +200,10 @@ enum PrintData : uint32_t {
 
 enum PrintDataEx : uint32_t {
     PRINT_OM        = 1 << 0,
-    PRINT_FW        = 1 << 1,
-    PRINT_FFT       = 1 << 2
+    PRINT_M_INDEX   = 1 << 1,
+    PRINT_FW        = 1 << 2,
+    PRINT_UMAG      = 1 << 3,
+    PRINT_FFT       = 1 << 4
 };
 
 enum class PrintFormat : uint8_t {

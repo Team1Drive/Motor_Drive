@@ -83,6 +83,7 @@ void foc_init(FOC_State_t* foc)
 
     foc->fault         = 0U;
     foc->om            = 0U;
+    foc->m_index       = 0.0f;
     foc->speed_div_cnt = 0U;
     foc->fault         = false;
 }
@@ -106,6 +107,7 @@ void foc_reset(FOC_State_t* foc)
     foc->u_mag     = 0.0f;
     foc->fw_active = 0U;
     foc->om        = 0U;
+    foc->m_index   = 0.0f;
     foc->fault     = false;
 }
 
@@ -381,11 +383,11 @@ void foc(ModulationType modulation_type,
     foc->Vq_cmd = vq_cmd;
     foc->u_mag = lut::hypotf(vd_req, vq_req);
 
-    float m = foc->u_mag / (2.0f * vdc / M_PI);
+    foc->m_index = foc->u_mag / (2.0f * vdc / M_PI);
 
-    if (m <= 0.907f)        foc->om = 0;
-    else if (m <= 0.9514f)  foc->om = 1;
-    else                    foc->om = 2;
+    if (foc->m_index <= 0.907f)         foc->om = 0;
+    else if (foc->m_index <= 0.9514f)   foc->om = 1;
+    else                                foc->om = 2;
 
     //float v_max = vdc / SQRT3;  // Maximum voltage magnitude for SVPWM (line-line voltage limit)
     //float v_max = 2 * vdc / M_PI;

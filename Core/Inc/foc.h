@@ -251,6 +251,8 @@ typedef struct {
     /* --- Overmodulation flag --- */
     uint8_t om;
 
+    float m_index;
+
     /* --- Fault flag — set on overcurrent, cleared by foc_reset() --- */
     volatile bool fault;
 

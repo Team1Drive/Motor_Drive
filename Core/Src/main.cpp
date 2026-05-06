@@ -34,7 +34,7 @@ void printTelemetryBinary(void);
 void speedControl(void);
 
 void startUpSequence(MotorControlMode mode);
-void alignRotor(void);
+void alignRotor(Sampling_t* sample);
 void vvvfRampUp(Sampling_t* sample);
 void sixStepCommutation(void);
 
@@ -324,7 +324,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
         break;
 
       case MotorControlMode::MOTOR_ALIGN:
-        alignRotor();
+        alignRotor(&sample);
         break;
         
       default:
@@ -639,8 +639,14 @@ void printTelemetryUTF8(void) {
   if (print_mask_ex & PRINT_OM) {
     pos += snprintf(buffer + pos, sizeof(buffer) - pos, "om %u ", foc_state.om);
   }
+  if (print_mask_ex & PRINT_M_INDEX) {
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "m_index %.2f ", foc_state.m_index);
+  }
   if (print_mask_ex & PRINT_FW) {
     pos += snprintf(buffer + pos, sizeof(buffer) - pos, "fw %u ", foc_state.fw_active);
+  }
+  if (print_mask_ex & PRINT_UMAG) {
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "umag %.2f ", foc_state.u_mag);
   }
   if (pos > 0) {
     buffer[pos - 1] = '\n';
@@ -891,10 +897,20 @@ void printTelemetryBinary(void) {
     memcpy(ptr, &val, 1);
     ptr += 1;
   }
+  if (print_mask_ex & PRINT_M_INDEX) {
+    float val = foc_state.m_index;
+    memcpy(ptr, &val, 4);
+    ptr += 4;
+  }
   if (print_mask_ex & PRINT_FW) {
     uint8_t val = foc_state.fw_active;
     memcpy(ptr, &val, 1);
     ptr += 1;
+  }
+  if (print_mask_ex & PRINT_UMAG) {
+    float val = foc_state.u_mag;
+    memcpy(ptr, &val, 4);
+    ptr += 4;
   }
   if (ptr != buffer) {
       CDC_Transmit_HS(buffer, ptr - buffer);
@@ -920,9 +936,12 @@ void speedControl(void) {
         target.speed = 0.0f;
         target.torque = 0.0f;
         foc_state.target_rpm = 0.0f;
+        foc_state.Iq_ref = 0.0f;
+        foc_state.Id_ref = 0.0f;
         motorPWM.stop();
         control_mode = MotorControlMode::MOTOR_STOP;
         relay.write(0);
+        return;
       }
     }
     else {
@@ -931,9 +950,12 @@ void speedControl(void) {
         target.speed = 0.0f;
         target.torque = 0.0f;
         foc_state.target_rpm = 0.0f;
+        foc_state.Iq_ref = 0.0f;
+        foc_state.Id_ref = 0.0f;
         motorPWM.stop();
         control_mode = MotorControlMode::MOTOR_STOP;
         relay.write(0);
+        return;
       }
     }
   }
@@ -1021,10 +1043,11 @@ void speedControl(void) {
   /* =========================================================================
   *   Field-weakening Loop
   * ========================================================================= */
-  const float u_fw_entry_vscaled = 0.56f * foc_state.Vdc;
-  const float u_fw_release_vscaled = 0.52f * foc_state.Vdc;
+  const float u_fw_entry_vscaled = 0.76f * foc_state.Vdc;
+  const float u_fw_release_vscaled = 0.72f * foc_state.Vdc;
   const float u_fw_entry = (u_fw_entry_vscaled < 12.5f) ? u_fw_entry_vscaled : 12.5f;
   const float u_fw_release = (u_fw_release_vscaled < 11.8f) ? u_fw_release_vscaled : 11.8f;
+  const float u_fw_limit = 2 * foc_state.Vdc / M_PI * 0.92f;
   const float u_req = foc_state.u_mag;
   const float omega_abs = fabsf(foc_state.omega_m);
   float new_Id_ref;
@@ -1037,7 +1060,7 @@ void speedControl(void) {
       }
 
       if (fw_active) {
-          float fw_error = (u_fw_entry - u_req) / omega_abs;
+          float fw_error = (u_fw_limit - u_req) / omega_abs;
           //foc_state.pi_fw.integrator += foc_state.pi_fw.ki * fw_error * foc_state.ts_speed;
           //if (foc_state.pi_fw.integrator > 0.0f) foc_state.pi_fw.integrator = 0.0f;
           //if (foc_state.pi_fw.integrator < FOC_ID_FW_MIN) foc_state.pi_fw.integrator = FOC_ID_FW_MIN;
@@ -1045,17 +1068,14 @@ void speedControl(void) {
           new_Id_ref = PI_update(&foc_state.pi_fw, fw_error, foc_state.ts_speed);
           if (new_Id_ref > 0.0f) new_Id_ref = 0.0f;
           if (new_Id_ref < FOC_ID_FW_MIN) new_Id_ref = FOC_ID_FW_MIN;
-          foc_state.fw_active = 1U;
       } else {
           new_Id_ref = 0.0f;
           PI_reset(&foc_state.pi_fw);
-          foc_state.fw_active = 0U;
       }
   } else {
       new_Id_ref = 0.0f;
       PI_reset(&foc_state.pi_fw);
       fw_active = false;
-      foc_state.fw_active = 0U;
   }
   
   /* =========================================================================
@@ -1067,6 +1087,8 @@ void speedControl(void) {
       if (new_Iq_ref > iq_ref_clamp) new_Iq_ref = iq_ref_clamp;
       if (new_Iq_ref < -iq_ref_clamp) new_Iq_ref = -iq_ref_clamp;
   }
+  if (new_Id_ref != 0.0f) foc_state.fw_active = 1U;
+  else foc_state.fw_active = 0U;
   // In manual FOC mode, current setpoints are controlled directly by the user
   if (control_mode != MotorControlMode::MOTOR_FOC_MANUAL) {
       __disable_irq();
@@ -1076,7 +1098,7 @@ void speedControl(void) {
   }
 }
 
-void alignRotor(void) {
+void alignRotor(Sampling_t* sample) {
   if (control_mode != MotorControlMode::MOTOR_ALIGN) return;
   
   static uint16_t p_pos = 0;
@@ -1089,9 +1111,7 @@ void alignRotor(void) {
     // Set alignment voltage in D-axis to hold the rotor to electrical zero position
     foc_state.Iq_ref = MOTOR_ALIGNMENT_IQ_REF;
     foc_state.Id_ref = MOTOR_ALIGNMENT_ID_REF;
-    Sampling_t sample;
-    if (sampleAndProtect(&sample) != 0) return;
-    focTick(&sample);
+    focTick(sample);
 
     // Monitor encoder position to check for settling
     uint16_t pos = encoder.getPosBypass();
@@ -1121,39 +1141,36 @@ void alignRotor(void) {
 
   // Step 2: Once aligned, ramp up speed using VVVF to search for index pulse for absolute position reference
   else if (!encoder.is_synchronized_) {
-    const uint32_t ramp_up = VVVF_RAMP_UP_SPEED; // RPM/s
-    // Increment aligned with interrupt frequency
     uint32_t frequency = motorPWM.getFrequency();
-    float step_increment = (float)ramp_up / frequency;
-
-    // Ramp up speed
+    float step_increment = (float)VVVF_RAMP_UP_SPEED / (float)frequency;
     rpm += step_increment;
+    if (rpm > VVVF_THRESHOLD_RPM) rpm = VVVF_THRESHOLD_RPM;
 
-    // Calculate electrical angle
     float electrical_freq = rpm / 60.0f * MOTOR_POLE_PAIRS;
-
-    float delta_angle = 2.0f * M_PI * electrical_freq / frequency;
+    float delta_angle = 2.0f * M_PI * electrical_freq / (float)frequency;
     angle += delta_angle * MOTOR_ROTATION_DIRECTION;
     if (angle >= 2.0f * M_PI) angle -= 2.0f * M_PI;
+    if (angle < 0.0f) angle += 2.0f * M_PI;
 
-    // Calculate voltage amplitude
-    float amplitude;
-    const float MIN_VOLTAGE = 0.15f;  // Boost start voltage
-    const float KNEE_RPM = 1000.0f;   // Knee point (RPM)
-    amplitude = MIN_VOLTAGE + (1.0f - MIN_VOLTAGE) * (rpm / KNEE_RPM);
+    foc_state.Iq_ref = MOTOR_ALIGNMENT_ID_REF;
+    foc_state.Id_ref = MOTOR_ALIGNMENT_IQ_REF;
 
-    // Limit output range
-    if (amplitude > 1.0f) amplitude = 1.0f;
-
-    float dutyA = 0.5f + amplitude * 0.5f * lut::sinf(angle);
-    float dutyB = 0.5f + amplitude * 0.5f * lut::sinf(angle - 2.0f * M_PI / 3.0f);
-    float dutyC = 0.5f + amplitude * 0.5f * lut::sinf(angle + 2.0f * M_PI / 3.0f);
-
+    float dutyA, dutyB, dutyC;
+    float omega_m = (rpm * RPM_TO_RAD_S) * MOTOR_ROTATION_DIRECTION;
+    foc_state.ts = 1.0f / (float)frequency;
+    foc(modulation_type,
+        &foc_state,
+        sample->ia, sample->ib, sample->ic,
+        sample->vbatt,
+        angle, omega_m,
+        &dutyA, &dutyB, &dutyC);
     motorPWM.setDuty(dutyA, dutyB, dutyC);
   }
 
   else {
     control_mode = MotorControlMode::MOTOR_STOP;
+    foc_state.Iq_ref = 0.0f;
+    foc_state.Id_ref = 0.0f;
     motorPWM.stop();
     relay.write(0);
     rpm = 0.0f;
@@ -1176,16 +1193,15 @@ void alignRotor(void) {
 void startUpSequence(MotorControlMode mode) {
   if (control_mode != MotorControlMode::MOTOR_STARTUP) return;
 
+  Sampling_t sample;
+  if (sampleAndProtect(&sample, true) != 0) return;
+
   if ((system_flag & FLAG_ELEC_ZERO_ALIGNED && encoder.is_synchronized_) == 0) {
     control_mode = MotorControlMode::MOTOR_ALIGN;
     usb_printf("Starting rotor alignment sequence...\r\n");
-    alignRotor();
+    alignRotor(&sample);
     return;
   }
-
-  
-  Sampling_t sample;
-  if (sampleAndProtect(&sample, true) != 0) return;
 
   switch (mode) {
     case MotorControlMode::MOTOR_FOC_LINEAR:
@@ -1598,12 +1614,14 @@ void cmd_align(int argc, char** argv) {
         return;
     }
     if (control_mode == MotorControlMode::MOTOR_PROTECTION) {protectionModePrint(); return;}
-    if (system_flag & FLAG_ELEC_ZERO_ALIGNED) {usb_printf("Electrical zero already aligned\r\n"); return;}
+    if ((system_flag & FLAG_ELEC_ZERO_ALIGNED) && encoder.is_synchronized_) {usb_printf("Electrical zero already aligned\r\n"); return;}
     if (control_mode == MotorControlMode::MOTOR_ALIGN) {usb_printf("Already aligning, please wait\r\n"); return;}
     control_mode = MotorControlMode::MOTOR_ALIGN;
     clearRunningFlags();
     relay.write(1);
-    alignRotor();
+    Sampling_t sample;
+    if (sampleAndProtect(&sample, true) != 0) return;
+    alignRotor(&sample);
     usb_printf("Starting\r\n");
 }
 
@@ -2275,7 +2293,9 @@ void cmd_log(int argc, char** argv) {
         else if (strcmp(token, "vq") == 0) flag = PRINT_FOC_VQ;
 
         else if (strcmp(token, "om") == 0) flag_ex = PRINT_OM;
+        else if (strcmp(token, "m_index") == 0) flag_ex = PRINT_M_INDEX;
         else if (strcmp(token, "fw") == 0) flag_ex = PRINT_FW;
+        else if (strcmp(token, "umag") == 0) flag_ex = PRINT_UMAG;
         else if (strcmp(token, "fft") == 0) flag_ex = PRINT_FFT;
 
         else if (strcmp(token, "all") == 0 && strcmp(action, "rm") == 0) {
