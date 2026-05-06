@@ -1043,19 +1043,22 @@ void speedControl(void) {
   /* =========================================================================
   *   Field-weakening Loop
   * ========================================================================= */
-  const float u_fw_entry_vscaled = 0.76f * foc_state.Vdc;
-  const float u_fw_release_vscaled = 0.72f * foc_state.Vdc;
-  const float u_fw_entry = (u_fw_entry_vscaled < 12.5f) ? u_fw_entry_vscaled : 12.5f;
-  const float u_fw_release = (u_fw_release_vscaled < 11.8f) ? u_fw_release_vscaled : 11.8f;
-  const float u_fw_limit = 2 * foc_state.Vdc / M_PI * 0.92f;
+  const float u_abs_limit = 2.0f * foc_state.Vdc / M_PI;
+  const float m_req = foc_state.u_mag / u_abs_limit;
+
+  const float m_fw_entry    = 1.0f;
+  const float m_fw_release  = 0.96;
+  const float m_fw_target   = 0.985f;
+
+  const float u_fw_limit = 2 * foc_state.Vdc / M_PI * 0.95f;
   const float u_req = foc_state.u_mag;
   const float omega_abs = fabsf(foc_state.omega_m);
   float new_Id_ref;
 
   if (omega_abs > 20.0f) {
-      if (!fw_active && u_req > u_fw_entry) {
+      if (!fw_active && m_req > m_fw_entry) {
           fw_active = true;
-      } else if (fw_active && u_req < u_fw_release && foc_state.Id_ref > -0.05f) {
+      } else if (fw_active && m_req < m_fw_release && foc_state.Id_ref > -0.05f) {
           fw_active = false;
       }
 
