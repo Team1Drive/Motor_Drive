@@ -244,6 +244,12 @@ typedef struct {
     /* --- Speed decimation counter --- */
     uint32_t speed_div_cnt;
 
+    /* --- Field-weakening active flag (for telemetry) --- */
+    uint8_t fw_active;
+
+    /* --- Overmodulation flag --- */
+    uint8_t om;
+
     /* --- Fault flag — set on overcurrent, cleared by foc_reset() --- */
     volatile bool fault;
 

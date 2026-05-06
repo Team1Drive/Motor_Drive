@@ -195,7 +195,13 @@ enum PrintData : uint32_t {
     PRINT_FOC_IDSP  = 1 << 27,
     PRINT_FOC_IQSP  = 1 << 28,
     PRINT_FOC_VD    = 1 << 29,
-    PRINT_FOC_VQ    = 1 << 30
+    PRINT_FOC_VQ    = 1 << 30,
+};
+
+enum PrintDataEx : uint32_t {
+    PRINT_OM        = 1 << 0,
+    PRINT_FW        = 1 << 1,
+    PRINT_FFT       = 1 << 2
 };
 
 enum class PrintFormat : uint8_t {

@@ -81,6 +81,8 @@ void foc_init(FOC_State_t* foc)
     foc->Vq_cmd  = 0.0f;
     foc->u_mag   = 0.0f;
 
+    foc->fault         = 0U;
+    foc->om            = 0U;
     foc->speed_div_cnt = 0U;
     foc->fault         = false;
 }
@@ -102,6 +104,8 @@ void foc_reset(FOC_State_t* foc)
     foc->Vd_cmd    = 0.0f;
     foc->Vq_cmd    = 0.0f;
     foc->u_mag     = 0.0f;
+    foc->fw_active = 0U;
+    foc->om        = 0U;
     foc->fault     = false;
 }
 
@@ -400,7 +404,8 @@ void foc(ModulationType modulation_type,
              v_alpha, v_beta,
              vdc,
              foc->ts,
-             dutyA, dutyB, dutyC, 
+             dutyA, dutyB, dutyC,
+             &foc->om,
              foc->omega_e,
              &u_mag);
 

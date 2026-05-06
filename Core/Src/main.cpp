@@ -111,6 +111,7 @@ volatile Target_t target = { .speed = 0.0f, .torque = 0.0f, .time = 0.0f, .is_to
 ModulationType modulation_type = ModulationType::SVPWM_SUPERPOS;
 
 volatile uint32_t print_mask = 0;
+volatile uint32_t print_mask_ex = 0;
 volatile PrintFormat print_format = PrintFormat::PRINT_BINARY;
 
 ring_buffer_t rx_ring = { .head = 0, .tail = 0 };
@@ -489,7 +490,7 @@ void timer6IRQ(void) {
  * @note The data fields to be printed are determined by the print_mask variable, and the format is determined by the print_format variable. The function reads the latest ADC data, processes it into physical units, and constructs a formatted string to be sent over USB.
  */
 void printTelemetryUTF8(void) {
-  if (print_mask == 0 || (print_format != PrintFormat::PRINT_UTF8)) return;
+  if ((print_mask == 0 && print_mask_ex == 0) || (print_format != PrintFormat::PRINT_UTF8)) return;
   
   uint16_t adc1_raw[3];
   uint16_t adc2_raw[2];
@@ -635,6 +636,12 @@ void printTelemetryUTF8(void) {
   if (print_mask & PRINT_FOC_VQ) {
     pos += snprintf(buffer + pos, sizeof(buffer) - pos, "foc_vq %.2f ", foc_state.Vq_cmd);
   }
+  if (print_mask_ex & PRINT_OM) {
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "om %u ", foc_state.om);
+  }
+  if (print_mask_ex & PRINT_FW) {
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "fw %u ", foc_state.fw_active);
+  }
   if (pos > 0) {
     buffer[pos - 1] = '\n';
     buffer[pos] = '\0';
@@ -653,7 +660,7 @@ void printTelemetryUTF8(void) {
  * @note Binary data sent is parsed automatically by a script on the host computer.
  */
 void printTelemetryBinary(void) {
-  if (print_mask == 0 || (print_format != PrintFormat::PRINT_BINARY)) return;
+  if ((print_mask == 0 && print_mask_ex == 0) || (print_format != PrintFormat::PRINT_BINARY)) return;
 
   uint16_t adc1_raw[3];
   uint16_t adc2_raw[2];
@@ -699,12 +706,13 @@ void printTelemetryBinary(void) {
   }
 
   // Construct a binary packet
-  uint8_t buffer[128];
+  uint8_t buffer[256];
   uint8_t* ptr = buffer;
 
   uint32_t error = error_flag;
   uint8_t mode = static_cast<uint8_t>(control_mode);
   uint32_t mask = print_mask;
+  uint32_t mask_ex = print_mask_ex;
 
   *ptr++ = 0xAA;
   *ptr++ = 0x55;
@@ -717,6 +725,9 @@ void printTelemetryBinary(void) {
   
   memcpy(ptr, &mask, 4);
   ptr += 4;
+
+  memcpy(ptr, &mask_ex, 4);
+  ptr += 4; 
 
   if (print_mask & PRINT_RPM) {
     float val = encoder.getRPM();
@@ -875,6 +886,16 @@ void printTelemetryBinary(void) {
     memcpy(ptr, &val, 4);
     ptr += 4;
   }
+  if (print_mask_ex & PRINT_OM) {
+    float val = foc_state.om;
+    memcpy(ptr, &val, 1);
+    ptr += 1;
+  }
+  if (print_mask_ex & PRINT_FW) {
+    float val = foc_state.fw_active;
+    memcpy(ptr, &val, 1);
+    ptr += 1;
+  }
   if (ptr != buffer) {
       CDC_Transmit_HS(buffer, ptr - buffer);
   }
@@ -1024,14 +1045,17 @@ void speedControl(void) {
           new_Id_ref = PI_update(&foc_state.pi_fw, fw_error, foc_state.ts_speed);
           if (new_Id_ref > 0.0f) new_Id_ref = 0.0f;
           if (new_Id_ref < FOC_ID_FW_MIN) new_Id_ref = FOC_ID_FW_MIN;
+          foc_state.fw_active = 1U;
       } else {
           new_Id_ref = 0.0f;
           PI_reset(&foc_state.pi_fw);
+          foc_state.fw_active = 0U;
       }
   } else {
       new_Id_ref = 0.0f;
       PI_reset(&foc_state.pi_fw);
       fw_active = false;
+      foc_state.fw_active = 0U;
   }
   
   /* =========================================================================
@@ -2192,6 +2216,7 @@ void cmd_log(int argc, char** argv) {
 
             case 4:
                 print_mask = PRINT_RPM | PRINT_RPMSP | PRINT_DUTY_A | PRINT_DUTY_B | PRINT_DUTY_C | PRINT_IA | PRINT_IB | PRINT_IC | PRINT_VBATT | PRINT_FOC_ID | PRINT_FOC_IQ | PRINT_FOC_VD | PRINT_FOC_VQ | PRINT_FOC_IDSP | PRINT_FOC_IQSP;
+                print_mask_ex = PRINT_OM | PRINT_FW;
                 usb_printf("Preset %d active\r\n", preset_id);
                 break;
                 
@@ -2209,6 +2234,7 @@ void cmd_log(int argc, char** argv) {
         }
         char* token = argv[2];
         uint32_t flag = 0;
+        uint32_t flag_ex = 0;
         
         if      (strcmp(token, "rpm") == 0) flag = PRINT_RPM;
         else if (strcmp(token, "rpmsp") == 0) flag = PRINT_RPMSP;
@@ -2241,8 +2267,14 @@ void cmd_log(int argc, char** argv) {
         else if (strcmp(token, "iqsp") == 0) flag = PRINT_FOC_IQSP;
         else if (strcmp(token, "vd") == 0) flag = PRINT_FOC_VD;
         else if (strcmp(token, "vq") == 0) flag = PRINT_FOC_VQ;
+
+        else if (strcmp(token, "om") == 0) flag_ex = PRINT_OM;
+        else if (strcmp(token, "fw") == 0) flag_ex = PRINT_FW;
+        else if (strcmp(token, "fft") == 0) flag_ex = PRINT_FFT;
+
         else if (strcmp(token, "all") == 0 && strcmp(action, "rm") == 0) {
             print_mask = 0;
+            print_mask_ex = 0;
             usb_printf("All variables removed\r\n");
             return;
         } else {
@@ -2252,9 +2284,11 @@ void cmd_log(int argc, char** argv) {
 
         if (strcmp(action, "add") == 0) {
             print_mask |= flag;
+            print_mask_ex |= flag_ex;
             usb_printf("Variable %s added\r\n", token);
         } else {
             print_mask &= ~flag;
+            print_mask_ex &= ~flag_ex;
             usb_printf("Variable %s removed\r\n", token);
         }
     } 

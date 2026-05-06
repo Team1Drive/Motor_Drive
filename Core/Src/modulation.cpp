@@ -167,7 +167,7 @@ static void svpwm_comp(float v_alpha, float v_beta, float v_dc, float Ts,
 //     Blends linearly into six-step as m → 1
 // ─────────────────────────────────────────────
 static void svpwm_superposition(float v_alpha, float v_beta, float v_dc, float Ts, float omega_e,
-                                float* da, float* db, float* dc)
+                                float* da, float* db, float* dc, uint8_t* om)
 {
     int   sector;
     float theta_s;
@@ -191,6 +191,7 @@ static void svpwm_superposition(float v_alpha, float v_beta, float v_dc, float T
         float eta = (2.0f * SQRT3 / M_PI) * m;
         T1 = eta * s1 * Ts;
         T2 = eta * s2 * Ts;
+        if (om != nullptr) *om = 0;
     }
     else if (m <= 0.9514f)
     {
@@ -198,6 +199,7 @@ static void svpwm_superposition(float v_alpha, float v_beta, float v_dc, float T
         float e = (m - 0.907f) / (0.9514f - 0.907f);
         T1 = ((1.0f - e) * s1 + e * (s1 / cd)) * Ts;
         T2 = ((1.0f - e) * s2 + e * (s2 / cd)) * Ts;
+        if (om != nullptr) *om = 1;
     }
     else
     {
@@ -213,6 +215,7 @@ static void svpwm_superposition(float v_alpha, float v_beta, float v_dc, float T
             T1 = (1.0f - e) * (s1 / cd) * Ts;
             T2 = (1.0f - e) * (s2 / cd) * Ts + e * Ts;
         }
+        if (om != nullptr) *om = 2;
     }
 
     float T0 = std::max(Ts - T1 - T2, 0.0f);
@@ -331,6 +334,7 @@ void modulate(
     float v_dc,
     float Ts,
     float* dutyA, float* dutyB, float* dutyC,
+    uint8_t* om,
     float omega_e,
     float* applied_mag) 
 {
@@ -349,7 +353,7 @@ void modulate(
 
         case ModulationType::SVPWM_SUPERPOS:
             svpwm_superposition(v_alpha, v_beta, v_dc, Ts, omega_e,
-                                dutyA, dutyB, dutyC);
+                                dutyA, dutyB, dutyC, om);
             break;
 
         case ModulationType::SYM_PWM:
