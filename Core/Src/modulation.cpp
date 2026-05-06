@@ -232,7 +232,7 @@ static void svpwm_superposition(float v_alpha, float v_beta, float v_dc, float T
 //  so the range is [-1, 1].
 // ─────────────────────────────────────────────
 static inline void get_phase_refs(float v_alpha, float v_beta, float v_dc,
-                                  float& Va, float& Vb, float& Vc)
+                                  float& Va, float& Vb, float& Vc, float omega_e = 0.0f, float Ts = 0.0f)
 {
     // inv_clarke gives phase voltages in volts
     float a, b, c;
@@ -240,10 +240,17 @@ static inline void get_phase_refs(float v_alpha, float v_beta, float v_dc,
     //float beta_n  = v_beta  / (v_dc * 0.5f);
     float alpha_n = v_alpha / (v_dc / SQRT3);   // Corrected: normalise to [-1,1] using Vdc/√3
     float beta_n  = v_beta  / (v_dc / SQRT3);
-    a =  alpha_n;
-    b = (-alpha_n + SQRT3 * beta_n) / 2.0f;
-    c = (-alpha_n - SQRT3 * beta_n) / 2.0f;
-    Va = a; Vb = b; Vc = c;
+
+    float theta_comp = omega_e * Ts * COMP_RATIO;
+    float cos_t = lut::cosf(theta_comp);
+    float sin_t = lut::sinf(theta_comp);
+
+    float alpha_c = alpha_n * cos_t - beta_n * sin_t;
+    float beta_c  = alpha_n * sin_t + beta_n * cos_t;
+
+    Va = alpha_c;
+    Vb = (-alpha_c + SQRT3 * beta_c) / 2.0f;
+    Vc = (-alpha_c - SQRT3 * beta_c) / 2.0f;
 }
 
 // ─────────────────────────────────────────────
@@ -252,11 +259,11 @@ static inline void get_phase_refs(float v_alpha, float v_beta, float v_dc,
 //     Zero-sequence centres min/max → same DC bus
 //     utilisation as SVPWM with simpler maths
 // ─────────────────────────────────────────────
-static void sym_pwm(float v_alpha, float v_beta, float v_dc,
+static void sym_pwm(float v_alpha, float v_beta, float v_dc, float Ts, float omega_e,
                     float* da, float* db, float* dc)
 {
     float Va, Vb, Vc;
-    get_phase_refs(v_alpha, v_beta, v_dc, Va, Vb, Vc);
+    get_phase_refs(v_alpha, v_beta, v_dc, Va, Vb, Vc, omega_e, Ts);
 
     // Zero-sequence = midpoint of max and min
     float z = -(std::min({Va, Vb, Vc}) + std::max({Va, Vb, Vc})) / 2.0f;
@@ -272,12 +279,12 @@ static void sym_pwm(float v_alpha, float v_beta, float v_dc,
 //     Each variant clamps a different phase to
 //     a rail for 120°/cycle → ~33% fewer switches
 // ─────────────────────────────────────────────
-static void dpwm(float v_alpha, float v_beta, float v_dc,
+static void dpwm(float v_alpha, float v_beta, float v_dc, float Ts, float omega_e,
                  int variant,
                  float* da, float* db, float* dc)
 {
     float Va, Vb, Vc;
-    get_phase_refs(v_alpha, v_beta, v_dc, Va, Vb, Vc);
+    get_phase_refs(v_alpha, v_beta, v_dc, Va, Vb, Vc, omega_e, Ts);
 
     float Vab = Va - Vb;
     float Vbc = Vb - Vc;
@@ -353,24 +360,24 @@ void modulate(
             break;
 
         case ModulationType::SYM_PWM:
-            sym_pwm(v_alpha, v_beta, v_dc,
+            sym_pwm(v_alpha, v_beta, v_dc, Ts, omega_e,
                     dutyA, dutyB, dutyC);
             break;
 
         case ModulationType::DPWM0:
-            dpwm(v_alpha, v_beta, v_dc, 0, dutyA, dutyB, dutyC);
+            dpwm(v_alpha, v_beta, v_dc, Ts, omega_e, 0, dutyA, dutyB, dutyC);
             break;
 
         case ModulationType::DPWM1:
-            dpwm(v_alpha, v_beta, v_dc, 1, dutyA, dutyB, dutyC);
+            dpwm(v_alpha, v_beta, v_dc, Ts, omega_e, 1, dutyA, dutyB, dutyC);
             break;
 
         case ModulationType::DPWM2:
-            dpwm(v_alpha, v_beta, v_dc, 2, dutyA, dutyB, dutyC);
+            dpwm(v_alpha, v_beta, v_dc, Ts, omega_e, 2, dutyA, dutyB, dutyC);
             break;
 
         case ModulationType::DPWM3:
-            dpwm(v_alpha, v_beta, v_dc, 3, dutyA, dutyB, dutyC);
+            dpwm(v_alpha, v_beta, v_dc, Ts, omega_e, 3, dutyA, dutyB, dutyC);
             break;
 
         default:
