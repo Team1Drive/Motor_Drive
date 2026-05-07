@@ -720,6 +720,9 @@ void printTelemetryBinary(void) {
 
   uint32_t error = error_flag;
   uint8_t mode = static_cast<uint8_t>(control_mode);
+  uint64_t time = HighResTimer::getTicks();
+  uint16_t time_high = static_cast<uint16_t>((time >> 32) & 0xFFFF);
+  uint32_t time_low = static_cast<uint32_t>(time & 0xFFFFFFFF);
   uint32_t mask = print_mask;
   uint32_t mask_ex = print_mask_ex;
 
@@ -731,6 +734,12 @@ void printTelemetryBinary(void) {
 
   memcpy(ptr, &mode, 1);
   ptr += 1;
+
+  memcpy(ptr, &time_high, 2);
+  ptr += 2;
+
+  memcpy(ptr, &time_low, 4);
+  ptr += 4;
   
   memcpy(ptr, &mask, 4);
   ptr += 4;
