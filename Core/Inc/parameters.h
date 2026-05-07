@@ -69,7 +69,9 @@
 #define MOTOR_ALIGNMENT_IQ_REF      0.0f
 #define MOTOR_SPEED_LIMIT_RPM       10000.0f
 
-#define MOTOR_MAX_PHASE_CURRENT     4.8f // Maximum phase current for safety (in amps)
+#define MOTOR_MAX_PHASE_CURRENT     3.5f // Maximum phase current for safety (in amps)
+#define MOTOR_INSTANT_TRIP_CURRENT  5.0f // Instantaneous trip threshold for overcurrent protection (in amps)
+#define MOTOR_INT_CURRENT_THRESHOLD 3.0f
 #define MOTOR_MAX_CURRENT           5.0f // Maximum current for safety (in amps), including battery current
 #define MOTOR_MIN_VOLTAGE           6.0f // Minimum voltage for operation (in volts) 
 

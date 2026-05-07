@@ -1478,12 +1478,25 @@ int8_t sampleAndProtect(Sampling_t* sample, bool bypass_protection) {
 
     if (bypass_protection) return 0;
 
-    if (fabsf(sample->ia) > MOTOR_MAX_PHASE_CURRENT || fabsf(sample->ib) > MOTOR_MAX_PHASE_CURRENT || fabsf(sample->ic) > MOTOR_MAX_PHASE_CURRENT) {
-        trip();
-        error_flag |= ERROR_OVERCURRENT;
-        foc_state.fault = true;
-        return -1;
+    // Overcurrent protection with integrator for transient spikes
+    static float integrator = 0.0f;
+    const float overcurrent_trip_threshold = MOTOR_INSTANT_TRIP_CURRENT - MOTOR_MAX_PHASE_CURRENT;
+    const float current_trip_threshold = overcurrent_trip_threshold * overcurrent_trip_threshold;
+    
+    if (fabsf(sample->ia) > MOTOR_INT_CURRENT_THRESHOLD || fabsf(sample->ib) > MOTOR_INT_CURRENT_THRESHOLD || fabsf(sample->ic) > MOTOR_INT_CURRENT_THRESHOLD) {
+        float max_current = std::max(fabsf(sample->ia), std::max(fabsf(sample->ib), fabsf(sample->ic)));
+        float overcurrent = max_current - MOTOR_MAX_PHASE_CURRENT;
+        if (overcurrent > 0.0f) integrator += overcurrent * overcurrent;
+        else                    integrator -= overcurrent * overcurrent;
+
+        if (integrator > current_trip_threshold) {
+          trip();
+          error_flag |= ERROR_OVERCURRENT;
+          foc_state.fault = true;
+          return -1;
+        }
     }
+    else integrator = 0.0f;
 
     if (sample->vbatt < MOTOR_MIN_VOLTAGE) {
         trip();
