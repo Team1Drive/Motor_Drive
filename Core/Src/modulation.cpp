@@ -1,4 +1,5 @@
 #include "modulation.h"
+#include "lut.h"
 #include <cmath>
 #include <algorithm>
 
@@ -29,9 +30,11 @@ static inline void sector_to_times(int sector,
 
 // Shared sector + angle extraction from v_alpha / v_beta
 static inline void get_sector_and_angle(float v_alpha, float v_beta,
-                                        int& sector, float& theta_s)
+                                        int& sector, float& theta_s, float omega_e = 0.0f, float Ts = 0.0f)
 {
-    float theta = atan2f(v_beta, v_alpha);
+    float theta = lut::atan2f(v_beta, v_alpha);
+    theta += omega_e * Ts * COMP_RATIO;
+    if (theta >= 2.0f * M_PI) theta -= 2.0f * M_PI;
     if (theta < 0.0f) theta += 2.0f * M_PI;
     sector  = (int)(theta / (M_PI / 3.0f)) + 1;   // 1-based (1..6)
     if (sector > 6) sector = 6;
@@ -58,16 +61,16 @@ void inv_clarke(float alpha, float beta, float* a, float* b, float* c)
 
 void park(float alpha, float beta, float theta, float* d, float* q)
 {
-    float cos_t = cosf(theta);
-    float sin_t = sinf(theta);
+    float cos_t = lut::cosf(theta);
+    float sin_t = lut::sinf(theta);
     *d =  alpha * cos_t + beta * sin_t;
     *q = -alpha * sin_t + beta * cos_t;
 }
 
 void inv_park(float d, float q, float theta, float* alpha, float* beta)
 {
-    float cos_t = cosf(theta);
-    float sin_t = sinf(theta);
+    float cos_t = lut::cosf(theta);
+    float sin_t = lut::sinf(theta);
     *alpha = d * cos_t - q * sin_t;
     *beta  = d * sin_t + q * cos_t;
 }
@@ -82,21 +85,21 @@ void inv_park(float d, float q, float theta, float* alpha, float* beta)
 //     Inputs: v_alpha, v_beta, v_dc
 // ─────────────────────────────────────────────
 static void svpwm_standard(float v_alpha, float v_beta, float v_dc,
-                           float* da, float* db, float* dc)
+                           float* da, float* db, float* dc, float* applied_mag)
 {
     int   sector;
     float theta_s;
     get_sector_and_angle(v_alpha, v_beta, sector, theta_s);
 
-    float v_ref   = hypotf(v_alpha, v_beta);
+    float v_ref   = lut::hypotf(v_alpha, v_beta);
     float v_ratio = v_ref * SQRT3 / v_dc;                        // normalised magnitude
     //const float csc60 = 2.0f / SQRT3;
     const float sin60 = SQRT3 / 2.0f;
     const float cos60 = 0.5f;
 
     float sin_theta_s, cos_theta_s;
-    sin_theta_s = sinf(theta_s);
-    cos_theta_s = cosf(theta_s);
+    sin_theta_s = lut::sinf(theta_s);
+    cos_theta_s = lut::cosf(theta_s);
     //cordic::sincosf(theta_s, &sin_theta_s, &cos_theta_s);
     float sin_comp_theta_s = sin60 * cos_theta_s - cos60 * sin_theta_s;   // sin(60°-θs) = √3/2·cos(θs) - 1/2·sin(θs)
 
@@ -105,11 +108,20 @@ static void svpwm_standard(float v_alpha, float v_beta, float v_dc,
     float d0 = 1.0f - d1 - d2;
 
     // Normalise d1 and d2 proportionally
+    bool saturated = false;
+    float scale = 1.0f;
+
     if (d0 < 0.0f) {
         float sum = d1 + d2;
-        d1 /= sum;
-        d2 /= sum;
+        scale = 1.0f / sum;
+        d1 *= scale;
+        d2 *= scale;
         d0 = 0.0f;
+        saturated = true;
+    }
+
+    if (applied_mag != nullptr) {
+        *applied_mag = saturated ? (v_ref * scale) : v_ref;
     }
 
     float Ta, Tb, Tc;
@@ -133,11 +145,11 @@ static void svpwm_comp(float v_alpha, float v_beta, float v_dc, float Ts,
     float theta_s;
     get_sector_and_angle(v_alpha, v_beta, sector, theta_s);
 
-    float v_ref = hypotf(v_alpha, v_beta);
+    float v_ref = lut::hypotf(v_alpha, v_beta);
     float K     = (SQRT3 * Ts / v_dc) * v_ref;          // time scaling factor
 
-    float T1 = std::max(K * sinf(M_PI / 3.0f - theta_s), 0.0f);
-    float T2 = std::max(K * sinf(theta_s),                0.0f);
+    float T1 = std::max(K * lut::sinf(M_PI / 3.0f - theta_s), 0.0f);
+    float T2 = std::max(K * lut::sinf(theta_s),               0.0f);
     float T0 = std::max(Ts - T1 - T2,                    0.0f);
 
     float Ta, Tb, Tc;
@@ -154,21 +166,22 @@ static void svpwm_comp(float v_alpha, float v_beta, float v_dc, float Ts,
 //     m is computed internally from |Vref| / (Vdc/2)
 //     Blends linearly into six-step as m → 1
 // ─────────────────────────────────────────────
-static void svpwm_superposition(float v_alpha, float v_beta, float v_dc, float Ts,
+static void svpwm_superposition(float v_alpha, float v_beta, float v_dc, float Ts, float omega_e,
                                 float* da, float* db, float* dc)
 {
     int   sector;
     float theta_s;
-    get_sector_and_angle(v_alpha, v_beta, sector, theta_s);
+    get_sector_and_angle(v_alpha, v_beta, sector, theta_s, omega_e, Ts);
 
     // Compute normalised modulation index from voltage vector magnitude
-    float v_ref = hypotf(v_alpha, v_beta);
-    float m     = v_ref / (v_dc * 0.5f);                // [0..1], >1 = overmod
+    float v_ref = lut::hypotf(v_alpha, v_beta);
+    //float m     = v_ref / (v_dc * 0.5f);                // [0..1], >1 = overmod
+    float m = v_ref / (2.0f * v_dc / M_PI);
     m = std::min(m, 1.0f);                              // hard cap at six-step
 
-    float s1  = sinf(M_PI / 3.0f - theta_s);
-    float s2  = sinf(theta_s);
-    float cd  = std::max(cosf(theta_s - M_PI / 6.0f), 1e-6f);
+    float s1  = lut::sinf(M_PI / 3.0f - theta_s);
+    float s2  = lut::sinf(theta_s);
+    float cd  = std::max(lut::cosf(theta_s - M_PI / 6.0f), 1e-6f);
 
     float T1, T2;
 
@@ -219,18 +232,26 @@ static void svpwm_superposition(float v_alpha, float v_beta, float v_dc, float T
 //  so the range is [-1, 1].
 // ─────────────────────────────────────────────
 static inline void get_phase_refs(float v_alpha, float v_beta, float v_dc,
-                                  float& Va, float& Vb, float& Vc)
+                                  float& Va, float& Vb, float& Vc, float omega_e = 0.0f, float Ts = 0.0f)
 {
     // inv_clarke gives phase voltages in volts
-    float a, b, c;
     //float alpha_n = v_alpha / (v_dc * 0.5f);   // normalise to [-1,1]
     //float beta_n  = v_beta  / (v_dc * 0.5f);
-    float alpha_n = v_alpha / (v_dc / SQRT3);   // Corrected: normalise to [-1,1] using Vdc/√3
-    float beta_n  = v_beta  / (v_dc / SQRT3);
-    a =  alpha_n;
-    b = (-alpha_n + SQRT3 * beta_n) / 2.0f;
-    c = (-alpha_n - SQRT3 * beta_n) / 2.0f;
-    Va = a; Vb = b; Vc = c;
+    //float alpha_n = v_alpha / (v_dc / SQRT3);   // Corrected: normalise to [-1,1] using Vdc/√3
+    //float beta_n  = v_beta  / (v_dc / SQRT3);
+    float alpha_n = v_alpha / (2 * v_dc / M_PI);   // Corrected: normalise to [-1,1] using 2Vdc/π
+    float beta_n  = v_beta  / (2 * v_dc / M_PI);
+    
+    float theta_comp = omega_e * Ts * COMP_RATIO;
+    float cos_t = lut::cosf(theta_comp);
+    float sin_t = lut::sinf(theta_comp);
+
+    float alpha_c = alpha_n * cos_t - beta_n * sin_t;
+    float beta_c  = alpha_n * sin_t + beta_n * cos_t;
+
+    Va = alpha_c;
+    Vb = (-alpha_c + SQRT3 * beta_c) / 2.0f;
+    Vc = (-alpha_c - SQRT3 * beta_c) / 2.0f;
 }
 
 // ─────────────────────────────────────────────
@@ -239,11 +260,11 @@ static inline void get_phase_refs(float v_alpha, float v_beta, float v_dc,
 //     Zero-sequence centres min/max → same DC bus
 //     utilisation as SVPWM with simpler maths
 // ─────────────────────────────────────────────
-static void sym_pwm(float v_alpha, float v_beta, float v_dc,
+static void sym_pwm(float v_alpha, float v_beta, float v_dc, float Ts, float omega_e,
                     float* da, float* db, float* dc)
 {
     float Va, Vb, Vc;
-    get_phase_refs(v_alpha, v_beta, v_dc, Va, Vb, Vc);
+    get_phase_refs(v_alpha, v_beta, v_dc, Va, Vb, Vc, omega_e, Ts);
 
     // Zero-sequence = midpoint of max and min
     float z = -(std::min({Va, Vb, Vc}) + std::max({Va, Vb, Vc})) / 2.0f;
@@ -259,12 +280,12 @@ static void sym_pwm(float v_alpha, float v_beta, float v_dc,
 //     Each variant clamps a different phase to
 //     a rail for 120°/cycle → ~33% fewer switches
 // ─────────────────────────────────────────────
-static void dpwm(float v_alpha, float v_beta, float v_dc,
+static void dpwm(float v_alpha, float v_beta, float v_dc, float Ts, float omega_e,
                  int variant,
                  float* da, float* db, float* dc)
 {
     float Va, Vb, Vc;
-    get_phase_refs(v_alpha, v_beta, v_dc, Va, Vb, Vc);
+    get_phase_refs(v_alpha, v_beta, v_dc, Va, Vb, Vc, omega_e, Ts);
 
     float Vab = Va - Vb;
     float Vbc = Vb - Vc;
@@ -317,13 +338,16 @@ void modulate(
     float v_beta,
     float v_dc,
     float Ts,
-    float* dutyA, float* dutyB, float* dutyC)
+    float* dutyA, float* dutyB, float* dutyC,
+    float omega_e,
+    float* applied_mag) 
 {
     switch (type)
     {
         case ModulationType::SVPWM:
             svpwm_standard(v_alpha, v_beta, v_dc,
-                           dutyA, dutyB, dutyC);
+                           dutyA, dutyB, dutyC,
+                           applied_mag);
             break;
 
         case ModulationType::SVPWM_COMP:
@@ -332,29 +356,29 @@ void modulate(
             break;
 
         case ModulationType::SVPWM_SUPERPOS:
-            svpwm_superposition(v_alpha, v_beta, v_dc, Ts,
+            svpwm_superposition(v_alpha, v_beta, v_dc, Ts, omega_e,
                                 dutyA, dutyB, dutyC);
             break;
 
         case ModulationType::SYM_PWM:
-            sym_pwm(v_alpha, v_beta, v_dc,
+            sym_pwm(v_alpha, v_beta, v_dc, Ts, omega_e,
                     dutyA, dutyB, dutyC);
             break;
 
         case ModulationType::DPWM0:
-            dpwm(v_alpha, v_beta, v_dc, 0, dutyA, dutyB, dutyC);
+            dpwm(v_alpha, v_beta, v_dc, Ts, omega_e, 0, dutyA, dutyB, dutyC);
             break;
 
         case ModulationType::DPWM1:
-            dpwm(v_alpha, v_beta, v_dc, 1, dutyA, dutyB, dutyC);
+            dpwm(v_alpha, v_beta, v_dc, Ts, omega_e, 1, dutyA, dutyB, dutyC);
             break;
 
         case ModulationType::DPWM2:
-            dpwm(v_alpha, v_beta, v_dc, 2, dutyA, dutyB, dutyC);
+            dpwm(v_alpha, v_beta, v_dc, Ts, omega_e, 2, dutyA, dutyB, dutyC);
             break;
 
         case ModulationType::DPWM3:
-            dpwm(v_alpha, v_beta, v_dc, 3, dutyA, dutyB, dutyC);
+            dpwm(v_alpha, v_beta, v_dc, Ts, omega_e, 3, dutyA, dutyB, dutyC);
             break;
 
         default:

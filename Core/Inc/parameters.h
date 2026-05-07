@@ -62,9 +62,16 @@
 
 #define MOTOR_ROTATION_DIRECTION    1 // 1 for anticlockwise, -1 for clockwise
 
-#define MOTOR_ALIGNMENT_POS_WINDOW  2048 // Counts of the encoder position within which alignment is considered successful (tuned experimentally)
+#define MOTOR_ALIGNMENT_POS_WINDOW  32768 // Counts of the encoder position within which alignment is considered successful (tuned experimentally)
 #define MOTOR_ALIGNMENT_THRESHOLD   1 // Encoder position delta window for successful alignment
 #define MOTOR_ALIGNMENT_VOLTAGE     5 // Volts to apply during encoder alignment
+#define MOTOR_ALIGNMENT_ID_REF      1.0f
+#define MOTOR_ALIGNMENT_IQ_REF      0.0f
+#define MOTOR_SPEED_LIMIT_RPM       10000.0f
+
+#define MOTOR_MAX_PHASE_CURRENT     4.8f // Maximum phase current for safety (in amps)
+#define MOTOR_MAX_CURRENT           5.0f // Maximum current for safety (in amps), including battery current
+#define MOTOR_MIN_VOLTAGE           6.0f // Minimum voltage for operation (in volts) 
 
 #define SIXSTEP_DUTYCYCLE           1.0f // Range 1.0 to 0.5
 
@@ -74,7 +81,7 @@
 
 #define FOC_ALLOWED                 false // Allow FOC mode in the system (set to false to disable FOC-related code and save flash/RAM)
 #define FOC_INITIAL_RPM             1500U // Target RPM for FOC mode (used when FOC is enabled and selected)
-#define FOC_OVERSAMPLING_SIZE       16U // Number of samples to average for oversampling (must be a power of 2 for efficient averaging)
+#define FOC_OVERSAMPLING_SIZE       4U // Number of samples to average for oversampling (must be a power of 2 for efficient averaging)
 #define FOC_RAMP_DOWN_SPEED         200U // 200 RPM/s
 
 #define MASTER_MODE                 true // Set master or slave mode in load testing
@@ -128,7 +135,8 @@ enum ErrorFlag : uint32_t {
     ERROR_TIM_CONFIG        = 1 << 3,
     ERROR_ENCODER_CONFIG    = 1 << 4,
     ERROR_FOC_CONFIG        = 1 << 5,
-    ERROR_OVERCURRENT       = 1 << 6
+    ERROR_OVERCURRENT       = 1 << 6,
+    ERROR_UNDERVOLTAGE      = 1 << 7
 };
 
 typedef struct {
@@ -153,6 +161,7 @@ typedef struct {
     float speed;
     float torque;
     float time;
+    bool is_torque_control;
 } Target_t;
 
 enum PrintData : uint32_t {
@@ -186,13 +195,32 @@ enum PrintData : uint32_t {
     PRINT_FOC_IDSP  = 1 << 27,
     PRINT_FOC_IQSP  = 1 << 28,
     PRINT_FOC_VD    = 1 << 29,
-    PRINT_FOC_VQ    = 1 << 30
+    PRINT_FOC_VQ    = 1 << 30,
+};
+
+enum PrintDataEx : uint32_t {
+    PRINT_OM        = 1 << 0,
+    PRINT_M_INDEX   = 1 << 1,
+    PRINT_FW        = 1 << 2,
+    PRINT_UMAG      = 1 << 3,
+    PRINT_IMAG      = 1 << 4,
+    PRINT_FFT       = 1 << 5
 };
 
 enum class PrintFormat : uint8_t {
     PRINT_UTF8,
     PRINT_BINARY
 };
+
+typedef struct {
+    float ia;
+    float ib;
+    float ic;
+    float va;
+    float vb;
+    float vbatt;
+    float ibatt;
+} Sampling_t;
 
 /*
 Timer allocation

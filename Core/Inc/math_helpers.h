@@ -43,6 +43,15 @@ float adcToVoltage(uint32_t raw, float vref, uint32_t resolution, float gain, fl
 float adcToCurrent(uint32_t raw, float vref, uint32_t resolution, float gain, float offset, float shunt);
 
 /**
+ * @brief Clamps a floating-point value between a specified lower and upper bound.
+ * @param value The value to be clamped.
+ * @param lower The lower bound for clamping.
+ * @param upper The upper bound for clamping.
+ * @return The clamped value, which will be equal to the input value if it is within the bounds, or the nearest bound if it is outside.
+ */
+float clampf(float value, float lower, float upper);
+
+/**
  * @brief Computes the average of an array of uint16_t values using a fast method that avoids overflow. The function sums all values in a uint32_t variable and then right shifts by the number of bits corresponding to the size of the array (assuming size is a power of 2) to get the average.
  * @param data_ptr Pointer to the array of uint16_t values.
  * @param size The number of elements in the array (must be a power of 2).

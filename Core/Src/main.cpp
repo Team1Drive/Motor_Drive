@@ -11,6 +11,7 @@
 #include "foc.h"
 #include "cmd.h"
 #include "math_helpers.h"
+#include "lut.h"
 #include <cstdint>
 
 #include "usbd_cdc_if.h"
@@ -33,16 +34,18 @@ void printTelemetryBinary(void);
 void speedControl(void);
 
 void startUpSequence(MotorControlMode mode);
-void alignRotor(void);
-void vvvfRampUp(void);
+void alignRotor(Sampling_t* sample);
+void vvvfRampUp(Sampling_t* sample);
 void sixStepCommutation(void);
+
+int8_t sampleAndProtect(Sampling_t* sample, bool bypass_protection = false);
+void trip(void);
 
 void clearRunningFlags(void);
 void loadAdcCalibration(ADCGain_t* adc_gain, uint8_t preset_num);
 
 /* Forward declaration for FOC ISR helper */
-static void foc_isr_tick(void);
-void focTick(void);
+void focTick(Sampling_t* sample);
 
 void test_PWM(void);
 void test_PWM_sweep(void);
@@ -103,11 +106,12 @@ volatile uint32_t error_flag = 0;
 
 ADCGain_t adc_gain;
 
-volatile Target_t target = { .speed = 0.0f, .torque = 0.0f, .time = 0.0f };
+volatile Target_t target = { .speed = 0.0f, .torque = 0.0f, .time = 0.0f, .is_torque_control = false };
 
-ModulationType modulation_type = ModulationType::SVPWM;
+ModulationType modulation_type = ModulationType::SVPWM_SUPERPOS;
 
 volatile uint32_t print_mask = 0;
+volatile uint32_t print_mask_ex = 0;
 volatile PrintFormat print_format = PrintFormat::PRINT_BINARY;
 
 ring_buffer_t rx_ring = { .head = 0, .tail = 0 };
@@ -302,22 +306,25 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
   if (htim->Instance == TIM8) {
     // PWM update interrupt
+    Sampling_t sample;
+    if (sampleAndProtect(&sample) != 0) return;
+
     switch (control_mode) {
       case MotorControlMode::MOTOR_FOC_LINEAR:
       case MotorControlMode::MOTOR_FOC_DPWM:
-        focTick();
+        focTick(&sample);
         break;
 
       case MotorControlMode::MOTOR_FOC_MANUAL:
-        focTick();
+        focTick(&sample);
         break;
 
       case MotorControlMode::MOTOR_VVVF:
-        vvvfRampUp();
+        vvvfRampUp(&sample);
         break;
 
       case MotorControlMode::MOTOR_ALIGN:
-        alignRotor();
+        alignRotor(&sample);
         break;
         
       default:
@@ -453,7 +460,7 @@ void timer3IRQ(void) {
         led_green.write(0);
         led_yellow_1.write(0);
         led_yellow_2.write(0);
-        if (error_flag & ERROR_OVERCURRENT) {
+        if ((error_flag & ERROR_OVERCURRENT) || (error_flag & ERROR_UNDERVOLTAGE)) {
           led_red.toggle();
         }
        break;
@@ -483,7 +490,7 @@ void timer6IRQ(void) {
  * @note The data fields to be printed are determined by the print_mask variable, and the format is determined by the print_format variable. The function reads the latest ADC data, processes it into physical units, and constructs a formatted string to be sent over USB.
  */
 void printTelemetryUTF8(void) {
-  if (print_mask == 0 || (print_format != PrintFormat::PRINT_UTF8)) return;
+  if ((print_mask == 0 && print_mask_ex == 0) || (print_format != PrintFormat::PRINT_UTF8)) return;
   
   uint16_t adc1_raw[3];
   uint16_t adc2_raw[2];
@@ -629,6 +636,21 @@ void printTelemetryUTF8(void) {
   if (print_mask & PRINT_FOC_VQ) {
     pos += snprintf(buffer + pos, sizeof(buffer) - pos, "foc_vq %.2f ", foc_state.Vq_cmd);
   }
+  if (print_mask_ex & PRINT_OM) {
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "om %u ", foc_state.om);
+  }
+  if (print_mask_ex & PRINT_M_INDEX) {
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "m_index %.2f ", foc_state.m_index);
+  }
+  if (print_mask_ex & PRINT_FW) {
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "fw %u ", foc_state.fw_active);
+  }
+  if (print_mask_ex & PRINT_UMAG) {
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "umag %.2f ", foc_state.u_mag);
+  }
+  if (print_mask_ex & PRINT_IMAG) {
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "imag %.2f ", foc_state.i_mag);
+  }
   if (pos > 0) {
     buffer[pos - 1] = '\n';
     buffer[pos] = '\0';
@@ -647,7 +669,7 @@ void printTelemetryUTF8(void) {
  * @note Binary data sent is parsed automatically by a script on the host computer.
  */
 void printTelemetryBinary(void) {
-  if (print_mask == 0 || (print_format != PrintFormat::PRINT_BINARY)) return;
+  if ((print_mask == 0 && print_mask_ex == 0) || (print_format != PrintFormat::PRINT_BINARY)) return;
 
   uint16_t adc1_raw[3];
   uint16_t adc2_raw[2];
@@ -684,8 +706,8 @@ void printTelemetryBinary(void) {
                    | PRINT_IBATT_RAW)) != 0) {
     adc3.getLatestDataMean(adc3_raw, FOC_OVERSAMPLING_SIZE);
 
-    ic = adcToCurrent(adc3_raw[0], 3.3f, 4096, 50.0f, 1.65f + adc_gain.ic_offset, adc_gain.ic_shunt);
-    //ic = -ia - ib;
+    //ic = adcToCurrent(adc3_raw[0], 3.3f, 4096, 50.0f, 1.65f + adc_gain.ic_offset, adc_gain.ic_shunt);
+    ic = -ia - ib;
     ibatt = adcToCurrent(adc3_raw[1], 3.3f, 4096, 50.0f, 1.65f + adc_gain.ibatt_offset, adc_gain.ibatt_shunt);
 
     ic_max.newValue(fabsf(ic));
@@ -693,15 +715,28 @@ void printTelemetryBinary(void) {
   }
 
   // Construct a binary packet
-  uint8_t buffer[128];
+  uint8_t buffer[256];
   uint8_t* ptr = buffer;
+
+  uint32_t error = error_flag;
+  uint8_t mode = static_cast<uint8_t>(control_mode);
   uint32_t mask = print_mask;
+  uint32_t mask_ex = print_mask_ex;
 
   *ptr++ = 0xAA;
   *ptr++ = 0x55;
+
+  memcpy(ptr, &error, 4);
+  ptr += 4;
+
+  memcpy(ptr, &mode, 1);
+  ptr += 1;
   
   memcpy(ptr, &mask, 4);
   ptr += 4;
+
+  memcpy(ptr, &mask_ex, 4);
+  ptr += 4; 
 
   if (print_mask & PRINT_RPM) {
     float val = encoder.getRPM();
@@ -860,6 +895,31 @@ void printTelemetryBinary(void) {
     memcpy(ptr, &val, 4);
     ptr += 4;
   }
+  if (print_mask_ex & PRINT_OM) {
+    uint8_t val = foc_state.om;
+    memcpy(ptr, &val, 1);
+    ptr += 1;
+  }
+  if (print_mask_ex & PRINT_M_INDEX) {
+    float val = foc_state.m_index;
+    memcpy(ptr, &val, 4);
+    ptr += 4;
+  }
+  if (print_mask_ex & PRINT_FW) {
+    uint8_t val = foc_state.fw_active;
+    memcpy(ptr, &val, 1);
+    ptr += 1;
+  }
+  if (print_mask_ex & PRINT_UMAG) {
+    float val = foc_state.u_mag;
+    memcpy(ptr, &val, 4);
+    ptr += 4;
+  }
+  if (print_mask_ex & PRINT_IMAG) {
+    float val = foc_state.i_mag;
+    memcpy(ptr, &val, 4);
+    ptr += 4;
+  }
   if (ptr != buffer) {
       CDC_Transmit_HS(buffer, ptr - buffer);
   }
@@ -868,69 +928,96 @@ void printTelemetryBinary(void) {
 void speedControl(void) {
   static float ramp_speed_increment = 0.0f;
   static uint32_t ramp_tick = 0;
+  static float iq_torque_clamp;
+  static bool fw_active = false;
 
   foc_state.ts_speed = 1.0f / (float)speedControlTimer.getFrequency();
   
   /* =========================================================================
   *   Ramp up/down logic
   * ========================================================================= */
-  if ((system_flag & FLAG_FOC_RUNNING) == 0) {
+  if (((system_flag & FLAG_FOC_RUNNING) == 0) && (control_mode != MotorControlMode::MOTOR_FOC_MANUAL)) {
     float ramp_down_step = FOC_RAMP_RATE * foc_state.ts_speed;
     if (target.speed > 0.0f){
       target.speed -= ramp_down_step;
       if (target.speed < 0.0f) {
         target.speed = 0.0f;
+        target.torque = 0.0f;
+        foc_state.target_rpm = 0.0f;
+        foc_reset(&foc_state);
         motorPWM.stop();
         control_mode = MotorControlMode::MOTOR_STOP;
         relay.write(0);
+        return;
       }
     }
     else {
       target.speed += ramp_down_step;
       if (target.speed > 0.0f) {
         target.speed = 0.0f;
+        target.torque = 0.0f;
+        foc_state.target_rpm = 0.0f;
+        foc_reset(&foc_state);
         motorPWM.stop();
         control_mode = MotorControlMode::MOTOR_STOP;
         relay.write(0);
+        return;
       }
     }
   }
 
-  // Check if target speed has changed and update foc_state.target_rpm accordingly, with optional ramping
-  if (target.speed != foc_state.target_rpm) {
-    // Check if new target contains ramp flag
-    if (system_flag & FLAG_TARGET_RAMP) {
-      // Set up ramp parameters if this is the first tick of a new speed target
-      if (system_flag & FLAG_SPEED_RAMP_INIT) {
-        float speed_delta = target.speed - foc_state.target_rpm;
-        ramp_tick = (uint32_t)(target.time * (float)SPEEDLOOP_FREQ_HZ + 0.5f) + 1;
-        ramp_speed_increment = speed_delta / (float)ramp_tick;
-        if (ramp_speed_increment > (FOC_RAMP_RATE / SPEEDLOOP_FREQ_HZ)) {
-          ramp_speed_increment = FOC_RAMP_RATE / SPEEDLOOP_FREQ_HZ;
-          ramp_tick = (uint32_t)(fabsf(speed_delta / ramp_speed_increment)) + 1;
+  if (!target.is_torque_control) {
+  /* =========================================================================
+  *   Speed Ramping
+  * ========================================================================= */
+    // Check if target speed has changed and update foc_state.target_rpm accordingly, with optional ramping
+    if (target.speed != foc_state.target_rpm) {
+      // Check if new target contains ramp flag
+      if (system_flag & FLAG_TARGET_RAMP) {
+        // Set up ramp parameters if this is the first tick of a new speed target
+        if (system_flag & FLAG_SPEED_RAMP_INIT) {
+          float speed_delta = target.speed - foc_state.target_rpm;
+          ramp_tick = (uint32_t)(target.time * (float)SPEEDLOOP_FREQ_HZ + 0.5f) + 1;
+          ramp_speed_increment = speed_delta / (float)ramp_tick;
+          if (ramp_speed_increment > (FOC_RAMP_RATE / SPEEDLOOP_FREQ_HZ)) {
+            ramp_speed_increment = FOC_RAMP_RATE / SPEEDLOOP_FREQ_HZ;
+            ramp_tick = (uint32_t)(fabsf(speed_delta / ramp_speed_increment)) + 1;
+          }
+          if (ramp_speed_increment < -(FOC_RAMP_RATE / SPEEDLOOP_FREQ_HZ)) {
+            ramp_speed_increment = -FOC_RAMP_RATE / SPEEDLOOP_FREQ_HZ;
+            ramp_tick = (uint32_t)(fabsf(speed_delta / ramp_speed_increment)) + 1;
+          }
+          system_flag &= ~FLAG_SPEED_RAMP_INIT;
         }
-        if (ramp_speed_increment < -(FOC_RAMP_RATE / SPEEDLOOP_FREQ_HZ)) {
-          ramp_speed_increment = -FOC_RAMP_RATE / SPEEDLOOP_FREQ_HZ;
-          ramp_tick = (uint32_t)(fabsf(speed_delta / ramp_speed_increment)) + 1;
+        if (ramp_tick > 0) {
+          foc_state.target_rpm += ramp_speed_increment;
+          ramp_tick--;
         }
-        system_flag &= ~FLAG_SPEED_RAMP_INIT;
+        if (ramp_tick == 0) {
+          foc_state.target_rpm = target.speed;
+        }
       }
-      if (ramp_tick > 0) {
-        foc_state.target_rpm += ramp_speed_increment;
-        ramp_tick--;
-      }
-      if (ramp_tick == 0) {
+      // If no ramping, update target RPM immediately
+      else {
         foc_state.target_rpm = target.speed;
       }
     }
-    // If no ramping, update target RPM immediately
-    else {
-      foc_state.target_rpm = target.speed;
+    else if (system_flag & FLAG_TARGET_RAMP) {
+      ramp_speed_increment = 0.0f;
+      system_flag &= ~FLAG_TARGET_RAMP;
     }
+    iq_torque_clamp = FOC_I_CLAMP_UPPER_SP;
   }
-  else if (system_flag & FLAG_TARGET_RAMP) {
-    ramp_speed_increment = 0.0f;
-    system_flag &= ~FLAG_TARGET_RAMP;
+
+  else {
+  /* =========================================================================
+  *   Torque Ramping
+  * ========================================================================= */
+    iq_torque_clamp = target.torque / FOC_KT;
+    foc_state.target_rpm = 0.0f;
+    if (system_flag & FLAG_SPEED_RAMP_INIT) {
+      system_flag &= ~FLAG_SPEED_RAMP_INIT;
+    }
   }
   
   /* =========================================================================
@@ -954,40 +1041,69 @@ void speedControl(void) {
   float err_sp = foc_state.omega_ref - omega_m;
   float new_Iq_ref = PI_update(&foc_state.pi_speed, err_sp, foc_state.ts_speed);
 
+  // Clamp Iq reference based on torque limits
+  new_Iq_ref = clampf(new_Iq_ref, -iq_torque_clamp, iq_torque_clamp);
+
   
   /* =========================================================================
   *   Field-weakening Loop
   * ========================================================================= */
-  float U_max_fw   = (foc_state.Vdc / SQRT3) * 0.95f;
-  float u_mag_prev = foc_state.u_mag;
+  const float m_req = foc_state.u_mag / foc_state.u_abs_limit;
+
+  const float m_fw_entry    = 1.0f;
+  const float m_fw_release  = 0.96;
+  //const float m_fw_target   = 0.985f;
+
+  const float u_fw_limit = 2 * foc_state.Vdc / M_PI * 0.95f;
+  const float u_req = foc_state.u_mag;
+  const float omega_abs = fabsf(foc_state.omega_m);
   float new_Id_ref;
-  if (fabsf(foc_state.omega_m) > 20.0f) {
-      float fw_error = (U_max_fw - u_mag_prev) / fabsf(foc_state.omega_m);
-      //foc_state.pi_fw.integrator += foc_state.pi_fw.ki * fw_error * foc_state.ts_speed;
-      //if (foc_state.pi_fw.integrator > 0.0f) foc_state.pi_fw.integrator = 0.0f;
-      //if (foc_state.pi_fw.integrator < FOC_ID_FW_MIN) foc_state.pi_fw.integrator = FOC_ID_FW_MIN;
-      //new_Id_ref = foc_state.pi_fw.integrator;
-      new_Id_ref = PI_update(&foc_state.pi_fw, fw_error, foc_state.ts_speed);
-      if (new_Id_ref > 0.0f) new_Id_ref = 0.0f;
+
+  if (omega_abs > 20.0f) {
+      if (!fw_active && m_req > m_fw_entry) {
+          fw_active = true;
+      } else if (fw_active && m_req < m_fw_release && foc_state.Id_ref > -0.05f) {
+          fw_active = false;
+      }
+
+      if (fw_active) {
+          float fw_error = (u_fw_limit - u_req) / omega_abs;
+          //foc_state.pi_fw.integrator += foc_state.pi_fw.ki * fw_error * foc_state.ts_speed;
+          //if (foc_state.pi_fw.integrator > 0.0f) foc_state.pi_fw.integrator = 0.0f;
+          //if (foc_state.pi_fw.integrator < FOC_ID_FW_MIN) foc_state.pi_fw.integrator = FOC_ID_FW_MIN;
+          //new_Id_ref = foc_state.pi_fw.integrator;
+          new_Id_ref = PI_update(&foc_state.pi_fw, fw_error, foc_state.ts_speed);
+          new_Id_ref = clampf(new_Id_ref, FOC_ID_FW_MIN, 0.0f);
+      } else {
+          new_Id_ref = 0.0f;
+          PI_reset(&foc_state.pi_fw);
+      }
   } else {
       new_Id_ref = 0.0f;
       PI_reset(&foc_state.pi_fw);
+      fw_active = false;
   }
-
   
   /* =========================================================================
   *   Setting new Id and Iq setpoints
   * ========================================================================= */
+  foc_state.i_mag = lut::hypotf(new_Id_ref, new_Iq_ref);
+  if (foc_state.i_mag > FOC_IMAX) {
+      float iq_ref_clamp = sqrtf(fmaxf(FOC_IMAX * FOC_IMAX - new_Id_ref * new_Id_ref, 0.0f));
+      new_Iq_ref = clampf(new_Iq_ref, -iq_ref_clamp, iq_ref_clamp);
+  }
+  if (new_Id_ref != 0.0f) foc_state.fw_active = 1U;
+  else foc_state.fw_active = 0U;
   // In manual FOC mode, current setpoints are controlled directly by the user
   if (control_mode != MotorControlMode::MOTOR_FOC_MANUAL) {
-    __disable_irq();
-    foc_state.Iq_ref = new_Iq_ref;
-    foc_state.Id_ref = new_Id_ref;
-    __enable_irq();
+      __disable_irq();
+      foc_state.Iq_ref = new_Iq_ref;
+      foc_state.Id_ref = new_Id_ref;
+      __enable_irq();
   }
 }
 
-void alignRotor(void) {
+void alignRotor(Sampling_t* sample) {
   if (control_mode != MotorControlMode::MOTOR_ALIGN) return;
   
   static uint16_t p_pos = 0;
@@ -997,21 +1113,12 @@ void alignRotor(void) {
 
   // Step 1: If electrical zero is not aligned, apply alignment voltage and monitor encoder position for settling
   if ((system_flag & FLAG_ELEC_ZERO_ALIGNED) == 0) {
+    // Set alignment voltage in D-axis to hold the rotor to electrical zero position
+    foc_state.Iq_ref = MOTOR_ALIGNMENT_IQ_REF;
+    foc_state.Id_ref = MOTOR_ALIGNMENT_ID_REF;
+    focTick(sample);
 
-    if ((system_flag & FLAG_ROTOR_ALIGNING) == 0) {
-      uint16_t vdc_sample[FOC_OVERSAMPLING_SIZE];
-      adc1.getLatestChannel(2, vdc_sample, FOC_OVERSAMPLING_SIZE);
-      float Vdc = adcToVoltage(fastAverage(vdc_sample, FOC_OVERSAMPLING_SIZE), 3.3f, 65536,
-                              adc_gain.vbatt_gain, adc_gain.vbatt_offset);
-
-      float dutyA, dutyB, dutyC;
-      foc_state.ts = 1.0f / (float)motorPWM.getFrequency();
-      focAlignZero(&foc_state, MOTOR_ALIGNMENT_VOLTAGE, Vdc, &dutyA, &dutyB, &dutyC);
-      motorPWM.setDuty(dutyA, dutyB, dutyC);
-
-      system_flag |= FLAG_ROTOR_ALIGNING;
-    }
-
+    // Monitor encoder position to check for settling
     uint16_t pos = encoder.getPosBypass();
     
     int16_t delta_pos = (int16_t)(pos - p_pos);
@@ -1023,6 +1130,7 @@ void alignRotor(void) {
       settlement_counter = 0;
     }
 
+    // Once position has settled within threshold for sufficient time, consider aligned and set electrical zero
     if (settlement_counter > MOTOR_ALIGNMENT_POS_WINDOW) {
       encoder.elecZeroAlign();
 
@@ -1038,39 +1146,36 @@ void alignRotor(void) {
 
   // Step 2: Once aligned, ramp up speed using VVVF to search for index pulse for absolute position reference
   else if (!encoder.is_synchronized_) {
-    const uint32_t ramp_up = VVVF_RAMP_UP_SPEED; // RPM/s
-    // Increment aligned with interrupt frequency
     uint32_t frequency = motorPWM.getFrequency();
-    float step_increment = (float)ramp_up / frequency;
-
-    // Ramp up speed
+    float step_increment = (float)VVVF_RAMP_UP_SPEED / (float)frequency;
     rpm += step_increment;
+    if (rpm > VVVF_THRESHOLD_RPM) rpm = VVVF_THRESHOLD_RPM;
 
-    // Calculate electrical angle
     float electrical_freq = rpm / 60.0f * MOTOR_POLE_PAIRS;
-
-    float delta_angle = 2.0f * M_PI * electrical_freq / frequency;
+    float delta_angle = 2.0f * M_PI * electrical_freq / (float)frequency;
     angle += delta_angle * MOTOR_ROTATION_DIRECTION;
     if (angle >= 2.0f * M_PI) angle -= 2.0f * M_PI;
+    if (angle < 0.0f) angle += 2.0f * M_PI;
 
-    // Calculate voltage amplitude
-    float amplitude;
-    const float MIN_VOLTAGE = 0.15f;  // Boost start voltage
-    const float KNEE_RPM = 1000.0f;   // Knee point (RPM)
-    amplitude = MIN_VOLTAGE + (1.0f - MIN_VOLTAGE) * (rpm / KNEE_RPM);
+    foc_state.Iq_ref = MOTOR_ALIGNMENT_ID_REF;
+    foc_state.Id_ref = MOTOR_ALIGNMENT_IQ_REF;
 
-    // Limit output range
-    if (amplitude > 1.0f) amplitude = 1.0f;
-
-    float dutyA = 0.5f + amplitude * 0.5f * sinf(angle);
-    float dutyB = 0.5f + amplitude * 0.5f * sinf(angle - 2.0f * M_PI / 3.0f);
-    float dutyC = 0.5f + amplitude * 0.5f * sinf(angle + 2.0f * M_PI / 3.0f);
-
+    float dutyA, dutyB, dutyC;
+    float omega_m = (rpm * RPM_TO_RAD_S) * MOTOR_ROTATION_DIRECTION;
+    foc_state.ts = 1.0f / (float)frequency;
+    foc(modulation_type,
+        &foc_state,
+        sample->ia, sample->ib, sample->ic,
+        sample->vbatt,
+        angle, omega_m,
+        &dutyA, &dutyB, &dutyC);
     motorPWM.setDuty(dutyA, dutyB, dutyC);
   }
 
   else {
     control_mode = MotorControlMode::MOTOR_STOP;
+    foc_state.Iq_ref = 0.0f;
+    foc_state.Id_ref = 0.0f;
     motorPWM.stop();
     relay.write(0);
     rpm = 0.0f;
@@ -1093,10 +1198,13 @@ void alignRotor(void) {
 void startUpSequence(MotorControlMode mode) {
   if (control_mode != MotorControlMode::MOTOR_STARTUP) return;
 
+  Sampling_t sample;
+  if (sampleAndProtect(&sample, true) != 0) return;
+
   if ((system_flag & FLAG_ELEC_ZERO_ALIGNED && encoder.is_synchronized_) == 0) {
     control_mode = MotorControlMode::MOTOR_ALIGN;
     usb_printf("Starting rotor alignment sequence...\r\n");
-    alignRotor();
+    alignRotor(&sample);
     return;
   }
 
@@ -1107,8 +1215,9 @@ void startUpSequence(MotorControlMode mode) {
       if (target.speed == 0.0f) target.speed = FOC_INITIAL_RPM;
       control_mode = MotorControlMode::MOTOR_FOC_LINEAR;
       system_flag |= FLAG_FOC_RUNNING;
+
       speedControl();
-      focTick();
+      focTick(&sample);
       usb_printf("Starting FOC linear startup sequence...\r\n");
       break;
     case MotorControlMode::MOTOR_VVVF:
@@ -1117,7 +1226,7 @@ void startUpSequence(MotorControlMode mode) {
       hallsensor.read();
       system_flag |= FLAG_VVVF_RAMP_UP;
       control_mode = MotorControlMode::MOTOR_VVVF;
-      vvvfRampUp();
+      vvvfRampUp(&sample);
       usb_printf("Starting VVVF ramp-up sequence...\r\n");
       break;
     default:
@@ -1133,7 +1242,7 @@ void startUpSequence(MotorControlMode mode) {
  * @brief Implements a VVVF ramp-up sequence for a BLDC motor. Gradually increases the frequency and amplitude of the PWM signals to smoothly accelerate the motor from standstill to a target speed defined by VVVF_THRESHOLD_RPM.
  * @note To be called in the TIM8 update interrupt when running in MOTOR_STARTUP mode.
  */
-void vvvfRampUp(void) {
+void vvvfRampUp(Sampling_t* sample) {
   if (control_mode != MotorControlMode::MOTOR_VVVF) return;
   const uint32_t ramp_up = VVVF_RAMP_UP_SPEED; // RPM/s
   static float rpm;  
@@ -1200,11 +1309,16 @@ void vvvfRampUp(void) {
   float step_increment = (float)ramp_up / frequency;
 
   // Ramp up or down the speed
+  const float v_dc = sample->vbatt;
+  uint8_t low_voltage;
+  if (v_dc < 16.0f) low_voltage = 1;
+  else low_voltage = 0;
+
   if (system_flag & FLAG_VVVF_RAMP_UP) {
-    if ((rpm < VVVF_MAX_RPM >> 1) && (rpm < target.speed / 2)) {
+    if ((rpm < VVVF_MAX_RPM >> low_voltage) && (rpm < target.speed / 2)) {
       rpm += step_increment;
-      if (rpm >= VVVF_MAX_RPM >> 1) {
-        rpm = VVVF_MAX_RPM >> 1;
+      if (rpm >= VVVF_MAX_RPM >> low_voltage) {
+        rpm = VVVF_MAX_RPM >> low_voltage;
       }
       else if (rpm >= (target.speed / 2)) {
         rpm = target.speed / 2;
@@ -1258,29 +1372,30 @@ void vvvfRampUp(void) {
   float dutyB = 0.5f + amplitude * 0.5f * sinf(angle - 2.0f * M_PI / 3.0f);
   float dutyC = 0.5f + amplitude * 0.5f * sinf(angle + 2.0f * M_PI / 3.0f); */
 
-  const float MIN_AMPLITUDE = 0.15f;
-  float amplitude = MIN_AMPLITUDE + (1.0f - MIN_AMPLITUDE) * rpm / ((float)VVVF_MAX_RPM * 0.5f);
-  if (amplitude < MIN_AMPLITUDE) amplitude = MIN_AMPLITUDE;
-  if (amplitude > 1.0f) amplitude = 1.0f;
+  float amplitude;
+  if (low_voltage) {
+    const float MIN_AMPLITUDE = 0.20f;
+    amplitude = MIN_AMPLITUDE + (1.0f - MIN_AMPLITUDE) * rpm / ((float)VVVF_MAX_RPM * 0.5f);
+    //amplitude = rpm / ((float)VVVF_MAX_RPM * 0.5f);
+    if (amplitude < MIN_AMPLITUDE) amplitude = MIN_AMPLITUDE;
+    if (amplitude > 1.0f) amplitude = 1.0f;
+  }
+  else {
+    const float MIN_AMPLITUDE = 0.10f;
+    amplitude = MIN_AMPLITUDE + (1.0f - MIN_AMPLITUDE) * rpm / ((float)VVVF_MAX_RPM);
+    if (amplitude < MIN_AMPLITUDE) amplitude = MIN_AMPLITUDE;
+    if (amplitude > 1.0f) amplitude = 1.0f;
+  }
 
-  float v_dc = adcToVoltage(adc1.getLatestChannelMean(2, FOC_OVERSAMPLING_SIZE), 3.3f, 65536, adc_gain.vbatt_gain, adc_gain.vbatt_offset);
-  float u_max_linear = v_dc / SQRT3;
-  float u_mag = amplitude * u_max_linear;
-  float v_alpha = u_mag * cosf(angle);
-  float v_beta = u_mag * sinf(angle);
-  float ts = 1.0f / frequency;
+  const float u_max_linear = v_dc / SQRT3;
+  const float u_mag = amplitude * u_max_linear;
+  const float v_alpha = u_mag * lut::cosf(angle);
+  const float v_beta = u_mag * lut::sinf(angle);
+  const float ts = 1.0f / frequency;
   float dutyA, dutyB, dutyC;
   modulate(modulation_type, v_alpha, v_beta, v_dc, ts, &dutyA, &dutyB, &dutyC);
 
   motorPWM.setDuty(dutyA, dutyB, dutyC);
-
-  if (FOC_ALLOWED && encoder.is_synchronized_ && encoder.is_zeroed_ && rpm >= VVVF_THRESHOLD_RPM >> 1) {
-    system_flag &= ~FLAG_VVVF_RUNNING;
-    system_flag |= FLAG_FOC_RUNNING;
-    foc_state.target_rpm = FOC_INITIAL_RPM;
-    control_mode = MotorControlMode::MOTOR_FOC_LINEAR;
-    usb_printf("Entering FOC mode\r\n");
-  }
 }
 
 /**
@@ -1339,6 +1454,52 @@ const int8_t commutation_acw[8][3] = {
   float dutyC = (c_state == 1) ? SIXSTEP_DUTYCYCLE : (c_state == 0) ? (1.0f - SIXSTEP_DUTYCYCLE) : -1.0f;
   
   motorPWM.setDuty(dutyA, dutyB, dutyC);
+}
+
+int8_t sampleAndProtect(Sampling_t* sample, bool bypass_protection) {
+    if (adc1.data_ready_ == false || adc2.data_ready_ == false || adc3.data_ready_ == false) return -2;
+
+    uint16_t adc1_raw[3];
+    uint16_t adc2_raw[2];
+    uint16_t adc3_raw[2];
+
+    adc1.getLatestDataMean(adc1_raw, FOC_OVERSAMPLING_SIZE);
+    adc2.getLatestDataMean(adc2_raw, FOC_OVERSAMPLING_SIZE);
+    adc3.getLatestDataMean(adc3_raw, FOC_OVERSAMPLING_SIZE);
+
+    sample->ia = adcToCurrent(adc1_raw[0], 3.3f, 65536, 50.0f, 1.65f + adc_gain.ia_offset, adc_gain.ia_shunt);
+    sample->ib = adcToCurrent(adc2_raw[0], 3.3f, 65536, 50.0f, 1.65f + adc_gain.ib_offset, adc_gain.ib_shunt);
+    //sample->ic = adcToCurrent(adc3_raw[0], 3.3f, 4096, 50.0f, 1.65f + adc_gain.ic_offset, adc_gain.ic_shunt);
+    sample->ic = -(sample->ia + sample->ib); // Reconstruct Ic from Ia and Ib for better accuracy
+    sample->va = adcToVoltage(adc2_raw[1], 3.3f, 65536, adc_gain.va_gain, 1.65f + adc_gain.va_offset);
+    sample->vb = adcToVoltage(adc1_raw[1], 3.3f, 65536, adc_gain.vb_gain, 1.65f + adc_gain.vb_offset);
+    sample->vbatt = adcToVoltage(adc1_raw[2], 3.3f, 65536, adc_gain.vbatt_gain, 0.0f + adc_gain.vbatt_offset);
+    sample->ibatt = adcToCurrent(adc3_raw[1], 3.3f, 4096, 50.0f, 1.65f + adc_gain.ibatt_offset, adc_gain.ibatt_shunt);
+
+    if (bypass_protection) return 0;
+
+    if (fabsf(sample->ia) > MOTOR_MAX_PHASE_CURRENT || fabsf(sample->ib) > MOTOR_MAX_PHASE_CURRENT || fabsf(sample->ic) > MOTOR_MAX_PHASE_CURRENT) {
+        trip();
+        error_flag |= ERROR_OVERCURRENT;
+        foc_state.fault = true;
+        return -1;
+    }
+
+    if (sample->vbatt < MOTOR_MIN_VOLTAGE) {
+        trip();
+        error_flag |= ERROR_UNDERVOLTAGE;
+        foc_state.fault = true;
+        return -1;
+    }
+
+    return 0;
+}
+
+void trip(void) {
+    motorPWM.stop();
+    relay.write(0);
+    control_mode = MotorControlMode::MOTOR_PROTECTION;
+    clearRunningFlags();
 }
 
 void clearRunningFlags(void) {
@@ -1458,12 +1619,14 @@ void cmd_align(int argc, char** argv) {
         return;
     }
     if (control_mode == MotorControlMode::MOTOR_PROTECTION) {protectionModePrint(); return;}
-    if (system_flag & FLAG_ELEC_ZERO_ALIGNED) {usb_printf("Electrical zero already aligned\r\n"); return;}
+    if ((system_flag & FLAG_ELEC_ZERO_ALIGNED) && encoder.is_synchronized_) {usb_printf("Electrical zero already aligned\r\n"); return;}
     if (control_mode == MotorControlMode::MOTOR_ALIGN) {usb_printf("Already aligning, please wait\r\n"); return;}
     control_mode = MotorControlMode::MOTOR_ALIGN;
     clearRunningFlags();
     relay.write(1);
-    alignRotor();
+    Sampling_t sample;
+    if (sampleAndProtect(&sample, true) != 0) return;
+    alignRotor(&sample);
     usb_printf("Starting\r\n");
 }
 
@@ -1475,10 +1638,13 @@ void cmd_reset(int argc, char** argv) {
     control_mode = MotorControlMode::MOTOR_STOP;
     clearRunningFlags();
     error_flag &= ~ERROR_OVERCURRENT;
+    error_flag &= ~ERROR_UNDERVOLTAGE;
     motorPWM.stop();
     led_red.write(0);
     foc_reset(&foc_state);
     relay.write(0);
+    if (foc_state.target_rpm != 0.0f) foc_state.target_rpm = FOC_INITIAL_RPM;
+    if (target.speed != 0.0f) target.speed = FOC_INITIAL_RPM;
     usb_printf("Resetting\r\n");
 }
 
@@ -1512,7 +1678,9 @@ void cmd_foc(int argc, char** argv) {
         if ((system_flag & FLAG_FOC_RUNNING) == 0) {
             system_flag |= FLAG_FOC_RUNNING;
             relay.write(1);
-            focTick();
+            Sampling_t sample;
+            if (sampleAndProtect(&sample) != 0) return;
+            focTick(&sample);
         }
         focResetPI(&foc_state);
         usb_printf("FOC Vd set to %.2f V\r\n", foc_state.Vd_cmd);
@@ -1526,7 +1694,9 @@ void cmd_foc(int argc, char** argv) {
         if ((system_flag & FLAG_FOC_RUNNING) == 0) {
             system_flag |= FLAG_FOC_RUNNING;
             relay.write(1);
-            focTick();
+            Sampling_t sample;
+            if (sampleAndProtect(&sample) != 0) return;
+            focTick(&sample);
         }
         focResetPI(&foc_state);
         usb_printf("FOC Vq set to %.2f V\r\n", foc_state.Vq_cmd);
@@ -1540,7 +1710,9 @@ void cmd_foc(int argc, char** argv) {
         if ((system_flag & FLAG_FOC_RUNNING) == 0) {
             system_flag |= FLAG_FOC_RUNNING;
             relay.write(1);
-            focTick();
+            Sampling_t sample;
+            if (sampleAndProtect(&sample) != 0) return;
+            focTick(&sample);
         }
         focResetPI(&foc_state);
         usb_printf("FOC Id set to %.3f A\r\n", foc_state.Id_ref);
@@ -1554,7 +1726,9 @@ void cmd_foc(int argc, char** argv) {
         if ((system_flag & FLAG_FOC_RUNNING) == 0) {
             system_flag |= FLAG_FOC_RUNNING;
             relay.write(1);
-            focTick();
+            Sampling_t sample;
+            if (sampleAndProtect(&sample) != 0) return;
+            focTick(&sample);
         }
         focResetPI(&foc_state);
         usb_printf("FOC Iq set to %.3f A\r\n", foc_state.Iq_ref);
@@ -1583,7 +1757,7 @@ void cmd_sixstep(int argc, char** argv) {
  */
 void cmd_speed(int argc, char** argv) {
     float speed = atof(argv[1]);
-    if (speed < -5000.0f || speed > 5000.0f) {
+    if (speed < -MOTOR_SPEED_LIMIT_RPM || speed > MOTOR_SPEED_LIMIT_RPM) {
         usb_printf("Invalid speed value: %s\r\n", argv[1]);
         return;
     }
@@ -1598,6 +1772,8 @@ void cmd_speed(int argc, char** argv) {
         }
     }
     target.speed = speed;
+    target.torque = 0.0f;
+    target.is_torque_control = false;
 
     // Setting system flag
     if (argc >= 3) {
@@ -1621,7 +1797,7 @@ void cmd_speed(int argc, char** argv) {
  */
 void cmd_torque(int argc, char** argv) {
     float torque = atof(argv[1]);
-    if (torque < -10.0f || torque > 10.0f) {
+    if (torque < 0.0f || torque > 10.0f) {
         usb_printf("Invalid torque value: %s\r\n", argv[1]);
         return;
     }
@@ -1636,6 +1812,8 @@ void cmd_torque(int argc, char** argv) {
         }
     }
     target.torque = torque;
+    target.speed = 0.0f;
+    target.is_torque_control = true;
 
     // Setting system flag
     if (argc >= 3) {
@@ -1656,6 +1834,10 @@ void cmd_mod(int argc, char** argv) {
     if (strcmp(argv[1], "svpwm") == 0) {
         modulation_type = ModulationType::SVPWM;
         usb_printf("Modulation set to SVPWM\r\n");
+    }
+    else if (strcmp(argv[1], "svpwms") == 0) {
+        modulation_type = ModulationType::SVPWM_SUPERPOS;
+        usb_printf("Modulation set to SVPWM Superposition\r\n");
     }
     else if (strcmp(argv[1], "sym") == 0) {
         modulation_type = ModulationType::SYM_PWM;
@@ -2062,7 +2244,8 @@ void cmd_log(int argc, char** argv) {
                 break;
 
             case 4:
-                print_mask = PRINT_RPM | PRINT_RPMSP | PRINT_IA | PRINT_IB | PRINT_IC | PRINT_FOC_ID | PRINT_FOC_IQ | PRINT_FOC_VD | PRINT_FOC_VQ | PRINT_FOC_IDSP | PRINT_FOC_IQSP;
+                print_mask = PRINT_RPM | PRINT_RPMSP | PRINT_DUTY_A | PRINT_DUTY_B | PRINT_DUTY_C | PRINT_IA | PRINT_IB | PRINT_IC | PRINT_VBATT | PRINT_FOC_ID | PRINT_FOC_IQ | PRINT_FOC_VD | PRINT_FOC_VQ | PRINT_FOC_IDSP | PRINT_FOC_IQSP;
+                print_mask_ex = PRINT_OM | PRINT_M_INDEX | PRINT_FW;
                 usb_printf("Preset %d active\r\n", preset_id);
                 break;
                 
@@ -2080,6 +2263,7 @@ void cmd_log(int argc, char** argv) {
         }
         char* token = argv[2];
         uint32_t flag = 0;
+        uint32_t flag_ex = 0;
         
         if      (strcmp(token, "rpm") == 0) flag = PRINT_RPM;
         else if (strcmp(token, "rpmsp") == 0) flag = PRINT_RPMSP;
@@ -2112,8 +2296,17 @@ void cmd_log(int argc, char** argv) {
         else if (strcmp(token, "iqsp") == 0) flag = PRINT_FOC_IQSP;
         else if (strcmp(token, "vd") == 0) flag = PRINT_FOC_VD;
         else if (strcmp(token, "vq") == 0) flag = PRINT_FOC_VQ;
+
+        else if (strcmp(token, "om") == 0) flag_ex = PRINT_OM;
+        else if (strcmp(token, "m_index") == 0) flag_ex = PRINT_M_INDEX;
+        else if (strcmp(token, "fw") == 0) flag_ex = PRINT_FW;
+        else if (strcmp(token, "umag") == 0) flag_ex = PRINT_UMAG;
+        else if (strcmp(token, "imag") == 0) flag_ex = PRINT_IMAG;
+        else if (strcmp(token, "fft") == 0) flag_ex = PRINT_FFT;
+
         else if (strcmp(token, "all") == 0 && strcmp(action, "rm") == 0) {
             print_mask = 0;
+            print_mask_ex = 0;
             usb_printf("All variables removed\r\n");
             return;
         } else {
@@ -2123,9 +2316,11 @@ void cmd_log(int argc, char** argv) {
 
         if (strcmp(action, "add") == 0) {
             print_mask |= flag;
+            print_mask_ex |= flag_ex;
             usb_printf("Variable %s added\r\n", token);
         } else {
             print_mask &= ~flag;
+            print_mask_ex &= ~flag_ex;
             usb_printf("Variable %s removed\r\n", token);
         }
     } 
@@ -2153,12 +2348,62 @@ void cmd_audible(int argc, char** argv) {
     }
 }
 
+void cmd_sin(int argc, char** argv) {
+    float value = atof(argv[1]);
+    uint64_t start_tick = HighResTimer::getTicks();
+    float math_sin = sinf(value);
+    uint64_t math_ticks = HighResTimer::getTicksDelta(start_tick);
+    float cordic_sin = lut::sinf(value);
+    uint64_t cordic_ticks = HighResTimer::getTicksDelta(start_tick) - math_ticks;
+    float math_ns = (float)math_ticks * HighResTimer::TICK_PERIOD * 1000000000.0f;
+    float cordic_ns = (float)cordic_ticks * HighResTimer::TICK_PERIOD * 1000000000.0f;
+    usb_printf("sinf(%.2f) = %.5f, lut::sinf(%.2f) = %.5f\r\nMath: %.2f ns, LUT: %.2f ns\r\n", value, math_sin, value, cordic_sin, math_ns, cordic_ns);
+}
+
+void cmd_cos(int argc, char** argv) {
+    float value = atof(argv[1]);
+    uint64_t start_tick = HighResTimer::getTicks();
+    float math_cos = cosf(value);
+    uint64_t math_ticks = HighResTimer::getTicksDelta(start_tick);
+    float cordic_cos = lut::cosf(value);
+    uint64_t cordic_ticks = HighResTimer::getTicksDelta(start_tick) - math_ticks;
+    float math_ns = (float)math_ticks * HighResTimer::TICK_PERIOD * 1000000000.0f;
+    float cordic_ns = (float)cordic_ticks * HighResTimer::TICK_PERIOD * 1000000000.0f;
+    usb_printf("cosf(%.2f) = %.5f, lut::cosf(%.2f) = %.5f\r\nMath: %.2f ns, LUT: %.2f ns\r\n", value, math_cos, value, cordic_cos, math_ns, cordic_ns);
+}
+
+void cmd_arctan(int argc, char** argv) {
+    float y = atof(argv[1]);
+    float x = atof(argv[2]);
+    uint64_t start_tick = HighResTimer::getTicks();
+    float math_atan2 = atan2f(y, x);
+    uint64_t math_ticks = HighResTimer::getTicksDelta(start_tick);
+    float cordic_atan2 = lut::atan2f(y, x);
+    uint64_t cordic_ticks = HighResTimer::getTicksDelta(start_tick) - math_ticks;
+    float math_ns = (float)math_ticks * HighResTimer::TICK_PERIOD * 1000000000.0f;
+    float cordic_ns = (float)cordic_ticks * HighResTimer::TICK_PERIOD * 1000000000.0f;
+    usb_printf("atan2f(%.2f, %.2f) = %.5f, lut::atan2f(%.2f, %.2f) = %.5f\r\nMath: %.2f ns, LUT: %.2f ns\r\n", y, x, math_atan2, y, x, cordic_atan2, math_ns, cordic_ns);
+}
+
+void cmd_hypot(int argc, char** argv) {
+    float x = atof(argv[1]);
+    float y = atof(argv[2]);
+    uint64_t start_tick = HighResTimer::getTicks();
+    float math_hypot = hypotf(x, y);
+    uint64_t math_ticks = HighResTimer::getTicksDelta(start_tick);
+    float cordic_hypot = lut::hypotf(x, y);
+    uint64_t cordic_ticks = HighResTimer::getTicksDelta(start_tick) - math_ticks;
+    float math_ns = (float)math_ticks * HighResTimer::TICK_PERIOD * 1000000000.0f;
+    float cordic_ns = (float)cordic_ticks * HighResTimer::TICK_PERIOD * 1000000000.0f;
+    usb_printf("hypotf(%.2f, %.2f) = %.5f, lut::hypotf(%.2f, %.2f) = %.5f\r\nMath: %.2f ns, LUT: %.2f ns\r\n", x, y, math_hypot, x, y, cordic_hypot, math_ns, cordic_ns);
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
-//  FOC ISR tick — called from TIM8 update interrupt at 20 kHz
+//  FOC tick — called from TIM8 update interrupt at 20 kHz
 // ─────────────────────────────────────────────────────────────────────────────
 
 /*
- * foc_isr_tick
+ * focTick
  *
  * Reads ADC and encoder, converts to SI units using the same formula and
  * adc_gain struct as the rest of the codebase, then calls foc_run() and
@@ -2175,33 +2420,7 @@ void cmd_audible(int argc, char** argv) {
  *
  * Must complete within one PWM period (50 µs at 20 kHz).
  */
-static void foc_isr_tick(void)
-{
-    /* Guard: fault latched — stop inverter and return to STOP mode */
-    static uint32_t tick_counter = 0;
-    if (foc_state.fault) {
-      // Prints out the current FOC state for debugging before stopping
-      usb_printf("\r\n------------------------\r\nFOC fault at tick %u\r\nRPM=%.1f  Ia=%.3fA  Ib=%.3fA  Ic=%.3fA\r\nId=%.3fA  Iq=%.3fA  Vd=%.2fV  Vq=%.2fV  Vdc=%.2fV  |u|=%.2fV  fault=%d\r\n------------------------\r\n",
-              tick_counter,
-              foc_state.rpm,
-              foc_state.Ia,  foc_state.Ib,  foc_state.Ic,
-              foc_state.Id,  foc_state.Iq,
-              foc_state.Vd_cmd, foc_state.Vq_cmd,
-              foc_state.Vdc, foc_state.u_mag,
-              (int)foc_state.fault);
-      // Stop all 3 phases PWM output
-      motorPWM.stop();
-      // De-energize relay
-      relay.write(0);
-      // Set fault flag
-      error_flag |= ERROR_OVERCURRENT;
-      // Set control mode to PROTECTION and clear FOC running flag
-      control_mode = MotorControlMode::MOTOR_PROTECTION;
-      system_flag &= ~FLAG_FOC_RUNNING;
-      tick_counter = 0;
-      return;
-    }
-
+void focTick(Sampling_t* sample) {
     /* -----------------------------------------------------------------------
      * 1. Read ADC — latest DMA sample (interrupt-safe via NDTR)
      *
@@ -2214,39 +2433,10 @@ static void foc_isr_tick(void)
      *   ADC3[0] = I_C   (PC1,  INP11, 12-bit → 4096 counts)
      *   ADC3[1] = I_BATT(PC0,  INP10, 12-bit)  — not used in FOC loop
      * --------------------------------------------------------------------- */
-    uint16_t adc1_raw[3];
-    uint16_t adc2_raw[2];
-    uint16_t adc3_raw[2];
-
-    adc1.getLatestDataMean(adc1_raw, FOC_OVERSAMPLING_SIZE);
-    adc2.getLatestDataMean(adc2_raw, FOC_OVERSAMPLING_SIZE);
-    adc3.getLatestDataMean(adc3_raw, FOC_OVERSAMPLING_SIZE);
-
-    /*
-     * Convert raw ADC to amps using the real formula:
-     *   adcToVoltage: ((raw/resolution)*vref - offset) / gain
-     *   adcToCurrent: adcToVoltage(..., gain=1) / shunt
-     *
-     * offset = 1.65f (op-amp Vref/2) + adc_gain.i*_offset (per-board trim)
-     * shunt  = adc_gain.i*_shunt  (from parameters.h, e.g. ADC_IA_SHUNT)
-     *
-     * Note: gain parameter passed as 1.0f to adcToVoltage for current
-     *       channels — the op-amp gain of 50 is already embedded in the
-     *       shunt value (effective sensitivity = 50 × shunt V/A).
-     */
-    float Ia = adcToCurrent(adc1_raw[0], 3.3f, 65536, 50.0f,
-                            1.65f + adc_gain.ia_offset, adc_gain.ia_shunt);
-    float Ib = adcToCurrent(adc2_raw[0], 3.3f, 65536, 50.0f,
-                            1.65f + adc_gain.ib_offset, adc_gain.ib_shunt);
-    float Ic = adcToCurrent(adc3_raw[0], 3.3f,  4096, 50.0f,
-                            1.65f + adc_gain.ic_offset, adc_gain.ic_shunt);
-
-    /* DC bus voltage */
-    float Vdc = adcToVoltage(adc1_raw[2], 3.3f, 65536,
-                             adc_gain.vbatt_gain, adc_gain.vbatt_offset);
-
-    /* Guard: Vdc too low — SVPWM would divide by zero */
-    if (Vdc < 1.0f) return;
+    const float ia = sample->ia;
+    const float ib = sample->ib;
+    const float ic = sample->ic;
+    const float vdc = sample->vbatt;
 
     /* -----------------------------------------------------------------------
      * 2. Read encoder
@@ -2256,65 +2446,26 @@ static void foc_isr_tick(void)
      *    theta_e = theta_mech × pole_pairs, wrapped to [0, 2π)
      *    omega_m = mechanical angular velocity (rad/s)
      * --------------------------------------------------------------------- */
-    //float theta_mech = encoder.getPos_rad();
-    //float theta_e    = fmodf(theta_mech * (float)MOTOR_POLE_PAIRS, 2.0f * M_PI);
-    //if (theta_e < 0.0f) theta_e += 2.0f * M_PI;
-    float theta_e    = encoder.getElecPos_rad();
-
-    float omega_m = encoder.getRPM() * (2.0f * M_PI / 60.0f);
-
-    /* -----------------------------------------------------------------------
-     * 3. Run one FOC tick
-     * --------------------------------------------------------------------- */
-    float dutyA, dutyB, dutyC;
-    foc_state.ts = 1.0f / (float)motorPWM.getFrequency();  // Update FOC state with actual PWM period
-    foc_run(&foc_state,
-            Ia, Ib, Ic,
-            Vdc,
-            theta_e, omega_m,
-            &dutyA, &dutyB, &dutyC);
-
-    /* -----------------------------------------------------------------------
-     * 4. Apply to inverter
-     * --------------------------------------------------------------------- */
-    motorPWM.setDuty(dutyA, dutyB, dutyC);
-
-    tick_counter++;
-}
-
-void focTick(void) {
-    /* uint16_t adc1_raw[3];
-    uint16_t adc2_raw[2];
-    uint16_t adc3_raw[2];
-
-    adc1.getLatestDataMean(adc1_raw, FOC_OVERSAMPLING_SIZE);
-    adc2.getLatestDataMean(adc2_raw, FOC_OVERSAMPLING_SIZE);
-    adc3.getLatestDataMean(adc3_raw, FOC_OVERSAMPLING_SIZE);
-
-    float ia = adcToCurrent(adc1_raw[0], 3.3f, 65536, 50.0f, 1.65f + adc_gain.ia_offset, adc_gain.ia_shunt);
-    float ib = adcToCurrent(adc2_raw[0], 3.3f, 65536, 50.0f, 1.65f + adc_gain.ib_offset, adc_gain.ib_shunt);
-    float ic = adcToCurrent(adc3_raw[0], 3.3f,  4096, 50.0f, 1.65f + adc_gain.ic_offset, adc_gain.ic_shunt);
-    float vdc = adcToVoltage(adc1_raw[2], 3.3f, 65536, adc_gain.vbatt_gain, adc_gain.vbatt_offset); */
-
-    float ia = adcToCurrent(adc1.getLatestChannelMean(0, FOC_OVERSAMPLING_SIZE), 3.3f, 65536, 50.0f, 1.65f + adc_gain.ia_offset, adc_gain.ia_shunt);
-    float ib = adcToCurrent(adc2.getLatestChannelMean(0, FOC_OVERSAMPLING_SIZE), 3.3f, 65536, 50.0f, 1.65f + adc_gain.ib_offset, adc_gain.ib_shunt);
-    float ic = adcToCurrent(adc3.getLatestChannelMean(0, FOC_OVERSAMPLING_SIZE), 3.3f, 4096, 50.0f, 1.65f + adc_gain.ic_offset, adc_gain.ic_shunt);
-    //float ic = -ia - ib;
-    float vdc = adcToVoltage(adc1.getLatestChannelMean(2, FOC_OVERSAMPLING_SIZE), 3.3f, 65536, adc_gain.vbatt_gain, adc_gain.vbatt_offset);
-
     float theta_e = encoder.getElecPos_rad();
     float omega_m = encoder.getRPM() * RPM_TO_RAD_S;
 
     foc_state.ts = 1.0f / (float)motorPWM.getFrequency();
 
+    /* -----------------------------------------------------------------------
+     * 3. Run one FOC tick
+     * --------------------------------------------------------------------- */
     float dutyA, dutyB, dutyC;
 
-    focTest(&foc_state,
-            ia, ib, ic,
-            vdc,
-            theta_e, omega_m,
-            &dutyA, &dutyB, &dutyC);
+    foc(modulation_type,
+        &foc_state,
+        ia, ib, ic,
+        vdc,
+        theta_e, omega_m,
+        &dutyA, &dutyB, &dutyC);
 
+    /* -----------------------------------------------------------------------
+     * 4. Apply to inverter
+     * --------------------------------------------------------------------- */
     motorPWM.setDuty(dutyA, dutyB, dutyC);
 }
 

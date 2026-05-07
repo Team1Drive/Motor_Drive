@@ -12,6 +12,7 @@ extern void cmd_reset(int argc, char** argv);
 extern void cmd_foc(int argc, char** argv);
 extern void cmd_sixstep(int argc, char** argv);
 extern void cmd_speed(int argc, char** argv);
+extern void cmd_torque(int argc, char** argv);
 extern void cmd_mod(int argc, char** argv);
 extern void cmd_duty(int argc, char** argv);
 extern void cmd_vec(int argc, char** argv);
@@ -20,6 +21,10 @@ extern void cmd_increment(int argc, char** argv);
 extern void cmd_board(int argc, char** argv);
 extern void cmd_log(int argc, char** argv);
 extern void cmd_audible(int argc, char** argv);
+extern void cmd_sin(int argc, char** argv);
+extern void cmd_cos(int argc, char** argv);
+extern void cmd_arctan(int argc, char** argv);
+extern void cmd_hypot(int argc, char** argv);
 
 static const cmd_entry_t cmd_table[] = {
     { "start",       cmd_start,       1,    2,  "Usage: start <mode>\r\n"                       }, // 1 means just the command itself
@@ -29,6 +34,7 @@ static const cmd_entry_t cmd_table[] = {
     { "foc",         cmd_foc,         2,    3,  "Usage: foc <rpm> or foc status\r\n"            }, // e.g., "foc 1000" = 2 tokens
     { "sixstep",     cmd_sixstep,     1,    1,  "Usage: sixstep\r\n"                            },
     { "speed",       cmd_speed,       2,    3,  "Usage: speed <value>\r\n"                      },
+    { "torque",      cmd_torque,      2,    3,  "Usage: torque <value>\r\n"                     },
     { "mod",         cmd_mod,         2,    2,  "Usage: mod <type>\r\n"                         }, // Select modulation type, e.g., "mod svpwm"
     { "duty",        cmd_duty,        2,    2,  "Usage: duty <v1>,<v2>,<v3>\r\n"                }, // Arguments can be kept comma-separated internally
     { "vec",         cmd_vec,         2,    2,  "Usage: vec <0-5>\r\n"                          },
@@ -36,7 +42,11 @@ static const cmd_entry_t cmd_table[] = {
     { "increment",   cmd_increment,   4,    4,  "Usage: increment <subsys> <param> <value>\r\n" }, // e.g., "increment speed p 0.1" = 4 tokens
     { "log",         cmd_log,         2,    3,  "Usage: log <add|rm|preset|utf8|bin> [var]\r\n" },
     { "board",       cmd_board,       1,    2,  "Usage: board <1|2|3>\r\n"                      },
-    { "audible",     cmd_audible,     1,    1,  "Usage: audible\r\n"                            }
+    { "audible",     cmd_audible,     1,    1,  "Usage: audible\r\n"                            },
+    { "sin",         cmd_sin,         2,    2,  "Usage: sin <value>\r\n"                        },
+    { "cos",         cmd_cos,         2,    2,  "Usage: cos <value>\r\n"                        },
+    { "arctan",      cmd_arctan,      3,    3,  "Usage: arctan <y> <x>\r\n"                     },
+    { "hypot",       cmd_hypot,       3,    3,  "Usage: hypot <x> <y>\r\n"                      }
 };
 
 const int num_commands = sizeof(cmd_table) / sizeof(cmd_entry_t);

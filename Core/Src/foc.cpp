@@ -18,9 +18,21 @@
  */
 
 #include "foc.h"
-#include "modulation.h"   /* clarke, park, inv_park, modulate, ModulationType */
 #include <cmath>
 #include <algorithm>
+
+static inline float clampf(float value, float lower, float upper) {
+    return std::min(std::max(value, lower), upper);
+}
+
+static inline void limitVoltageVector(float* vd, float* vq, float max_mag) {
+    float mag = lut::hypotf(*vd, *vq);
+    if (mag > max_mag && mag > 1e-6f) {
+        float scale = max_mag / mag;
+        *vd *= scale;
+        *vq *= scale;
+    }
+}
 
 /* =========================================================================
  * foc_init
@@ -68,7 +80,12 @@ void foc_init(FOC_State_t* foc)
     foc->Vd_cmd  = 0.0f;
     foc->Vq_cmd  = 0.0f;
     foc->u_mag   = 0.0f;
+    foc->i_mag   = 0.0f;
 
+    foc->u_abs_limit   = 0.0f;
+    foc->fault         = 0U;
+    foc->om            = 0U;
+    foc->m_index       = 0.0f;
     foc->speed_div_cnt = 0U;
     foc->fault         = false;
 }
@@ -82,15 +99,20 @@ void foc_reset(FOC_State_t* foc)
     PI_reset(&foc->pi_q);
     PI_reset(&foc->pi_speed);
     PI_reset(&foc->pi_fw);
-    foc->omega_ref = 0.0f;
-    foc->Id_ref    = 0.0f;
-    foc->Iq_ref    = 0.0f;
-    foc->Id        = 0.0f;
-    foc->Iq        = 0.0f;
-    foc->Vd_cmd    = 0.0f;
-    foc->Vq_cmd    = 0.0f;
-    foc->u_mag     = 0.0f;
-    foc->fault     = false;
+    foc->omega_ref   = 0.0f;
+    foc->Id_ref      = 0.0f;
+    foc->Iq_ref      = 0.0f;
+    foc->Id          = 0.0f;
+    foc->Iq          = 0.0f;
+    foc->Vd_cmd      = 0.0f;
+    foc->Vq_cmd      = 0.0f;
+    foc->u_mag       = 0.0f;
+    foc->i_mag       = 0.0f;
+    foc->u_abs_limit = 0.0f;
+    foc->fw_active   = 0U;
+    foc->om          = 0U;
+    foc->m_index     = 0.0f;
+    foc->fault       = false;
 }
 
 void focResetPI(FOC_State_t* foc) {
@@ -98,6 +120,11 @@ void focResetPI(FOC_State_t* foc) {
     PI_reset(&foc->pi_q);
     PI_reset(&foc->pi_speed);
     PI_reset(&foc->pi_fw);
+}
+
+void focUpdatePIClamp(PI_t* pi, float lower_clamp, float higher_clamp) {
+    pi->clamp_upper = higher_clamp;
+    pi->clamp_lower = lower_clamp;
 }
 
 /* =========================================================================
@@ -283,31 +310,66 @@ void focAlignZero(FOC_State_t* foc, float Vmag, float Vdc, float* dutyA, float* 
              dutyA, dutyB, dutyC);
 }
 
-void focTest(FOC_State_t* foc,
-             float ia, float ib, float ic,
-             float vdc,
-             float theta_e, float omega_m,
-             float* dutyA, float* dutyB, float* dutyC) {
-
+/* =========================================================================
+ * foc_run  — called from focTick in main.cpp at 20 kHz
+ * ========================================================================= */
+void foc(ModulationType modulation_type,
+         FOC_State_t* foc,
+         float ia, float ib, float ic,
+         float vdc,
+         float theta_e, float omega_m,
+         float* dutyA, float* dutyB, float* dutyC) {
+    /* ------------------------------------------------------------------
+     * 0. Store observables
+     * ------------------------------------------------------------------ */
     foc->Ia = ia;
     foc->Ib = ib;
     foc->Ic = ic;
     foc->Vdc = vdc;
+    foc->u_abs_limit = 2.0f * vdc / M_PI;
     foc->theta_e = theta_e;
     foc->omega_m = omega_m;
     foc->omega_e  = omega_m * (float)MOTOR_POLE_PAIRS;
 
-    // Current Clarke Transform
+    focUpdatePIClamp(&foc->pi_q, -foc->u_abs_limit, foc->u_abs_limit);
+    focUpdatePIClamp(&foc->pi_d, -foc->u_abs_limit, foc->u_abs_limit);
+
+    /* ------------------------------------------------------------------
+     * 1. Clarke transform: Ia,Ib,Ic → Iα,Iβ  (stationary frame)
+     *
+     *   Iα = (2·Ia − Ib − Ic) / 3
+     *   Iβ = (Ib − Ic) / √3
+     *
+     * Uses clarke() from modulation.h (same formula).
+     * ------------------------------------------------------------------ */
     float i_alpha, i_beta;
     clarke(ia, ib, ic, &i_alpha, &i_beta);
 
-    // Current Park Transform
+    /* ------------------------------------------------------------------
+     * 2. Park transform: Iα,Iβ,θe → Id,Iq  (rotating frame)
+     *
+     *   Id =  Iα·cos(θe) + Iβ·sin(θe)
+     *   Iq = −Iα·sin(θe) + Iβ·cos(θe)
+     *
+     * Uses park() from modulation.h (same formula).
+     * ------------------------------------------------------------------ */
     float id, iq;
     park(i_alpha, i_beta, theta_e, &id, &iq);
 
     foc->Id = id;
     foc->Iq = iq;
 
+    /* ------------------------------------------------------------------
+     * 3. Current PI controllers with decoupling feed-forward
+     *
+     * Mirrors MATLAB exactly:
+     *   vd_cmd = Kp·err_id + Ki·∫err_id + R·Id − ωe·L·Iq
+     *   vq_cmd = Kp·err_iq + Ki·∫err_iq + R·Iq + ωe·L·Id + ωe·ψf
+     *
+     * The feed-forward terms cancel cross-coupling and back-EMF so the
+     * PI only needs to correct residual error.
+     * Output hard-clamped to ±Vdc/2 (inverter rail limit).
+     * ------------------------------------------------------------------ */
     if (system_flag & FLAG_AUDIBLE) {
       focInjection(foc, 500.0f);
       //if (foc->rpm < 800.0f) focInjection(foc, 500.0f);
@@ -315,28 +377,59 @@ void focTest(FOC_State_t* foc,
     }
     
     // Calculate PI outputs
-    float err_id = foc->Id_ref - id;
-    float err_iq = foc->Iq_ref - iq;
+    const float err_id = foc->Id_ref - id;
+    const float err_iq = foc->Iq_ref - iq;
     
     float vd_pi = PI_update(&foc->pi_d, err_id, foc->ts);
     float vq_pi = PI_update(&foc->pi_q, err_iq, foc->ts);
 
     // Calculate voltage commands with decoupling feed-forward
-    foc->Vd_cmd = vd_pi - foc->omega_e * FOC_L * iq;
-    foc->Vq_cmd = vq_pi + foc->omega_e * FOC_L * id + foc->omega_e * FOC_PSI_F;
-    foc->u_mag  = hypotf(foc->Vd_cmd, foc->Vq_cmd);
+    float vd_req = vd_pi - foc->omega_e * FOC_L * iq;
+    float vq_req = vq_pi + foc->omega_e * FOC_L * id + foc->omega_e * FOC_PSI_F;
 
-    float v_max = vdc / SQRT3;  // Maximum voltage magnitude for SVPWM (line-line voltage limit)
-    if (foc->u_mag > v_max) foc->Vq_cmd = sqrt(v_max * v_max - foc->Vd_cmd * foc->Vd_cmd);
-    
+    float vd_cmd = vd_req;
+    float vq_cmd = vq_req;
+    limitVoltageVector(&vd_cmd, &vq_cmd, foc->u_abs_limit);
+
+    foc->Vd_cmd = vd_cmd;
+    foc->Vq_cmd = vq_cmd;
+    foc->u_mag = lut::hypotf(vd_req, vq_req);
+
+    float m_index = foc->u_mag / foc->u_abs_limit;
+    foc->m_index = m_index * 0.1f + foc->m_index * 0.9f;  // Low-pass filter for stable overmodulation index
+
+    if (foc->m_index <= 0.907f)         foc->om = 0;
+    else if (foc->m_index <= 0.9514f)   foc->om = 1;
+    else                                foc->om = 2;
+
+    //float v_max = vdc / SQRT3;  // Maximum voltage magnitude for SVPWM (line-line voltage limit)
+    //float v_max = 2 * vdc / M_PI;
+    //if (foc->u_mag > v_max) foc->Vq_cmd = sqrt(v_max * v_max - foc->Vd_cmd * foc->Vd_cmd);
+   
+    /* ------------------------------------------------------------------
+     * 4. Inverse Park: Vd,Vq,θe → Vα,Vβ
+     *
+     *   Vα =  Vd·cos(θe) − Vq·sin(θe)
+     *   Vβ =  Vd·sin(θe) + Vq·cos(θe)
+     * ------------------------------------------------------------------ */
     float v_alpha, v_beta;
     inv_park(foc->Vd_cmd, foc->Vq_cmd, theta_e, &v_alpha, &v_beta);
 
-    modulate(ModulationType::SVPWM,
+    /* ------------------------------------------------------------------
+     * 5. Modulation: Vα,Vβ → dA,dB,dC
+     *     Use specified modulation type (e.g. SVPWM, DPWM) for testing.
+     *     Ts passed for compensated timing calculation.
+     * ------------------------------------------------------------------ */
+    float u_mag;
+    modulate(modulation_type,
              v_alpha, v_beta,
              vdc,
              foc->ts,
-             dutyA, dutyB, dutyC);
+             dutyA, dutyB, dutyC,
+             foc->omega_e,
+             &u_mag);
+
+    //foc->u_mag = u_mag;
 }
 
 void focInjection(FOC_State_t* foc, float freq) {
@@ -372,5 +465,5 @@ void focInjection(FOC_State_t* foc, float freq) {
         inj_phase -= 2.0f * M_PI;
     }
 
-    foc->Id_ref += amplitude_max * sinf(inj_phase) * foc->Vdc;
+    foc->Id_ref += amplitude_max * lut::sinf(inj_phase) * foc->Vdc;
 }

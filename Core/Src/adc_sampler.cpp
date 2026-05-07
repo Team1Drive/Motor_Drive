@@ -153,27 +153,48 @@ uint32_t ADCSampler::getLatestData(uint16_t* data_ptr, uint32_t set_length) {
 }
 
 uint32_t ADCSampler::getLatestDataMean(uint16_t* data_ptr, uint32_t set_length) {
-    if (set_length > (half_len_ / num_channels_)) {
-        // Return zeros if set_length is not a power of 2
+    if (!data_ready_ || set_length > (half_len_ / num_channels_) || !isPowerOfTwo(set_length)) {
         for (uint32_t i = 0; i < num_channels_; i++) {
             data_ptr[i] = 0;
         }
         return 0;
     }
-    uint16_t data[set_length * num_channels_];
-    getLatestData(data, set_length);
 
-    // Calculate the average for each channel
-    uint32_t data_retrieved = 0;
-    for (uint32_t i = 0; i < num_channels_; i++) {
-        uint16_t channel_data[set_length];
-        for (uint32_t j = 0; j < set_length; j++) {
-            channel_data[j] = data[i + j * num_channels_];
+    __disable_irq();
+    uint32_t ndtr = __HAL_DMA_GET_COUNTER(hdma_);
+    __enable_irq();
+
+    uint32_t written = length_ - ndtr;
+    uint32_t written_groups = written / num_channels_;
+    if (written_groups == 0) written_groups = length_ / num_channels_;
+    written_groups--;
+    uint32_t group_start = written_groups * num_channels_;
+
+    constexpr uint32_t MAX_ADC_CHANNELS = 16;
+    if (num_channels_ > MAX_ADC_CHANNELS) {
+        for (uint32_t i = 0; i < num_channels_; i++) {
+            data_ptr[i] = 0;
         }
-        data_ptr[i] = fastAverage(channel_data, set_length);
-        data_retrieved++;
+        return 0;
     }
-    return data_retrieved;
+
+    uint32_t sums[MAX_ADC_CHANNELS] = {0};
+
+    int32_t buffer_index = group_start;
+    for (uint32_t sample = 0; sample < set_length; sample++) {
+        for (uint32_t channel = 0; channel < num_channels_; channel++) {
+            sums[channel] += buffer_[buffer_index + channel];
+        }
+        buffer_index -= num_channels_;
+        if (buffer_index < 0) buffer_index += length_;
+    }
+
+    uint32_t shift = 31 - __builtin_clz(set_length);
+    for (uint32_t channel = 0; channel < num_channels_; channel++) {
+        data_ptr[channel] = (uint16_t)(sums[channel] >> shift);
+    }
+
+    return num_channels_;
 }
 
 uint16_t ADCSampler::getLatestChannel(uint8_t channel) {

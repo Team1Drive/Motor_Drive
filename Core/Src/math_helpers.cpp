@@ -38,6 +38,10 @@ float adcToCurrent(uint32_t raw, float vref, uint32_t resolution, float gain, fl
   return voltage / shunt;
 }
 
+float clampf(float value, float lower, float upper) {
+    return std::min(std::max(value, lower), upper);
+}
+
 uint16_t fastAverage(uint16_t* data_ptr, uint16_t size) {
   if (size == 0) return 0; // Avoid division by zero
   if (!isPowerOfTwo(size)) return 0; // Size must be a power of 2 for this method to work correctly

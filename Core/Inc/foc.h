@@ -39,6 +39,8 @@
 
 #include "stm32h7xx_hal.h"
 #include "parameters.h"   /* MOTOR_POLE_PAIRS, ADCGain_t, M_PI */
+#include "modulation.h"   /* clarke, park, inv_park, modulate, ModulationType */
+#include "lut.h"
 #include <cmath>
 #include <algorithm>
 
@@ -64,7 +66,7 @@
 #define FOC_KT              4.1028e-2f
 
 /** Electrical damping factor */
-#define FOC_ZETA_I          0.707f
+#define FOC_ZETA_I          1.2f//0.707f
 
 /** Speed PI damping factor */
 #define FOC_ZETA_SP         0.707f
@@ -142,17 +144,17 @@
  * ========================================================================= */
 
 /** Current PI integrator clamp (V). Symmetric ±clamp. */
-#define FOC_INT_I_CLAMP     6.0f
+#define FOC_INT_I_CLAMP     (2.0f * M_PI / 24.0f)
 
 /** Speed PI output clamp (V). Symmetric ±clamp. */
-#define FOC_I_CLAMP_UPPER_SP 2.0f
+#define FOC_I_CLAMP_UPPER_SP 3.5f
 
-#define FOC_I_CLAMP_LOWER_SP -2.0f
+#define FOC_I_CLAMP_LOWER_SP -3.5f
 
 /** Field-weakening PI output clamp (V). Symmetric ±clamp. */
 #define FOC_I_CLAMP_UPPER_FW 0.0f
 
-#define FOC_I_CLAMP_LOWER_FW -2.0f
+#define FOC_I_CLAMP_LOWER_FW -3.5f
 
 /* =========================================================================
  * PI CONTROLLER — inline struct and update function (ISR-safe, no malloc)
@@ -239,9 +241,19 @@ typedef struct {
     volatile float Vd_cmd;
     volatile float Vq_cmd;
     volatile float u_mag;
+    volatile float u_abs_limit;
+    volatile float i_mag;
 
     /* --- Speed decimation counter --- */
     uint32_t speed_div_cnt;
+
+    /* --- Field-weakening active flag (for telemetry) --- */
+    uint8_t fw_active;
+
+    /* --- Overmodulation flag --- */
+    uint8_t om;
+
+    float m_index;
 
     /* --- Fault flag — set on overcurrent, cleared by foc_reset() --- */
     volatile bool fault;
@@ -285,6 +297,11 @@ void foc_run(FOC_State_t* foc,
  */
 void foc_reset(FOC_State_t* foc);
 
+static inline void focResetOuterPI(FOC_State_t* foc) {
+    PI_reset(&foc->pi_speed);
+    PI_reset(&foc->pi_fw);
+}
+
 void focResetPI(FOC_State_t* foc);
 
 /**
@@ -293,11 +310,12 @@ void focResetPI(FOC_State_t* foc);
  */
 void focAlignZero(FOC_State_t* foc, float Vmag, float Vdc, float* dutyA, float* dutyB, float* dutyC);
 
-void focTest(FOC_State_t* foc,
-             float va, float vb, float vc,
-             float vdc,
-             float theta_e, float omega_m,
-             float* dutyA, float* dutyB, float* dutyC);
+void foc(ModulationType modulation_type,
+         FOC_State_t* foc,
+         float va, float vb, float vc,
+         float vdc,
+         float theta_e, float omega_m,
+         float* dutyA, float* dutyB, float* dutyC);
 
 void focInjection(FOC_State_t* foc, float freq);
 
