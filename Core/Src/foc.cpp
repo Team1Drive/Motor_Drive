@@ -80,7 +80,9 @@ void foc_init(FOC_State_t* foc)
     foc->Vd_cmd  = 0.0f;
     foc->Vq_cmd  = 0.0f;
     foc->u_mag   = 0.0f;
+    foc->i_mag   = 0.0f;
 
+    foc->u_abs_limit   = 0.0f;
     foc->fault         = 0U;
     foc->om            = 0U;
     foc->m_index       = 0.0f;
@@ -97,18 +99,20 @@ void foc_reset(FOC_State_t* foc)
     PI_reset(&foc->pi_q);
     PI_reset(&foc->pi_speed);
     PI_reset(&foc->pi_fw);
-    foc->omega_ref = 0.0f;
-    foc->Id_ref    = 0.0f;
-    foc->Iq_ref    = 0.0f;
-    foc->Id        = 0.0f;
-    foc->Iq        = 0.0f;
-    foc->Vd_cmd    = 0.0f;
-    foc->Vq_cmd    = 0.0f;
-    foc->u_mag     = 0.0f;
-    foc->fw_active = 0U;
-    foc->om        = 0U;
-    foc->m_index   = 0.0f;
-    foc->fault     = false;
+    foc->omega_ref   = 0.0f;
+    foc->Id_ref      = 0.0f;
+    foc->Iq_ref      = 0.0f;
+    foc->Id          = 0.0f;
+    foc->Iq          = 0.0f;
+    foc->Vd_cmd      = 0.0f;
+    foc->Vq_cmd      = 0.0f;
+    foc->u_mag       = 0.0f;
+    foc->i_mag       = 0.0f;
+    foc->u_abs_limit = 0.0f;
+    foc->fw_active   = 0U;
+    foc->om          = 0U;
+    foc->m_index     = 0.0f;
+    foc->fault       = false;
 }
 
 void focResetPI(FOC_State_t* foc) {
@@ -116,6 +120,11 @@ void focResetPI(FOC_State_t* foc) {
     PI_reset(&foc->pi_q);
     PI_reset(&foc->pi_speed);
     PI_reset(&foc->pi_fw);
+}
+
+void focUpdatePIClamp(PI_t* pi, float lower_clamp, float higher_clamp) {
+    pi->clamp_upper = higher_clamp;
+    pi->clamp_lower = lower_clamp;
 }
 
 /* =========================================================================
@@ -317,9 +326,13 @@ void foc(ModulationType modulation_type,
     foc->Ib = ib;
     foc->Ic = ic;
     foc->Vdc = vdc;
+    foc->u_abs_limit = 2.0f * vdc / M_PI;
     foc->theta_e = theta_e;
     foc->omega_m = omega_m;
     foc->omega_e  = omega_m * (float)MOTOR_POLE_PAIRS;
+
+    focUpdatePIClamp(&foc->pi_q, -foc->u_abs_limit, foc->u_abs_limit);
+    focUpdatePIClamp(&foc->pi_d, -foc->u_abs_limit, foc->u_abs_limit);
 
     /* ------------------------------------------------------------------
      * 1. Clarke transform: Ia,Ib,Ic → Iα,Iβ  (stationary frame)
@@ -374,16 +387,16 @@ void foc(ModulationType modulation_type,
     float vd_req = vd_pi - foc->omega_e * FOC_L * iq;
     float vq_req = vq_pi + foc->omega_e * FOC_L * id + foc->omega_e * FOC_PSI_F;
 
-    const float u_abs_limit = 2.0f * vdc / M_PI;
     float vd_cmd = vd_req;
     float vq_cmd = vq_req;
-    limitVoltageVector(&vd_cmd, &vq_cmd, u_abs_limit);
+    limitVoltageVector(&vd_cmd, &vq_cmd, foc->u_abs_limit);
 
     foc->Vd_cmd = vd_cmd;
     foc->Vq_cmd = vq_cmd;
     foc->u_mag = lut::hypotf(vd_req, vq_req);
 
-    foc->m_index = foc->u_mag / (2.0f * vdc / M_PI);
+    float m_index = foc->u_mag / foc->u_abs_limit;
+    foc->m_index = m_index * 0.1f + foc->m_index * 0.9f;  // Low-pass filter for stable overmodulation index
 
     if (foc->m_index <= 0.907f)         foc->om = 0;
     else if (foc->m_index <= 0.9514f)   foc->om = 1;

@@ -62,12 +62,12 @@
 
 #define MOTOR_ROTATION_DIRECTION    1 // 1 for anticlockwise, -1 for clockwise
 
-#define MOTOR_ALIGNMENT_POS_WINDOW  2048 // Counts of the encoder position within which alignment is considered successful (tuned experimentally)
+#define MOTOR_ALIGNMENT_POS_WINDOW  32768 // Counts of the encoder position within which alignment is considered successful (tuned experimentally)
 #define MOTOR_ALIGNMENT_THRESHOLD   1 // Encoder position delta window for successful alignment
 #define MOTOR_ALIGNMENT_VOLTAGE     5 // Volts to apply during encoder alignment
 #define MOTOR_ALIGNMENT_ID_REF      1.0f
 #define MOTOR_ALIGNMENT_IQ_REF      0.0f
-#define MOTOR_SPEED_LIMIT_RPM       8000.0f
+#define MOTOR_SPEED_LIMIT_RPM       10000.0f
 
 #define MOTOR_MAX_PHASE_CURRENT     4.8f // Maximum phase current for safety (in amps)
 #define MOTOR_MAX_CURRENT           5.0f // Maximum current for safety (in amps), including battery current
@@ -203,7 +203,8 @@ enum PrintDataEx : uint32_t {
     PRINT_M_INDEX   = 1 << 1,
     PRINT_FW        = 1 << 2,
     PRINT_UMAG      = 1 << 3,
-    PRINT_FFT       = 1 << 4
+    PRINT_IMAG      = 1 << 4,
+    PRINT_FFT       = 1 << 5
 };
 
 enum class PrintFormat : uint8_t {

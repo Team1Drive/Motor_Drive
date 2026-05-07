@@ -648,6 +648,9 @@ void printTelemetryUTF8(void) {
   if (print_mask_ex & PRINT_UMAG) {
     pos += snprintf(buffer + pos, sizeof(buffer) - pos, "umag %.2f ", foc_state.u_mag);
   }
+  if (print_mask_ex & PRINT_IMAG) {
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "imag %.2f ", foc_state.i_mag);
+  }
   if (pos > 0) {
     buffer[pos - 1] = '\n';
     buffer[pos] = '\0';
@@ -912,6 +915,11 @@ void printTelemetryBinary(void) {
     memcpy(ptr, &val, 4);
     ptr += 4;
   }
+  if (print_mask_ex & PRINT_IMAG) {
+    float val = foc_state.i_mag;
+    memcpy(ptr, &val, 4);
+    ptr += 4;
+  }
   if (ptr != buffer) {
       CDC_Transmit_HS(buffer, ptr - buffer);
   }
@@ -936,8 +944,7 @@ void speedControl(void) {
         target.speed = 0.0f;
         target.torque = 0.0f;
         foc_state.target_rpm = 0.0f;
-        foc_state.Iq_ref = 0.0f;
-        foc_state.Id_ref = 0.0f;
+        foc_reset(&foc_state);
         motorPWM.stop();
         control_mode = MotorControlMode::MOTOR_STOP;
         relay.write(0);
@@ -950,8 +957,7 @@ void speedControl(void) {
         target.speed = 0.0f;
         target.torque = 0.0f;
         foc_state.target_rpm = 0.0f;
-        foc_state.Iq_ref = 0.0f;
-        foc_state.Id_ref = 0.0f;
+        foc_reset(&foc_state);
         motorPWM.stop();
         control_mode = MotorControlMode::MOTOR_STOP;
         relay.write(0);
@@ -1036,15 +1042,13 @@ void speedControl(void) {
   float new_Iq_ref = PI_update(&foc_state.pi_speed, err_sp, foc_state.ts_speed);
 
   // Clamp Iq reference based on torque limits
-  if (new_Iq_ref > iq_torque_clamp) new_Iq_ref = iq_torque_clamp;
-  if (new_Iq_ref < -iq_torque_clamp) new_Iq_ref = -iq_torque_clamp;
+  new_Iq_ref = clampf(new_Iq_ref, -iq_torque_clamp, iq_torque_clamp);
 
   
   /* =========================================================================
   *   Field-weakening Loop
   * ========================================================================= */
-  const float u_abs_limit = 2.0f * foc_state.Vdc / M_PI;
-  const float m_req = foc_state.u_mag / u_abs_limit;
+  const float m_req = foc_state.u_mag / foc_state.u_abs_limit;
 
   const float m_fw_entry    = 1.0f;
   const float m_fw_release  = 0.96;
@@ -1069,8 +1073,7 @@ void speedControl(void) {
           //if (foc_state.pi_fw.integrator < FOC_ID_FW_MIN) foc_state.pi_fw.integrator = FOC_ID_FW_MIN;
           //new_Id_ref = foc_state.pi_fw.integrator;
           new_Id_ref = PI_update(&foc_state.pi_fw, fw_error, foc_state.ts_speed);
-          if (new_Id_ref > 0.0f) new_Id_ref = 0.0f;
-          if (new_Id_ref < FOC_ID_FW_MIN) new_Id_ref = FOC_ID_FW_MIN;
+          new_Id_ref = clampf(new_Id_ref, FOC_ID_FW_MIN, 0.0f);
       } else {
           new_Id_ref = 0.0f;
           PI_reset(&foc_state.pi_fw);
@@ -1084,11 +1087,10 @@ void speedControl(void) {
   /* =========================================================================
   *   Setting new Id and Iq setpoints
   * ========================================================================= */
-  const float idq_mag = lut::hypotf(new_Id_ref, new_Iq_ref);
-  if (idq_mag > FOC_IMAX) {
+  foc_state.i_mag = lut::hypotf(new_Id_ref, new_Iq_ref);
+  if (foc_state.i_mag > FOC_IMAX) {
       float iq_ref_clamp = sqrtf(fmaxf(FOC_IMAX * FOC_IMAX - new_Id_ref * new_Id_ref, 0.0f));
-      if (new_Iq_ref > iq_ref_clamp) new_Iq_ref = iq_ref_clamp;
-      if (new_Iq_ref < -iq_ref_clamp) new_Iq_ref = -iq_ref_clamp;
+      new_Iq_ref = clampf(new_Iq_ref, -iq_ref_clamp, iq_ref_clamp);
   }
   if (new_Id_ref != 0.0f) foc_state.fw_active = 1U;
   else foc_state.fw_active = 0U;
@@ -2243,7 +2245,7 @@ void cmd_log(int argc, char** argv) {
 
             case 4:
                 print_mask = PRINT_RPM | PRINT_RPMSP | PRINT_DUTY_A | PRINT_DUTY_B | PRINT_DUTY_C | PRINT_IA | PRINT_IB | PRINT_IC | PRINT_VBATT | PRINT_FOC_ID | PRINT_FOC_IQ | PRINT_FOC_VD | PRINT_FOC_VQ | PRINT_FOC_IDSP | PRINT_FOC_IQSP;
-                print_mask_ex = PRINT_OM | PRINT_FW;
+                print_mask_ex = PRINT_OM | PRINT_M_INDEX | PRINT_FW;
                 usb_printf("Preset %d active\r\n", preset_id);
                 break;
                 
@@ -2299,6 +2301,7 @@ void cmd_log(int argc, char** argv) {
         else if (strcmp(token, "m_index") == 0) flag_ex = PRINT_M_INDEX;
         else if (strcmp(token, "fw") == 0) flag_ex = PRINT_FW;
         else if (strcmp(token, "umag") == 0) flag_ex = PRINT_UMAG;
+        else if (strcmp(token, "imag") == 0) flag_ex = PRINT_IMAG;
         else if (strcmp(token, "fft") == 0) flag_ex = PRINT_FFT;
 
         else if (strcmp(token, "all") == 0 && strcmp(action, "rm") == 0) {

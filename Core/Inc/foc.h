@@ -144,7 +144,7 @@
  * ========================================================================= */
 
 /** Current PI integrator clamp (V). Symmetric ±clamp. */
-#define FOC_INT_I_CLAMP     6.0f
+#define FOC_INT_I_CLAMP     (2.0f * M_PI / 24.0f)
 
 /** Speed PI output clamp (V). Symmetric ±clamp. */
 #define FOC_I_CLAMP_UPPER_SP 3.5f
@@ -241,6 +241,8 @@ typedef struct {
     volatile float Vd_cmd;
     volatile float Vq_cmd;
     volatile float u_mag;
+    volatile float u_abs_limit;
+    volatile float i_mag;
 
     /* --- Speed decimation counter --- */
     uint32_t speed_div_cnt;
