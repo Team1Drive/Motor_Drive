@@ -12,6 +12,7 @@
 #include "cmd.h"
 #include "math_helpers.h"
 #include "lut.h"
+#include "coupled_comm.h"
 #include <cstdint>
 
 #include "usbd_cdc_if.h"
@@ -67,8 +68,10 @@ extern TIM_HandleTypeDef htim3;
 extern TIM_HandleTypeDef htim4;
 extern TIM_HandleTypeDef htim5;
 extern TIM_HandleTypeDef htim6;
+extern TIM_HandleTypeDef htim7;
 extern TIM_HandleTypeDef htim8;
 extern TIM_HandleTypeDef htim12;
+extern TIM_HandleTypeDef htim14;
 extern TIM_HandleTypeDef htim15;
 extern TIM_HandleTypeDef htim16;
 
@@ -94,6 +97,8 @@ DigitalOut led_red(GPIOC, GPIO_PIN_9), led_green(GPIOA, GPIO_PIN_8), led_yellow_
 DigitalOut relay(GPIOD, GPIO_PIN_8);
 Encoder encoder(&htim4, &htim15, GPIO_PIN_9, ENCODER_PPR, TIM6_FREQ_HZ, ENCODER_STALL_THRESHOLD);
 HallSensor hallsensor(GPIOB, GPIO_PIN_5, GPIOB, GPIO_PIN_8, GPIOE, GPIO_PIN_4);
+
+CoupledCommunication communication(GPIOA, GPIO_PIN_13, GPIOA, GPIO_PIN_14, &htim14, &htim7);
 
 alignas(32) uint16_t adc1_proc_buffer[ADC1_BUF_LEN];
 alignas(32) uint16_t adc2_proc_buffer[ADC2_BUF_LEN];
@@ -171,8 +176,10 @@ int main(void)
   MX_TIM4_Init();
   MX_TIM5_Init();
   MX_TIM6_Init();
+  MX_TIM7_Init();
   MX_TIM8_Init();
   MX_TIM12_Init();
+  MX_TIM14_Init();
   MX_TIM15_Init();
   MX_TIM16_Init();
 
@@ -214,6 +221,9 @@ int main(void)
 
   /* Start PWM */
   if (motorPWM.init() != HAL_OK) error_flag |= ERROR_PWM_CONFIG;
+
+  /* Initialize Coupled Communication */
+  if (communication.init() != HAL_OK) error_flag |= ERROR_COMM_CONFIG;
 
   /* Enable Caches */
   SCB_EnableICache();
@@ -296,6 +306,13 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
         Encoder::irqHandlerIndex(GPIO_Pin);
       }
       break;
+    // Handle Coupled Communication RX (PA14)
+    case GPIO_PIN_14:
+      if (HAL_GPIO_ReadPin(GPIOA, GPIO_Pin) == GPIO_PIN_SET) {
+        CoupledCommunication::irqHandlerRxRising();
+      } else {
+        CoupledCommunication::irqHandlerRxFalling();
+      }
     default:
       // Unhandled pin interrupt
       break;
@@ -304,8 +321,8 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 
 /* TIM Period Elapsed callback */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
+  // PWM update interrupt
   if (htim->Instance == TIM8) {
-    // PWM update interrupt
     Sampling_t sample;
     if (sampleAndProtect(&sample) != 0) return;
 
@@ -331,6 +348,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
         break;
     }
   }
+  // Speed loop interrupt
   else if (htim->Instance == TIM16) {
     Encoder::irqHandlerSpeed();
     if (control_mode == MotorControlMode::MOTOR_FOC_LINEAR
@@ -340,26 +358,32 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
     }
 
   }
+  // Binary telemetry logging interrupt
   else if (htim->Instance == TIM6) {
-    // 1 kHz control loop interrupt
     //timer6IRQ();
     printTelemetryBinary();
   }
-  else if (htim->Instance == TIM7) {
-    // 1 MHz timer interrupt (Interrupt every 65.536 ms)
-    MicrosecondTimer::irqHandler(htim);
+  // Communication clock interrupt
+  else if (htim->Instance == TIM14) {
+    CoupledCommunication::irqHandlerClock();
   }
+  // Communication timeout interrupt
+  else if (htim->Instance == TIM7) {
+    CoupledCommunication::irqHandlerTimeout();
+  }
+  // Print telemetry interrupt
   else if (htim->Instance == TIM2) {
-    // 10 Hz timer interrupt
     //timer2IRQ();
     printTelemetryUTF8();
   }
+  // Encoder interrupts
   else if (htim->Instance == TIM4) {
     Encoder::irqHandlerEncoderOverflow();
   }
   else if (htim->Instance == TIM15) {
     Encoder::irqHandlerTimerOverflow();
   }
+  // LED status update interrupt
   else if (htim->Instance == TIM3) {
     // 2 Hz timer interrupt
     timer3IRQ();
@@ -1488,7 +1512,7 @@ int8_t sampleAndProtect(Sampling_t* sample, bool bypass_protection) {
     if (bypass_protection) return 0;
 
     // Overcurrent protection with integrator for transient spikes
-    static float integrator = 0.0f;
+    /* static float integrator = 0.0f;
     const float overcurrent_trip_threshold = MOTOR_INSTANT_TRIP_CURRENT - MOTOR_MAX_PHASE_CURRENT;
     const float current_trip_threshold = overcurrent_trip_threshold * overcurrent_trip_threshold;
     
@@ -1505,7 +1529,14 @@ int8_t sampleAndProtect(Sampling_t* sample, bool bypass_protection) {
           return -1;
         }
     }
-    else integrator = 0.0f;
+    else integrator = 0.0f; */
+
+    if (fabsf(sample->ia) > MOTOR_INSTANT_TRIP_CURRENT || fabsf(sample->ib) > MOTOR_INSTANT_TRIP_CURRENT || fabsf(sample->ic) > MOTOR_INSTANT_TRIP_CURRENT) {
+        trip();
+        error_flag |= ERROR_OVERCURRENT;
+        foc_state.fault = true;
+        return -1;
+    }
 
     if (sample->vbatt < MOTOR_MIN_VOLTAGE) {
         trip();

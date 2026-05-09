@@ -85,6 +85,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Core/Src/foc.cpp
     Core/Src/cmd.cpp
     Core/Src/math_helpers.cpp
+    Core/Src/coupled_comm.cpp
 )
 
 # Add include paths

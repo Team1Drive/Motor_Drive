@@ -137,8 +137,9 @@ enum ErrorFlag : uint32_t {
     ERROR_TIM_CONFIG        = 1 << 3,
     ERROR_ENCODER_CONFIG    = 1 << 4,
     ERROR_FOC_CONFIG        = 1 << 5,
-    ERROR_OVERCURRENT       = 1 << 6,
-    ERROR_UNDERVOLTAGE      = 1 << 7
+    ERROR_COMM_CONFIG       = 1 << 6,
+    ERROR_OVERCURRENT       = 1 << 7,
+    ERROR_UNDERVOLTAGE      = 1 << 8
 };
 
 typedef struct {
@@ -232,9 +233,11 @@ TIM2: 10 Hz interrupt
 TIM3: 4 Hz interrupt
 TIM4: Encoder pulse timing
 TIM5: Incremental counter at APB frequency
-TIM6: 1000 Hz interrupt
+TIM6: 5000 Hz interrupt for binary telemetry
+TIM7: 2 Hz interrupt for communication timeout
 TIM8: PWM generation for motor control
 TIM12: Upper 16 bits for TIM5 incremental counter (for microsecond timing)
+TIM14: Communication timing
 TIM15: Remapped TIM4 for encoder index timing
 TIM16: Speed loop timer (1000 Hz)
 

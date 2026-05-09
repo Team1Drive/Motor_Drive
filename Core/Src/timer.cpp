@@ -87,6 +87,7 @@ HAL_StatusTypeDef Timer::startIT(void) {
 HAL_StatusTypeDef Timer::setFrequency(uint32_t freq_Hz) {
     if (!htim_ || freq_Hz == 0) return HAL_ERROR;
 
+    if (frequency == freq_Hz) return HAL_OK; // No change needed
     frequency = freq_Hz;
 
     // Get timer clock frequency, distinguishing APB2 for TIM1/TIM8 and APB1 for others
