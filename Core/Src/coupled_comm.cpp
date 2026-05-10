@@ -4,21 +4,6 @@
 
 CoupledCommunication* CoupledCommunication::instance_ = nullptr;
 
-CoupledCommunication::CoupledCommunication(GPIO_TypeDef* tx_port,
-                                           uint16_t tx_pin,
-                                           GPIO_TypeDef* rx_port,
-                                           uint16_t rx_pin,
-                                           TIM_HandleTypeDef* htim_clk,
-                                           TIM_HandleTypeDef* htim_timeout):
-    tx_(tx_port, tx_pin),
-    rx_(rx_port, rx_pin),
-    htim_clk_(htim_clk),
-    htim_timeout_(htim_timeout),
-    clock_(htim_clk),
-    timeout_(htim_timeout) {
-        instance_ = this;
-}
-
 void CoupledCommunication::handleClock(void) {
 
 }
@@ -377,10 +362,27 @@ void CoupledCommunication::irqHandlerTimeout(void) {
     }
 }
 
-HAL_StatusTypeDef CoupledCommunication::init(void) {
-    rx_state_ = GPIO_PIN_RESET;
-    coupling_mode_ = CouplingMode::COUPLING_DEFAULT;
+CoupledCommunication::CoupledCommunication(GPIO_TypeDef* tx_port,
+                                           uint16_t tx_pin,
+                                           GPIO_TypeDef* rx_port,
+                                           uint16_t rx_pin,
+                                           TIM_HandleTypeDef* htim_clk,
+                                           TIM_HandleTypeDef* htim_timeout):
+    tx_(tx_port, tx_pin),
+    rx_(rx_port, rx_pin),
+    htim_clk_(htim_clk),
+    htim_timeout_(htim_timeout),
+    clock_(htim_clk),
+    timeout_(htim_timeout),
+    rx_state_(GPIO_PIN_RESET),
+    coupling_mode_(CouplingMode::COUPLING_DEFAULT),
+    receiving_signal_(IncomingSignalType::SIGNAL_NONE),
+    receive_event_counter_(0),
+    running_step_(0) {
+        instance_ = this;
+}
 
+HAL_StatusTypeDef CoupledCommunication::init(void) {
     tx_.write(1);
     clock_.setFrequency(TRANSMISSION_FREQ_HZ);
     timeout_.setFrequency(TRANSMISSION_TIMEOUT_HZ);
@@ -389,4 +391,17 @@ HAL_StatusTypeDef CoupledCommunication::init(void) {
     status = HAL_TIM_Base_Start(htim_clk_) == HAL_OK ? status : HAL_ERROR;
     status = HAL_TIM_Base_Start(htim_timeout_) == HAL_OK ? status : HAL_ERROR;
     return status;
+}
+
+void CoupledCommunication::run(void) {
+    if (coupling_mode_ == CouplingMode::COUPLING_MASTER_RUN) {
+
+    }
+    else if (coupling_mode_ == CouplingMode::COUPLING_SLAVE_RUN) {
+        // If no callback is set, send low signal to trigger master error
+        if (callback_ == nullptr) {
+            errorHandler();
+            return;
+        }
+    }
 }

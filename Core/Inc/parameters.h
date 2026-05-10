@@ -92,8 +92,8 @@
 #define BATTERY_OVERVOLTAGE_THRESHOLD   5.0f // Voltage threshold for overvoltage protection (in volts)
 
 #define ENCODER_PPR                 2048U // Pulses per revolution for the encoder
-#define ENCODER_T_THRESHOLD         250U // Threshold in RPM for using T method (with hysteresis)
-#define ENCODER_M_THRESHOLD         700U // Threshold in RPM for using M method (with hysteresis)
+#define ENCODER_T_THRESHOLD         400U // Threshold in RPM for using T method (Linear Interpolation)
+#define ENCODER_M_THRESHOLD         550U // Threshold in RPM for using M method (Linear Interpolation)
 #define ENCODER_ONEPULSE_THRESHOLD  1000U // Threshold in RPM for using one pulse counting
 #define ENCODER_STALL_THRESHOLD     100U // Threshold for detecting stall
 

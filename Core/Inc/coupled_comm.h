@@ -57,6 +57,9 @@ class CoupledCommunication {
         IncomingSignalType receiving_signal_;
         uint32_t receive_event_counter_;
 
+        void (*callback_)(float speed, float torque, bool error) = nullptr;
+        uint32_t running_step_;
+
         inline void rxRising(void) {
             rx_state_ = GPIO_PIN_SET;
             distinguishSignal();
@@ -109,6 +112,11 @@ class CoupledCommunication {
 
         void handleNone(void);
 
+        inline void errorHandler(void) {
+            sendSignal(IncomingSignalType::SIGNAL_LOW);
+            callback_(0.0f, 0.0f, true);
+        }
+
     public:
 
         CoupledCommunication(GPIO_TypeDef* tx_port,
@@ -131,4 +139,10 @@ class CoupledCommunication {
         inline CouplingMode getCouplingMode(void) const {
             return coupling_mode_;
         }
+
+        inline void setRunnningCallback(void (*callback)(float speed, float torque, bool error)) {
+            callback_ = callback;
+        }
+
+        void run(void);
 };
