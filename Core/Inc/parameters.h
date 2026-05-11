@@ -202,7 +202,7 @@ enum PrintData : uint32_t {
 };
 
 enum PrintDataEx : uint32_t {
-    PRINT_OM        = 1 << 0,
+    PRINT_CP_MODE   = 1 << 0,
     PRINT_M_INDEX   = 1 << 1,
     PRINT_FW        = 1 << 2,
     PRINT_UMAG      = 1 << 3,

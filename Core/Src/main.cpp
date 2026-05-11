@@ -34,6 +34,14 @@ void printTelemetryBinary(void);
 
 void speedControl(void);
 
+CoupledControlResult coupledSimulationCheck(void);
+bool coupledSimulationStart(bool master);
+void coupledSimulationRun(float speed, float torque);
+void coupledSimulationStop(bool fault);
+
+void outputDisable(void);
+void outputEnable(void);
+
 void startUpSequence(MotorControlMode mode);
 void alignRotor(Sampling_t* sample);
 void vvvfRampUp(Sampling_t* sample);
@@ -99,6 +107,12 @@ Encoder encoder(&htim4, &htim15, GPIO_PIN_9, ENCODER_PPR, TIM6_FREQ_HZ, ENCODER_
 HallSensor hallsensor(GPIOB, GPIO_PIN_5, GPIOB, GPIO_PIN_8, GPIOE, GPIO_PIN_4);
 
 CoupledCommunication communication(GPIOA, GPIO_PIN_13, GPIOA, GPIO_PIN_14, &htim14, &htim7);
+CoupledSimulationCallbacks protocol_callbacks = {
+    .canStart = coupledSimulationCheck,
+    .start = coupledSimulationStart,
+    .applyStep = coupledSimulationRun,
+    .stop = coupledSimulationStop
+};
 
 alignas(32) uint16_t adc1_proc_buffer[ADC1_BUF_LEN];
 alignas(32) uint16_t adc2_proc_buffer[ADC2_BUF_LEN];
@@ -224,6 +238,7 @@ int main(void)
 
   /* Initialize Coupled Communication */
   if (communication.init() != HAL_OK) error_flag |= ERROR_COMM_CONFIG;
+  communication.setSimulationCallbacks(protocol_callbacks);
 
   /* Enable Caches */
   SCB_EnableICache();
@@ -660,8 +675,8 @@ void printTelemetryUTF8(void) {
   if (print_mask & PRINT_FOC_VQ) {
     pos += snprintf(buffer + pos, sizeof(buffer) - pos, "foc_vq %.2f ", foc_state.Vq_cmd);
   }
-  if (print_mask_ex & PRINT_OM) {
-    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "om %u ", foc_state.om);
+  if (print_mask_ex & PRINT_CP_MODE) {
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "cp_mode %u ", static_cast<uint8_t>(communication.getCouplingMode()));
   }
   if (print_mask_ex & PRINT_M_INDEX) {
     pos += snprintf(buffer + pos, sizeof(buffer) - pos, "m_index %.2f ", foc_state.m_index);
@@ -928,8 +943,8 @@ void printTelemetryBinary(void) {
     memcpy(ptr, &val, 4);
     ptr += 4;
   }
-  if (print_mask_ex & PRINT_OM) {
-    uint8_t val = foc_state.om;
+  if (print_mask_ex & PRINT_CP_MODE) {
+    uint8_t val = static_cast<uint8_t>(communication.getCouplingMode());
     memcpy(ptr, &val, 1);
     ptr += 1;
   }
@@ -978,9 +993,8 @@ void speedControl(void) {
         target.torque = 0.0f;
         foc_state.target_rpm = 0.0f;
         foc_reset(&foc_state);
-        motorPWM.stop();
+        outputDisable();
         control_mode = MotorControlMode::MOTOR_STOP;
-        relay.write(0);
         return;
       }
     }
@@ -991,9 +1005,8 @@ void speedControl(void) {
         target.torque = 0.0f;
         foc_state.target_rpm = 0.0f;
         foc_reset(&foc_state);
-        motorPWM.stop();
+        outputDisable();
         control_mode = MotorControlMode::MOTOR_STOP;
-        relay.write(0);
         return;
       }
     }
@@ -1209,8 +1222,7 @@ void alignRotor(Sampling_t* sample) {
     control_mode = MotorControlMode::MOTOR_STOP;
     foc_state.Iq_ref = 0.0f;
     foc_state.Id_ref = 0.0f;
-    motorPWM.stop();
-    relay.write(0);
+    outputDisable();
     rpm = 0.0f;
     angle = 0.0f;
 
@@ -1371,9 +1383,8 @@ void vvvfRampUp(Sampling_t* sample) {
         rpm = 0.0f;
         system_flag &= ~FLAG_VVVF_RUNNING;
         control_mode = MotorControlMode::MOTOR_STOP;
-        motorPWM.setDuty(-1.0f, -1.0f, -1.0f);
         motorPWM.setFrequency(PWM_FREQ_DEFAULT_HZ);
-        relay.write(0);
+        outputDisable();
         return;
       }
     }
@@ -1549,8 +1560,7 @@ int8_t sampleAndProtect(Sampling_t* sample, bool bypass_protection) {
 }
 
 void trip(void) {
-    motorPWM.stop();
-    relay.write(0);
+    outputDisable();
     control_mode = MotorControlMode::MOTOR_PROTECTION;
     clearRunningFlags();
 }
@@ -1620,6 +1630,71 @@ void loadAdcCalibration(ADCGain_t* adc_gain, uint8_t preset_num) {
   }
 }
 
+CoupledControlResult coupledSimulationCheck(void) {
+    if (control_mode == MotorControlMode::MOTOR_PROTECTION) return CoupledControlResult::PROTECTION;
+    if (control_mode != MotorControlMode::MOTOR_STOP) return CoupledControlResult::BUSY;
+    if (((system_flag & FLAG_ELEC_ZERO_ALIGNED) == 0) || !encoder.is_synchronized_) return CoupledControlResult::NOT_READY;
+    return CoupledControlResult::OK;
+}
+
+bool coupledSimulationStart(bool master) {
+    target.speed = 0.0f;
+    target.torque = 0.0f;
+    target.time = 0.0f;
+    system_flag &= ~FLAG_TARGET_RAMP;
+    system_flag &= ~FLAG_SPEED_RAMP_INIT;
+    foc_state.target_rpm = 0.0f;
+    Sampling_t sample;
+    if (sampleAndProtect(&sample, true) != 0) return false;
+
+    clearRunningFlags();
+    outputEnable();
+
+    foc_reset(&foc_state);
+    control_mode = MotorControlMode::MOTOR_FOC_LINEAR;
+    system_flag |= FLAG_FOC_RUNNING;
+
+    speedControl();
+    focTick(&sample);
+    usb_printf("Starting FOC linear startup sequence...\r\n");
+    return true;
+}
+
+void coupledSimulationRun(float speed, float torque) {
+    target.speed = speed;
+    target.torque = torque;
+    target.is_torque_control = (speed == 0.0f && torque != 0.0f);
+}
+
+void coupledSimulationStop(bool fault) {
+    if (fault) {
+        control_mode = MotorControlMode::MOTOR_STOP;
+        clearRunningFlags();
+        foc_reset(&foc_state);
+        outputDisable();
+        usb_printf("Coupling protocol error, stopping\r\n");
+    }
+    else {
+        system_flag &= ~FLAG_FOC_RUNNING;
+        usb_printf("Simulation complete, ramping down\r\n");
+    }
+}
+
+void outputDisable(void) {
+    pwm_ch1_dis.write(1);
+    pwm_ch2_dis.write(1);
+    pwm_ch3_dis.write(1);
+    motorPWM.stop();
+    relay.write(0);
+}
+
+void outputEnable(void) {
+    pwm_ch1_dis.write(0);
+    pwm_ch2_dis.write(0);
+    pwm_ch3_dis.write(0);
+    relay.write(1);
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 //  USB Command Handling
 //  The following functions facilitate handling of USB commands received from host computer
@@ -1632,7 +1707,7 @@ void cmd_start(int argc, char** argv) {
     if (control_mode == MotorControlMode::MOTOR_PROTECTION) {protectionModePrint(); return;}
     control_mode = MotorControlMode::MOTOR_STARTUP;
     clearRunningFlags();
-    relay.write(1);
+    outputEnable();
     if (strcmp(argv[1], "foc") == 0) startUpSequence(MotorControlMode::MOTOR_FOC_LINEAR);
     else if (strcmp(argv[1], "vvvf") == 0) startUpSequence(MotorControlMode::MOTOR_VVVF);
     else startUpSequence(MotorControlMode::MOTOR_FOC_LINEAR);
@@ -1656,10 +1731,35 @@ void cmd_stop(int argc, char** argv) {
     else {
         control_mode = MotorControlMode::MOTOR_STOP;
         clearRunningFlags();
-        motorPWM.stop();
         foc_reset(&foc_state);
-        relay.write(0);
+        outputDisable();
         usb_printf("Stopping\r\n");
+    }
+}
+
+void cmd_sim(int argc, char** argv) {
+    if (strcmp(argv[1], "start") == 0) {
+        if (control_mode != MotorControlMode::MOTOR_STOP) {
+            usb_printf("Coupled simulation must be started from the stopped state\r\n");
+            return;
+        }
+        if (communication.startSimulation()) {
+            usb_printf("Coupled simulation start requested\r\n");
+        } else {
+            usb_printf("Coupled simulation not ready; mode=%u\r\n",
+                       static_cast<unsigned>(communication.getCouplingMode()));
+        }
+    }
+    else if (strcmp(argv[1], "status") == 0) {
+        usb_printf("Coupled communication mode=%u\r\n",
+                   static_cast<unsigned>(communication.getCouplingMode()));
+    }
+    else if (strcmp(argv[1], "reset") == 0) {
+        communication.reset();
+        usb_printf("Coupled communication reset\r\n");
+    }
+    else {
+        usb_printf("Usage: sim <start|status|reset>\r\n");
     }
 }
 
@@ -1676,7 +1776,7 @@ void cmd_align(int argc, char** argv) {
     if (control_mode == MotorControlMode::MOTOR_ALIGN) {usb_printf("Already aligning, please wait\r\n"); return;}
     control_mode = MotorControlMode::MOTOR_ALIGN;
     clearRunningFlags();
-    relay.write(1);
+    outputEnable();
     Sampling_t sample;
     if (sampleAndProtect(&sample, true) != 0) return;
     alignRotor(&sample);
@@ -1692,10 +1792,9 @@ void cmd_reset(int argc, char** argv) {
     clearRunningFlags();
     error_flag &= ~ERROR_OVERCURRENT;
     error_flag &= ~ERROR_UNDERVOLTAGE;
-    motorPWM.stop();
     led_red.write(0);
     foc_reset(&foc_state);
-    relay.write(0);
+    outputDisable();
     if (foc_state.target_rpm != 0.0f) foc_state.target_rpm = FOC_INITIAL_RPM;
     if (target.speed != 0.0f) target.speed = FOC_INITIAL_RPM;
     usb_printf("Resetting\r\n");
@@ -1730,7 +1829,7 @@ void cmd_foc(int argc, char** argv) {
         foc_state.Vd_cmd = atof(argv[2]);
         if ((system_flag & FLAG_FOC_RUNNING) == 0) {
             system_flag |= FLAG_FOC_RUNNING;
-            relay.write(1);
+            outputEnable();
             Sampling_t sample;
             if (sampleAndProtect(&sample) != 0) return;
             focTick(&sample);
@@ -1746,7 +1845,7 @@ void cmd_foc(int argc, char** argv) {
         foc_state.Vq_cmd = atof(argv[2]);
         if ((system_flag & FLAG_FOC_RUNNING) == 0) {
             system_flag |= FLAG_FOC_RUNNING;
-            relay.write(1);
+            outputEnable();
             Sampling_t sample;
             if (sampleAndProtect(&sample) != 0) return;
             focTick(&sample);
@@ -1762,7 +1861,7 @@ void cmd_foc(int argc, char** argv) {
         foc_state.Id_ref = atof(argv[2]);
         if ((system_flag & FLAG_FOC_RUNNING) == 0) {
             system_flag |= FLAG_FOC_RUNNING;
-            relay.write(1);
+            outputEnable();
             Sampling_t sample;
             if (sampleAndProtect(&sample) != 0) return;
             focTick(&sample);
@@ -1778,7 +1877,7 @@ void cmd_foc(int argc, char** argv) {
         foc_state.Iq_ref = atof(argv[2]);
         if ((system_flag & FLAG_FOC_RUNNING) == 0) {
             system_flag |= FLAG_FOC_RUNNING;
-            relay.write(1);
+            outputEnable();
             Sampling_t sample;
             if (sampleAndProtect(&sample) != 0) return;
             focTick(&sample);
@@ -1799,7 +1898,7 @@ void cmd_sixstep(int argc, char** argv) {
     if (control_mode == MotorControlMode::MOTOR_PROTECTION) {protectionModePrint(); return;}
     control_mode = MotorControlMode::MOTOR_SIX_STEP;
     clearRunningFlags();
-    relay.write(1);
+    outputEnable();
     sixStepCommutation();
     usb_printf("Six-step running\r\n");
 }
@@ -1945,7 +2044,7 @@ void cmd_duty(int argc, char** argv) {
             
             control_mode = MotorControlMode::MOTOR_MANUAL;
             clearRunningFlags();
-            relay.write(1);
+            outputEnable();
             motorPWM.setDuty(values[0], values[1], values[2]);
 
             usb_printf("Duty set to A=%.2f B=%.2f C=%.2f\r\n", values[0], values[1], values[2]);
@@ -1966,7 +2065,7 @@ void cmd_duty(int argc, char** argv) {
 void cmd_vec(int argc, char** argv) {
     if (BATTERY_PROTECTION) {batteryProtectionPrint(); return;}
     if (control_mode == MotorControlMode::MOTOR_PROTECTION) {protectionModePrint(); return;}
-    relay.write(1);
+    outputEnable();
     int vec_num = atoi(argv[1]);
     
     if (vec_num >= 0 && vec_num <= 5) {
@@ -2298,7 +2397,7 @@ void cmd_log(int argc, char** argv) {
 
             case 4:
                 print_mask = PRINT_RPM | PRINT_RPMSP | PRINT_DUTY_A | PRINT_DUTY_B | PRINT_DUTY_C | PRINT_IA | PRINT_IB | PRINT_IC | PRINT_VBATT | PRINT_FOC_ID | PRINT_FOC_IQ | PRINT_FOC_VD | PRINT_FOC_VQ | PRINT_FOC_IDSP | PRINT_FOC_IQSP;
-                print_mask_ex = PRINT_OM | PRINT_M_INDEX | PRINT_FW;
+                print_mask_ex = PRINT_CP_MODE | PRINT_M_INDEX | PRINT_FW;
                 usb_printf("Preset %d active\r\n", preset_id);
                 break;
                 
@@ -2350,7 +2449,7 @@ void cmd_log(int argc, char** argv) {
         else if (strcmp(token, "vd") == 0) flag = PRINT_FOC_VD;
         else if (strcmp(token, "vq") == 0) flag = PRINT_FOC_VQ;
 
-        else if (strcmp(token, "om") == 0) flag_ex = PRINT_OM;
+        else if (strcmp(token, "cp_mode") == 0) flag_ex = PRINT_CP_MODE;
         else if (strcmp(token, "m_index") == 0) flag_ex = PRINT_M_INDEX;
         else if (strcmp(token, "fw") == 0) flag_ex = PRINT_FW;
         else if (strcmp(token, "umag") == 0) flag_ex = PRINT_UMAG;

@@ -16,6 +16,11 @@ class DigitalOut {
             HAL_GPIO_WritePin(port_, pin_, value ? GPIO_PIN_SET : GPIO_PIN_RESET);
         }
 
+        // Overload for GPIO_PinState
+        inline void write(GPIO_PinState state) {
+            HAL_GPIO_WritePin(port_, pin_, state);
+        }
+
         // Toggle the output level of the pin
         inline void toggle(void) {
             HAL_GPIO_TogglePin(port_, pin_);
