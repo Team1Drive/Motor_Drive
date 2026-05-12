@@ -4,6 +4,12 @@
 #include <cstdint>
 
 #define RX_RING_SIZE 256
+#define USB_TX_TEXT_QUEUE_SIZE 2048
+#define USB_TX_TELEMETRY_QUEUE_SIZE 16384
+#define USB_TX_BULK_QUEUE_SIZE 32768
+#define USB_TX_CHUNK_SIZE 500
+#define USB_TX_LOW_WATERMARK_PERCENT 50
+#define USB_TX_HIGH_WATERMARK_PERCENT 75
 #define CMD_MAX_LEN 64
 #define MAX_ARGC 8
 
@@ -28,6 +34,41 @@ typedef struct {
  * @param format The format string, similar to printf.
  */
 void usb_printf(const char *format, ...);
+
+/**
+ * @brief Queues a binary telemetry packet for USB CDC transmission.
+ * @note Data is copied into the USB TX queue before this function returns, so
+ *       callers may use stack/local buffers safely. Returns false if the queue
+ *       does not have enough free space for the whole packet.
+ */
+bool usb_sendTelemetry(const uint8_t* buffer, uint16_t length);
+
+/**
+ * @brief Queues bulk USB CDC data for future high-throughput transfers.
+ * @note This is currently all-or-nothing to avoid partial application packets.
+ *       Large captures should be split into chunks by the caller.
+ */
+bool usb_sendBulk(const uint8_t* buffer, uint16_t length);
+
+/**
+ * @brief Pumps queued USB TX data into the CDC endpoint when it is idle.
+ * @note Call frequently from the main loop. It is also called opportunistically
+ *       by usb_printf(), usb_sendTelemetry(), and usb_sendBulk().
+ */
+void usb_tx_service(void);
+
+/**
+ * @brief Marks the active USB CDC transfer complete and starts the next queued
+ *        chunk if data is waiting.
+ * @note Call this from the USB CDC transmit-complete callback.
+ */
+#ifdef __cplusplus
+extern "C" {
+#endif
+void usb_tx_onTransmitComplete(void);
+#ifdef __cplusplus
+}
+#endif
 
 /**
  * @brief Writes a byte of data into the ring buffer. This function checks if there is space in the buffer before writing and updates the head index accordingly. It returns true if the write was successful, or false if the buffer is full.

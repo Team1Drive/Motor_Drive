@@ -18,6 +18,13 @@
 #define ADC2_NUM_CHANNELS   2U
 #define ADC3_NUM_CHANNELS   2U
 
+#define ADC_BUF_SIZE        2048U
+#define ADC_HALF_BUF_SIZE   (ADC_BUF_SIZE / 2U)
+
+#define ADC1_BUF_LEN  (ADC_BUF_SIZE * ADC1_NUM_CHANNELS)
+#define ADC2_BUF_LEN  (ADC_BUF_SIZE * ADC2_NUM_CHANNELS)
+#define ADC3_BUF_LEN  (ADC_BUF_SIZE * ADC3_NUM_CHANNELS)
+
 // ---------- ADC Calibration Parameters ----------
 #define BOARD_SELECTION     1U
 // Board 1
@@ -102,7 +109,8 @@
 
 #define LOG_MAX_VALUE_WINDOW_SIZE   32U // Number of samples to consider when calculating max current for logging (must be a power of 2 for efficient averaging)
 
-
+#define TELEMETRY_HEADER_MAGIC      0xAA55 // Magic number for telemetry data packets to identify the start of a valid packet
+#define ADC_SAMPLE_HEADER_MAGIC     0xAA46 // Magic number for ADC sample packets to identify the start of a valid packet
 
 enum class MotorControlMode : uint8_t {
     MOTOR_PROTECTION,

@@ -4,6 +4,19 @@
 #include <cstdint>
 #include <cstring>
 #include "math_helpers.h"
+#include "parameters.h"
+
+typedef struct __attribute__((packed)) {
+    uint16_t magic;
+    uint8_t  adc_id;
+    uint16_t sample_count;
+    uint8_t  resolution_bit;
+    uint32_t sequence;
+    float    shunt;
+    float    offset;
+} adc_bulk_sampling_t;
+
+static_assert(sizeof(adc_bulk_sampling_t) == 18);
 
 class ADCSampler {
     private:
@@ -19,6 +32,9 @@ class ADCSampler {
         uint16_t* proc_buffer_;
         uint32_t  proc_len_;
         bool      use_proc_buffer_;
+
+        adc_bulk_sampling_t header_;
+        uint8_t packet[sizeof(adc_bulk_sampling_t) + ADC_HALF_BUF_SIZE * sizeof(uint16_t)];
 
         /**
          * Helper function to determine the instance index based on the ADC handle. This is used to route the correct ADC handle to the corresponding ADCSampler instance in the static callback functions.
@@ -67,6 +83,13 @@ class ADCSampler {
          * @return HAL status code indicating success or failure of starting the ADC with DMA.
          */
         HAL_StatusTypeDef startDMA(void);
+
+        /**
+         * Initialize the bulk sampling header with the specified shunt and offset values.
+         * @param shunt The shunt value for the ADC.
+         * @param offset The offset value for the ADC.
+         */
+        void initBulkHeader(float shunt, float offset);
 
         /**
          * Set an optional processing buffer where the ADC data will be copied before being marked as ready. This allows for double buffering, where the DMA can continue filling the main buffer while the processing buffer is being used for computations. The processing buffer should have enough space to hold at least half of the DMA buffer length to accommodate the data copied during the half complete callback.
@@ -125,4 +148,12 @@ class ADCSampler {
          * @attention The `length` parameter must be a power of 2 otherwise will return 0.
          */
         uint16_t getLatestChannelMean(uint8_t channel, uint32_t set_length);
+
+        /**
+         * Assemble one ready DMA half-buffer into a contiguous bulk USB packet.
+         * @param packet_ptr Receives a pointer to the internal packet buffer.
+         * @param length_ptr Receives the packet length in bytes.
+         * @return true if a half-buffer was ready and a packet was assembled.
+         */
+        bool assembleBulkPacket(const uint8_t** packet_ptr, uint16_t* length_ptr);
 };

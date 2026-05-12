@@ -46,16 +46,16 @@ add_executable(${CMAKE_PROJECT_NAME})
 add_subdirectory(cmake/stm32cubemx)
 
 # Add CMSIS-DSP library
-set(CMSISDSP ${CMAKE_CURRENT_SOURCE_DIR}/Middlewares/ARM/CMSIS-DSP)
-set(CMSISCORE ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/CMSIS)
+#set(CMSISDSP ${CMAKE_CURRENT_SOURCE_DIR}/Middlewares/ARM/CMSIS-DSP)
+#set(CMSISCORE ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/CMSIS)
 
-add_subdirectory(${CMSISDSP}/Source cmsis-dsp)
+#add_subdirectory(${CMSISDSP}/Source cmsis-dsp)
 
 # Add preprocessor definitions
 target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE
     STM32H725xx
     USE_HAL_DRIVER
-    ARM_MATH_CM7
+    #ARM_MATH_CM7
 )
 
 # Add include directories
@@ -92,7 +92,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Core/Src/foc.cpp
     Core/Src/cmd.cpp
     Core/Src/math_helpers.cpp
-    Core/Src/fft_analyzer.cpp
+    #Core/Src/fft_analyzer.cpp
 )
 
 # Add include paths
@@ -117,7 +117,7 @@ target_compile_options(${PROJECT_NAME} PRIVATE
 target_link_libraries(${CMAKE_PROJECT_NAME}
     stm32cubemx
     # Add user defined libraries
-    CMSISDSP
+    #CMSISDSP
 )
 
 # Add post-build command to generate binary file

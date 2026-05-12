@@ -18,10 +18,6 @@
 #include <stdio.h>
 #include <stdarg.h>
 
-#define ADC1_BUF_LEN  6144
-#define ADC2_BUF_LEN  4096
-#define ADC3_BUF_LEN  4096
-
 void MPU_Config(void);
 
 void timer2IRQ(void);
@@ -262,8 +258,15 @@ int main(void)
     /* USER CODE BEGIN WHILE */
     char cmd_line[CMD_MAX_LEN];
     if (read_line_from_ring(&rx_ring, cmd_line, CMD_MAX_LEN)) process_command(cmd_line);
+    usb_tx_service();
     //if (control_mode != MotorControlMode::MOTOR_STOP && tick_count & 16384) usb_printf("Main Loop Tick: %u\r\n", tick_count);
     tick_count++;
+
+    const uint8_t* packet;
+    uint16_t length;
+    if (adc1.assembleBulkPacket(&packet, &length)) usb_sendBulk(packet, length);
+    if (adc2.assembleBulkPacket(&packet, &length)) usb_sendBulk(packet, length);
+    if (adc3.assembleBulkPacket(&packet, &length)) usb_sendBulk(packet, length);
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE BEGIN 3 */
@@ -662,7 +665,7 @@ void printTelemetryUTF8(void) {
   if (pos > 0) {
     buffer[pos - 1] = '\n';
     buffer[pos] = '\0';
-    CDC_Transmit_HS((uint8_t*)buffer, pos);
+    usb_sendTelemetry((uint8_t*)buffer, static_cast<uint16_t>(pos));
   }
 }
 
@@ -726,16 +729,18 @@ void printTelemetryBinary(void) {
   uint8_t buffer[256];
   uint8_t* ptr = buffer;
 
-  uint32_t error = error_flag;
-  uint8_t mode = static_cast<uint8_t>(control_mode);
-  uint64_t time = HighResTimer::getTicks();
-  uint16_t time_high = static_cast<uint16_t>((time >> 32) & 0xFFFF);
-  uint32_t time_low = static_cast<uint32_t>(time & 0xFFFFFFFF);
-  uint32_t mask = print_mask;
-  uint32_t mask_ex = print_mask_ex;
+  const uint8_t header1 = TELEMETRY_HEADER_MAGIC >> 8;
+  const uint8_t header2 = TELEMETRY_HEADER_MAGIC & 0xFF;
+  const uint32_t error = error_flag;
+  const uint8_t mode = static_cast<uint8_t>(control_mode);
+  const uint64_t time = HighResTimer::getTicks();
+  const uint16_t time_high = static_cast<uint16_t>((time >> 32) & 0xFFFF);
+  const uint32_t time_low = static_cast<uint32_t>(time & 0xFFFFFFFF);
+  const uint32_t mask = print_mask;
+  const uint32_t mask_ex = print_mask_ex;
 
-  *ptr++ = 0xAA;
-  *ptr++ = 0x55;
+  *ptr++ = header1;
+  *ptr++ = header2;
 
   memcpy(ptr, &error, 4);
   ptr += 4;
@@ -938,7 +943,7 @@ void printTelemetryBinary(void) {
     ptr += 4;
   }
   if (ptr != buffer) {
-      CDC_Transmit_HS(buffer, ptr - buffer);
+      usb_sendTelemetry(buffer, static_cast<uint16_t>(ptr - buffer));
   }
 }
 
@@ -1598,6 +1603,9 @@ void loadAdcCalibration(ADCGain_t* adc_gain, uint8_t preset_num) {
       adc_gain->preset = 0;
       break;
   }
+  adc1.initBulkHeader(adc_gain->ia_shunt, adc_gain->ia_offset);
+  adc2.initBulkHeader(adc_gain->ib_shunt, adc_gain->ib_offset);
+  adc3.initBulkHeader(adc_gain->ic_shunt, adc_gain->ic_offset);
 }
 
 void simulationCheck(void) {
@@ -1721,7 +1729,7 @@ void cmd_sim(int argc, char** argv) {
 }
 
 void cmd_align(int argc, char** argv) {
-    if (strcmp(argv[1], "reset") == 0) {
+    if (argc >= 2 && strcmp(argv[1], "reset") == 0) {
         system_flag &= ~FLAG_ELEC_ZERO_ALIGNED;
         encoder.is_synchronized_ = false;
         encoder.is_zeroed_ = false;

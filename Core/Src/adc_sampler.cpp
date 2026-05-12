@@ -45,9 +45,9 @@ ADCSampler::ADCSampler(ADC_HandleTypeDef* hadc, DMA_HandleTypeDef* hdma, volatil
     half_len_(length / 2),
     latest_group_(0),
     half_ready_(false),
-    full_ready_(false) {
-        data_ready_ = false;
-    }
+    full_ready_(false),
+    data_ready_(false),
+    use_proc_buffer_(false) {}
 
 void ADCSampler::setProcessingBuffer(uint16_t* proc_buf, uint32_t proc_len) {
     proc_buffer_ = proc_buf;
@@ -85,6 +85,17 @@ HAL_StatusTypeDef ADCSampler::startDMA(void) {
     num_channels_ = hadc_->Init.NbrOfConversion;
     if (num_channels_ == 0) num_channels_ = 1;
     return HAL_OK;
+}
+
+void ADCSampler::initBulkHeader(float shunt, float offset) {
+    header_.magic = ADC_SAMPLE_HEADER_MAGIC;
+    header_.sample_count = ADC_HALF_BUF_SIZE;
+    header_.sequence = 0;
+    header_.shunt = shunt;
+    header_.offset = offset;
+    uint32_t i = getInstanceIndex(hadc_);
+    header_.adc_id = i + 1; // ADC1 -> 1, ADC2 -> 2, ADC3 -> 3
+    header_.resolution_bit = i == 2 ? 12 : 16; // ADC3 = 12-bit, ADC1/2 = 16-bit
 }
 
 uint32_t ADCSampler::getLatestData(uint16_t* data_ptr) {
@@ -256,4 +267,55 @@ uint16_t ADCSampler::getLatestChannelMean(uint8_t channel, uint32_t set_length) 
     uint16_t data[set_length];
     getLatestChannel(channel, data, set_length);
     return fastAverage(data, set_length);
+}
+
+bool ADCSampler::assembleBulkPacket(const uint8_t** packet_ptr, uint16_t* length_ptr) {
+    if (packet_ptr == nullptr || length_ptr == nullptr || !use_proc_buffer_ || proc_buffer_ == nullptr) {
+        return false;
+    }
+
+    if (num_channels_ == 0U || half_len_ == 0U || proc_len_ < length_) {
+        return false;
+    }
+
+    uint32_t half_start = 0U;
+    bool packet_ready = false;
+
+    const uint32_t primask = __get_PRIMASK();
+    __disable_irq();
+    if (half_ready_) {
+        half_ready_ = false;
+        half_start = 0U;
+        packet_ready = true;
+    } else if (full_ready_) {
+        full_ready_ = false;
+        half_start = half_len_;
+        packet_ready = true;
+    }
+    if (primask == 0U) {
+        __enable_irq();
+    }
+
+    if (!packet_ready) {
+        return false;
+    }
+
+    const uint32_t sample_count = half_len_ / num_channels_;
+    if (sample_count > ADC_HALF_BUF_SIZE) {
+        return false;
+    }
+
+    header_.sample_count = static_cast<uint16_t>(sample_count);
+    memcpy(packet, &header_, sizeof(header_));
+    header_.sequence++;
+
+    uint8_t* payload = packet + sizeof(header_);
+    for (uint32_t sample = 0U; sample < sample_count; sample++) {
+        const uint16_t value = proc_buffer_[half_start + sample * num_channels_];
+        memcpy(payload + sample * sizeof(uint16_t), &value, sizeof(value));
+    }
+
+    *packet_ptr = packet;
+    *length_ptr = static_cast<uint16_t>(sizeof(header_) + sample_count * sizeof(uint16_t));
+    return true;
 }
