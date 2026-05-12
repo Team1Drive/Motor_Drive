@@ -142,6 +142,12 @@ enum ErrorFlag : uint32_t {
     ERROR_UNDERVOLTAGE      = 1 << 8
 };
 
+enum SimulationFlag : uint16_t {
+    SIM_FLAG_RUNNING        = 1 << 0,
+    SIM_FLAG_PAUSED         = 1 << 1,
+    SIM_FLAG_READY_ALIGN    = 1 << 2,
+};
+
 typedef struct {
     float ia_shunt;
     float ib_shunt;

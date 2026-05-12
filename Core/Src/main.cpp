@@ -12,7 +12,6 @@
 #include "cmd.h"
 #include "math_helpers.h"
 #include "lut.h"
-#include "coupled_comm.h"
 #include <cstdint>
 
 #include "usbd_cdc_if.h"
@@ -34,10 +33,10 @@ void printTelemetryBinary(void);
 
 void speedControl(void);
 
-CoupledControlResult coupledSimulationCheck(void);
-bool coupledSimulationStart(bool master);
-void coupledSimulationRun(float speed, float torque);
-void coupledSimulationStop(bool fault);
+void simulationCheck(void);
+bool simulationStart(bool master);
+bool simulationRun(float target, bool is_speed);
+void simulationStop(bool fault);
 
 void outputDisable(void);
 void outputEnable(void);
@@ -76,10 +75,8 @@ extern TIM_HandleTypeDef htim3;
 extern TIM_HandleTypeDef htim4;
 extern TIM_HandleTypeDef htim5;
 extern TIM_HandleTypeDef htim6;
-extern TIM_HandleTypeDef htim7;
 extern TIM_HandleTypeDef htim8;
 extern TIM_HandleTypeDef htim12;
-extern TIM_HandleTypeDef htim14;
 extern TIM_HandleTypeDef htim15;
 extern TIM_HandleTypeDef htim16;
 
@@ -106,14 +103,6 @@ DigitalOut relay(GPIOD, GPIO_PIN_8);
 Encoder encoder(&htim4, &htim15, GPIO_PIN_9, ENCODER_PPR, TIM6_FREQ_HZ, ENCODER_STALL_THRESHOLD);
 HallSensor hallsensor(GPIOB, GPIO_PIN_5, GPIOB, GPIO_PIN_8, GPIOE, GPIO_PIN_4);
 
-CoupledCommunication communication(GPIOA, GPIO_PIN_13, GPIOA, GPIO_PIN_14, &htim14, &htim7);
-CoupledSimulationCallbacks protocol_callbacks = {
-    .canStart = coupledSimulationCheck,
-    .start = coupledSimulationStart,
-    .applyStep = coupledSimulationRun,
-    .stop = coupledSimulationStop
-};
-
 alignas(32) uint16_t adc1_proc_buffer[ADC1_BUF_LEN];
 alignas(32) uint16_t adc2_proc_buffer[ADC2_BUF_LEN];
 alignas(32) uint16_t adc3_proc_buffer[ADC3_BUF_LEN];
@@ -122,6 +111,7 @@ volatile MotorControlMode control_mode = MotorControlMode::MOTOR_STOP;
 
 volatile uint32_t system_flag = 0;
 volatile uint32_t error_flag = 0;
+volatile uint16_t simulation_flag = 0;
 
 ADCGain_t adc_gain;
 
@@ -190,10 +180,8 @@ int main(void)
   MX_TIM4_Init();
   MX_TIM5_Init();
   MX_TIM6_Init();
-  MX_TIM7_Init();
   MX_TIM8_Init();
   MX_TIM12_Init();
-  MX_TIM14_Init();
   MX_TIM15_Init();
   MX_TIM16_Init();
 
@@ -235,10 +223,6 @@ int main(void)
 
   /* Start PWM */
   if (motorPWM.init() != HAL_OK) error_flag |= ERROR_PWM_CONFIG;
-
-  /* Initialize Coupled Communication */
-  if (communication.init() != HAL_OK) error_flag |= ERROR_COMM_CONFIG;
-  communication.setSimulationCallbacks(protocol_callbacks);
 
   /* Enable Caches */
   SCB_EnableICache();
@@ -321,13 +305,6 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
         Encoder::irqHandlerIndex(GPIO_Pin);
       }
       break;
-    // Handle Coupled Communication RX (PA14)
-    case GPIO_PIN_14:
-      if (HAL_GPIO_ReadPin(GPIOA, GPIO_Pin) == GPIO_PIN_SET) {
-        CoupledCommunication::irqHandlerRxRising();
-      } else {
-        CoupledCommunication::irqHandlerRxFalling();
-      }
     default:
       // Unhandled pin interrupt
       break;
@@ -377,14 +354,6 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
   else if (htim->Instance == TIM6) {
     //timer6IRQ();
     printTelemetryBinary();
-  }
-  // Communication clock interrupt
-  else if (htim->Instance == TIM14) {
-    CoupledCommunication::irqHandlerClock();
-  }
-  // Communication timeout interrupt
-  else if (htim->Instance == TIM7) {
-    CoupledCommunication::irqHandlerTimeout();
   }
   // Print telemetry interrupt
   else if (htim->Instance == TIM2) {
@@ -676,7 +645,7 @@ void printTelemetryUTF8(void) {
     pos += snprintf(buffer + pos, sizeof(buffer) - pos, "foc_vq %.2f ", foc_state.Vq_cmd);
   }
   if (print_mask_ex & PRINT_CP_MODE) {
-    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "cp_mode %u ", static_cast<uint8_t>(communication.getCouplingMode()));
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "cp_mode %u ", simulation_flag);
   }
   if (print_mask_ex & PRINT_M_INDEX) {
     pos += snprintf(buffer + pos, sizeof(buffer) - pos, "m_index %.2f ", foc_state.m_index);
@@ -944,9 +913,9 @@ void printTelemetryBinary(void) {
     ptr += 4;
   }
   if (print_mask_ex & PRINT_CP_MODE) {
-    uint8_t val = static_cast<uint8_t>(communication.getCouplingMode());
-    memcpy(ptr, &val, 1);
-    ptr += 1;
+    uint16_t val = simulation_flag;
+    memcpy(ptr, &val, 2);
+    ptr += 2;
   }
   if (print_mask_ex & PRINT_M_INDEX) {
     float val = foc_state.m_index;
@@ -1096,11 +1065,12 @@ void speedControl(void) {
   * ========================================================================= */
   const float m_req = foc_state.u_mag / foc_state.u_abs_limit;
 
-  const float m_fw_entry    = 1.0f;
-  const float m_fw_release  = 0.96;
-  //const float m_fw_target   = 0.985f;
+  //const float m_fw_entry    = 1.0f;
+  //const float m_fw_release  = 0.96f;
+  const float m_fw_entry    = 0.98f;
+  const float m_fw_release  = 0.91f;
 
-  const float u_fw_limit = 2 * foc_state.Vdc / M_PI * 0.95f;
+  const float u_fw_limit = foc_state.u_abs_limit * 0.93f;
   const float u_req = foc_state.u_mag;
   const float omega_abs = fabsf(foc_state.omega_m);
   float new_Id_ref;
@@ -1630,14 +1600,12 @@ void loadAdcCalibration(ADCGain_t* adc_gain, uint8_t preset_num) {
   }
 }
 
-CoupledControlResult coupledSimulationCheck(void) {
-    if (control_mode == MotorControlMode::MOTOR_PROTECTION) return CoupledControlResult::PROTECTION;
-    if (control_mode != MotorControlMode::MOTOR_STOP) return CoupledControlResult::BUSY;
-    if (((system_flag & FLAG_ELEC_ZERO_ALIGNED) == 0) || !encoder.is_synchronized_) return CoupledControlResult::NOT_READY;
-    return CoupledControlResult::OK;
+void simulationCheck(void) {
+    if (((system_flag & FLAG_ELEC_ZERO_ALIGNED) == 0) || !encoder.is_synchronized_) simulation_flag |= SIM_FLAG_READY_ALIGN;
+    else simulation_flag &= ~SIM_FLAG_READY_ALIGN;
 }
 
-bool coupledSimulationStart(bool master) {
+bool simulationStart(bool master) {
     target.speed = 0.0f;
     target.torque = 0.0f;
     target.time = 0.0f;
@@ -1660,19 +1628,22 @@ bool coupledSimulationStart(bool master) {
     return true;
 }
 
-void coupledSimulationRun(float speed, float torque) {
-    target.speed = speed;
-    target.torque = torque;
-    target.is_torque_control = (speed == 0.0f && torque != 0.0f);
+bool simulationRun(float target_value, bool is_speed) {
+    if (control_mode != MotorControlMode::MOTOR_FOC_LINEAR) return false;
+    if (is_speed) target.speed = target_value;
+    else          target.torque = target_value;
+    target.time = 0.0f;
+    target.is_torque_control = !is_speed;
+    return true;
 }
 
-void coupledSimulationStop(bool fault) {
+void simulationStop(bool fault) {
     if (fault) {
         control_mode = MotorControlMode::MOTOR_STOP;
         clearRunningFlags();
         foc_reset(&foc_state);
         outputDisable();
-        usb_printf("Coupling protocol error, stopping\r\n");
+        usb_printf("Protocol error, stopping\r\n");
     }
     else {
         system_flag &= ~FLAG_FOC_RUNNING;
@@ -1739,24 +1710,10 @@ void cmd_stop(int argc, char** argv) {
 
 void cmd_sim(int argc, char** argv) {
     if (strcmp(argv[1], "start") == 0) {
-        if (control_mode != MotorControlMode::MOTOR_STOP) {
-            usb_printf("Coupled simulation must be started from the stopped state\r\n");
-            return;
-        }
-        if (communication.startSimulation()) {
-            usb_printf("Coupled simulation start requested\r\n");
-        } else {
-            usb_printf("Coupled simulation not ready; mode=%u\r\n",
-                       static_cast<unsigned>(communication.getCouplingMode()));
-        }
     }
     else if (strcmp(argv[1], "status") == 0) {
-        usb_printf("Coupled communication mode=%u\r\n",
-                   static_cast<unsigned>(communication.getCouplingMode()));
     }
     else if (strcmp(argv[1], "reset") == 0) {
-        communication.reset();
-        usb_printf("Coupled communication reset\r\n");
     }
     else {
         usb_printf("Usage: sim <start|status|reset>\r\n");

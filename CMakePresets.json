@@ -8,6 +8,18 @@
             "generator": "MinGW Makefiles",
             "binaryDir": "${sourceDir}/out/build/${presetName}",
             "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/cmake/gcc-arm-none-eabi.cmake",
+                "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}"
+            }
+        },
+        {
+            "name": "gcc-arm-debug",
+            "displayName": "Config preset using toolchain file",
+            "description": "Config using MinGW Makefile",
+            "generator": "MinGW Makefiles",
+            "binaryDir": "${sourceDir}/out/build/${presetName}",
+            "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Debug",
                 "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/cmake/gcc-arm-none-eabi.cmake",
                 "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}"
@@ -18,6 +30,10 @@
         {
             "name": "gcc-arm",
             "configurePreset": "gcc-arm"
+        },
+        {
+            "name": "gcc-arm-debug",
+            "configurePreset": "gcc-arm-debug"
         }
     ]
 }

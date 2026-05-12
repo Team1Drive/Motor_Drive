@@ -8,10 +8,6 @@ namespace {
         return sizeof(coupled_simulation_table) / sizeof(coupled_simulation_table[0]);
     }
 
-    constexpr uint32_t transmissionWatchdogEdgeLimit(void) {
-        return (TRANSMISSION_FREQ_HZ / TRANSMISSION_WATCHDOG_HZ) + WAVE_CNT_THRESHOLD;
-    }
-
     bool isMasterState(CouplingMode mode) {
         switch (mode) {
             case CouplingMode::COUPLING_MASTER:
@@ -26,14 +22,6 @@ namespace {
             default:
                 return false;
         }
-    }
-
-    bool isTransmissionResponseState(CouplingMode mode) {
-        return mode == CouplingMode::COUPLING_MASTER_PARING
-            || mode == CouplingMode::COUPLING_MASTER_STARTUP
-            || mode == CouplingMode::COUPLING_MASTER_FINISH
-            || mode == CouplingMode::COUPLING_SLAVE_STARTUP
-            || mode == CouplingMode::COUPLING_SLAVE_FINISH;
     }
 
     bool isErrorState(CouplingMode mode) {
@@ -54,6 +42,7 @@ void CoupledCommunication::resetReception(IncomingSignalType signal) {
 }
 
 void CoupledCommunication::sendSignal(IncomingSignalType signal) {
+    outgoing_signal_ = signal;
     switch (signal) {
         case IncomingSignalType::SIGNAL_LOW:
             stopClock();
@@ -116,15 +105,12 @@ void CoupledCommunication::enterMode(CouplingMode mode) {
             break;
 
         case CouplingMode::COUPLING_SLAVE_STARTUP:
-            if (!checkControlStart(false)) return;
             sendSignal(IncomingSignalType::SIGNAL_WAVE);
-            startTransmissionWatchdog();
+            startStartupWatchdog();
             break;
 
         case CouplingMode::COUPLING_MASTER_STARTUP:
-            if (!checkControlStart(true)) return;
             sendSignal(IncomingSignalType::SIGNAL_LOW);
-            startTransmissionWatchdog();
             break;
 
         case CouplingMode::COUPLING_MASTER_RUN:
@@ -142,7 +128,6 @@ void CoupledCommunication::enterMode(CouplingMode mode) {
 
         case CouplingMode::COUPLING_MASTER_FINISH:
             sendSignal(IncomingSignalType::SIGNAL_WAVE);
-            startTransmissionWatchdog();
             break;
 
         case CouplingMode::COUPLING_SLAVE_FINISH:
@@ -281,7 +266,7 @@ void CoupledCommunication::handleTimeout(void) {
             break;
         }
 
-        case TimeoutPurpose::TIMEOUT_TRANSMISSION_WATCHDOG:
+        case TimeoutPurpose::TIMEOUT_STARTUP_WATCHDOG:
             if (isMasterState(coupling_mode_)) {
                 enterMode(CouplingMode::COUPLING_MASTER_LOST);
             }
@@ -306,6 +291,9 @@ void CoupledCommunication::handleTimeout(void) {
              && running_step_ >= simulationTableLength()) {
                 enterMode(CouplingMode::COUPLING_MASTER_FINISH);
             }
+            else {
+                enterMode(CouplingMode::COUPLING_MASTER_LOST);
+            }
             break;
 
         case TimeoutPurpose::TIMEOUT_NONE: default:
@@ -314,41 +302,12 @@ void CoupledCommunication::handleTimeout(void) {
 }
 
 void CoupledCommunication::distinguishSignal(void) {
-    if (coupling_mode_ == CouplingMode::COUPLING_MASTER_RUN) {
-        if (rx_state_ != GPIO_PIN_SET) {
-            enterMode(CouplingMode::COUPLING_MASTER_LOST);
-        }
-        return;
-    }
-
     if (coupling_mode_ == CouplingMode::COUPLING_SLAVE_RUN) {
-        resetReception(IncomingSignalType::SIGNAL_RUN);
-        handleRxSignal();
-        if (coupling_mode_ == CouplingMode::COUPLING_SLAVE_RUN) {
-            startSimulationTimeout();
-        }
-        return;
-    }
-
-    if (coupling_mode_ == CouplingMode::COUPLING_SLAVE_READY) {
-        enterMode(CouplingMode::COUPLING_SLAVE_RUN);
-        resetReception(IncomingSignalType::SIGNAL_RUN);
-        handleRxSignal();
-        if (coupling_mode_ == CouplingMode::COUPLING_SLAVE_RUN) {
-            startSimulationTimeout();
-        }
+        if (!applySimulationStep()) enterMode(CouplingMode::COUPLING_SLAVE_LOST);
         return;
     }
 
     receive_event_counter_++;
-
-    if (isTransmissionResponseState(coupling_mode_)
-     && receive_event_counter_ > transmissionWatchdogEdgeLimit()) {
-        enterMode(isMasterState(coupling_mode_)
-            ? CouplingMode::COUPLING_MASTER_LOST
-            : CouplingMode::COUPLING_SLAVE_LOST);
-        return;
-    }
 
     if (receive_event_counter_ >= WAVE_CNT_THRESHOLD
      && receiving_signal_ != IncomingSignalType::SIGNAL_WAVE) {
@@ -356,12 +315,11 @@ void CoupledCommunication::distinguishSignal(void) {
         CouplingMode previous_mode = coupling_mode_;
         handleRxSignal();
 
-        if (coupling_mode_ != previous_mode
-         || timeout_purpose_ == TimeoutPurpose::TIMEOUT_TRANSMISSION_WATCHDOG
-         || timeout_purpose_ == TimeoutPurpose::TIMEOUT_SIMULATION) {
+        if (coupling_mode_ != previous_mode) {
             return;
         }
     }
+
     startSignalTimeout();
 }
 
@@ -425,7 +383,6 @@ void CoupledCommunication::handleHigh(void) {
             break;
 
         case CouplingMode::COUPLING_MASTER_READY:
-            if (!startControl(true)) return;
             enterMode(CouplingMode::COUPLING_MASTER_RUN);
             break;
 
@@ -450,8 +407,12 @@ void CoupledCommunication::handleHigh(void) {
             break;
 
         case CouplingMode::COUPLING_SLAVE_STARTUP:
-            if (!startControl(false)) return;
-            enterMode(CouplingMode::COUPLING_SLAVE_READY);
+            if (!requestControlStart(false)) {
+                enterMode(CouplingMode::COUPLING_SLAVE_LOST);
+            }
+            else {
+                enterMode(CouplingMode::COUPLING_SLAVE_READY);
+            }
             break;
 
         case CouplingMode::COUPLING_SLAVE_FINISH:
@@ -598,17 +559,11 @@ HAL_StatusTypeDef CoupledCommunication::init(void) {
 
 bool CoupledCommunication::startSimulation(void) {
     if (coupling_mode_ != CouplingMode::COUPLING_MASTER) return false;
-    if (callbacks_.canStart == nullptr
-     || callbacks_.start == nullptr
-     || callbacks_.applyStep == nullptr
-     || callbacks_.stop == nullptr) {
-        enterMode(CouplingMode::COUPLING_ERROR_CALLBACK);
-        return false;
-    }
     if (simulationTableLength() == 0U) {
         enterMode(CouplingMode::COUPLING_ERROR_ARRAY);
         return false;
     }
+    if (!requestControlStart(true)) return false;
 
     enterMode(CouplingMode::COUPLING_MASTER_STARTUP);
     return true;
@@ -620,6 +575,11 @@ void CoupledCommunication::reset(void) {
     running_step_ = 0;
     error_reported_ = false;
     finish_wave_seen_ = false;
+    tx_state_ = GPIO_PIN_SET;
+    tx_.write(tx_state_);
+    clock_.setFrequency(TRANSMISSION_FREQ_HZ);
+    timeout_.setFrequency(TRANSMISSION_TIMEOUT_HZ);
+    stopClock();
     stopTimeout();
     enterMode(CouplingMode::COUPLING_DEFAULT);
 }

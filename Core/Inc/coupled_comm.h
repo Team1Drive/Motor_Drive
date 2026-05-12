@@ -8,8 +8,8 @@
 #define TRANSMISSION_FREQ_HZ    5000
 #define TRANSMISSION_TIMEOUT_MS 10
 #define TRANSMISSION_TIMEOUT_HZ (1000 / TRANSMISSION_TIMEOUT_MS)
-#define TRANSMISSION_WATCHDOG_MS    50
-#define TRANSMISSION_WATCHDOG_HZ    (1000 / TRANSMISSION_WATCHDOG_MS)
+#define STARTUP_WATCHDOG_MS     50
+#define STARTUP_WATCHDOG_HZ     (1000 / STARTUP_WATCHDOG_MS)
 #define WAVE_CNT_THRESHOLD      5 // Number of edge transitions within the timeout period to consider the signal as a wave
 #define SIMULATION_FREQ_HZ      10
 #define SIMULATION_TIMEOUT_MS   500
@@ -53,7 +53,7 @@ enum class IncomingSignalType : uint8_t {
 enum class TimeoutPurpose : uint8_t {
     TIMEOUT_NONE = 0,
     TIMEOUT_SIGNAL,
-    TIMEOUT_TRANSMISSION_WATCHDOG,
+    TIMEOUT_STARTUP_WATCHDOG,
     TIMEOUT_SIMULATION,
     TIMEOUT_SIMULATION_FINISH_DELAY
 };
@@ -93,6 +93,7 @@ class CoupledCommunication {
         GPIO_PinState tx_state_;
         CouplingMode coupling_mode_;
         IncomingSignalType receiving_signal_;
+        IncomingSignalType outgoing_signal_;
         TimeoutPurpose timeout_purpose_;
         uint32_t receive_event_counter_;
 
@@ -151,21 +152,33 @@ class CoupledCommunication {
             timeout_purpose_ = TimeoutPurpose::TIMEOUT_NONE;
         }
 
+        /**
+         * Timeout used to distinguish between wave and steady signals
+         */
         inline void startSignalTimeout(void) {
             timeout_purpose_ = TimeoutPurpose::TIMEOUT_SIGNAL;
             startTimeout(TRANSMISSION_TIMEOUT_HZ);
         }
 
-        inline void startTransmissionWatchdog(void) {
-            timeout_purpose_ = TimeoutPurpose::TIMEOUT_TRANSMISSION_WATCHDOG;
-            startTimeout(TRANSMISSION_WATCHDOG_HZ);
+        /**
+         * Timeout used to detect loss of signal during slave startup
+         */
+        inline void startStartupWatchdog(void) {
+            timeout_purpose_ = TimeoutPurpose::TIMEOUT_STARTUP_WATCHDOG;
+            startTimeout(STARTUP_WATCHDOG_HZ);
         }
 
+        /**
+         * Timeout used to distinguish between wave and steady signals during transmission
+         */
         inline void startSimulationTimeout(void) {
             timeout_purpose_ = TimeoutPurpose::TIMEOUT_SIMULATION;
             startTimeout(SIMULATION_TIMEOUT_HZ);
         }
 
+        /**
+         * Delay after simulation completion before declaring master finish
+         */
         inline void startSimulationFinishDelay(void) {
             timeout_purpose_ = TimeoutPurpose::TIMEOUT_SIMULATION_FINISH_DELAY;
             startTimeout(SIMULATION_FINISH_DELAY_HZ);
@@ -230,6 +243,30 @@ class CoupledCommunication {
             return coupling_mode_;
         }
 
+        inline IncomingSignalType getReceivingSignal(void) const {
+            return receiving_signal_;
+        }
+
+        inline IncomingSignalType getOutgoingSignal(void) const {
+            return outgoing_signal_;
+        }
+
+        inline TimeoutPurpose getTimeoutPurpose(void) const {
+            return timeout_purpose_;
+        }
+
+        inline uint32_t getReceiveEventCounter(void) const {
+            return receive_event_counter_;
+        }
+
+        inline GPIO_PinState getRxState(void) const {
+            return rx_state_;
+        }
+
+        inline GPIO_PinState getTxState(void) const {
+            return tx_state_;
+        }
+
         inline void setRunningCallback(void (*callback)(float speed, float torque, bool error)) {
             (void)callback;
         }
@@ -249,5 +286,36 @@ static constexpr CoupledSimulationStep_t coupled_simulation_table[] = {
     { 1500.0f, 0.0f, 0.0f, 0.30f },
     { 1000.0f, 0.0f, 0.0f, 0.20f },
     {  500.0f, 0.0f, 0.0f, 0.10f },
+    {    0.0f, 0.0f, 0.0f, 0.00f },
+    {    0.0f, 0.0f, 0.0f, 0.00f },
+    {    0.0f, 0.0f, 0.0f, 0.00f },
+    {    0.0f, 0.0f, 0.0f, 0.00f },
+    {    0.0f, 0.0f, 0.0f, 0.00f },
+    {    0.0f, 0.0f, 0.0f, 0.00f },
+    {    0.0f, 0.0f, 0.0f, 0.00f },
+    {    0.0f, 0.0f, 0.0f, 0.00f },
+    {    0.0f, 0.0f, 0.0f, 0.00f },
+    {    0.0f, 0.0f, 0.0f, 0.00f },
+    {    0.0f, 0.0f, 0.0f, 0.00f },
+    {    0.0f, 0.0f, 0.0f, 0.00f },
+    {    0.0f, 0.0f, 0.0f, 0.00f },
+    {    0.0f, 0.0f, 0.0f, 0.00f },
+    {    0.0f, 0.0f, 0.0f, 0.00f },
+    {    0.0f, 0.0f, 0.0f, 0.00f },
+    {    0.0f, 0.0f, 0.0f, 0.00f },
+    {    0.0f, 0.0f, 0.0f, 0.00f },
+    {    0.0f, 0.0f, 0.0f, 0.00f },
+    {    0.0f, 0.0f, 0.0f, 0.00f },
+    {    0.0f, 0.0f, 0.0f, 0.00f },
+    {    0.0f, 0.0f, 0.0f, 0.00f },
+    {    0.0f, 0.0f, 0.0f, 0.00f },
+    {    0.0f, 0.0f, 0.0f, 0.00f },
+    {    0.0f, 0.0f, 0.0f, 0.00f },
+    {    0.0f, 0.0f, 0.0f, 0.00f },
+    {    0.0f, 0.0f, 0.0f, 0.00f },
+    {    0.0f, 0.0f, 0.0f, 0.00f },
+    {    0.0f, 0.0f, 0.0f, 0.00f },
+    {    0.0f, 0.0f, 0.0f, 0.00f },
+    {    0.0f, 0.0f, 0.0f, 0.00f },
     {    0.0f, 0.0f, 0.0f, 0.00f }
 };
