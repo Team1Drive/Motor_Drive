@@ -117,6 +117,7 @@ ModulationType modulation_type = ModulationType::SVPWM_SUPERPOS;
 
 volatile uint32_t print_mask = 0;
 volatile uint32_t print_mask_ex = 0;
+volatile bool print_adc = false;
 volatile PrintFormat print_format = PrintFormat::PRINT_BINARY;
 
 ring_buffer_t rx_ring = { .head = 0, .tail = 0 };
@@ -262,11 +263,13 @@ int main(void)
     //if (control_mode != MotorControlMode::MOTOR_STOP && tick_count & 16384) usb_printf("Main Loop Tick: %u\r\n", tick_count);
     tick_count++;
 
-    const uint8_t* packet;
-    uint16_t length;
-    if (adc1.assembleBulkPacket(&packet, &length)) usb_sendBulk(packet, length);
-    if (adc2.assembleBulkPacket(&packet, &length)) usb_sendBulk(packet, length);
-    if (adc3.assembleBulkPacket(&packet, &length)) usb_sendBulk(packet, length);
+    if (print_adc) {
+      const uint8_t* packet;
+      uint16_t length;
+      if (adc1.assembleBulkPacket(&packet, &length)) usb_sendBulk(packet, length);
+      if (adc2.assembleBulkPacket(&packet, &length)) usb_sendBulk(packet, length);
+      if (adc3.assembleBulkPacket(&packet, &length)) usb_sendBulk(packet, length);
+    }
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE BEGIN 3 */
@@ -2423,6 +2426,13 @@ void cmd_log(int argc, char** argv) {
         else if (strcmp(token, "umag") == 0) flag_ex = PRINT_UMAG;
         else if (strcmp(token, "imag") == 0) flag_ex = PRINT_IMAG;
         else if (strcmp(token, "fft") == 0) flag_ex = PRINT_FFT;
+
+        else if (strcmp(token, "adc") == 0) {
+            if (strcmp(action, "add") == 0) print_adc = true;
+            else if (strcmp(action, "rm") == 0) print_adc = false;
+            usb_printf("ADC print %s\r\n", print_adc ? "enabled" : "disabled");
+            return;
+        }
 
         else if (strcmp(token, "all") == 0 && strcmp(action, "rm") == 0) {
             print_mask = 0;

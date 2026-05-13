@@ -88,10 +88,14 @@ HAL_StatusTypeDef ADCSampler::startDMA(void) {
 }
 
 void ADCSampler::initBulkHeader(float shunt, float offset) {
-    header_.magic = ADC_SAMPLE_HEADER_MAGIC;
+    const uint8_t magic1 = ADC_SAMPLE_HEADER_MAGIC >> 8;
+    const uint8_t magic2 = ADC_SAMPLE_HEADER_MAGIC & 0xFF;
+    header_.magic1 = magic1;
+    header_.magic2 = magic2;
     header_.version = ADC_SAMPLE_PACKET_VERSION;
     header_.sample_count = ADC_HALF_BUF_SIZE;
     header_.sequence = 0;
+    header_.timestamp_us = 0;
     header_.shunt = shunt;
     header_.offset = offset;
     uint32_t i = getInstanceIndex(hadc_);
@@ -307,6 +311,7 @@ bool ADCSampler::assembleBulkPacket(const uint8_t** packet_ptr, uint16_t* length
     }
 
     header_.sample_count = static_cast<uint16_t>(sample_count);
+    header_.timestamp_us = HighResTimer::getTime_us();
     memcpy(packet, &header_, sizeof(header_));
     header_.sequence++;
 

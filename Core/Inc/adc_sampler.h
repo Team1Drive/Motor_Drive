@@ -5,19 +5,22 @@
 #include <cstring>
 #include "math_helpers.h"
 #include "parameters.h"
+#include "ustimer.h"
 
 typedef struct __attribute__((packed)) {
-    uint16_t magic;
+    uint8_t magic1;
+    uint8_t magic2;
     uint8_t  version;
     uint8_t  adc_id;
     uint16_t sample_count;
     uint8_t  resolution_bit;
     uint32_t sequence;
+    uint32_t timestamp_us;
     float    shunt;
     float    offset;
 } adc_bulk_sampling_t;
 
-static_assert(sizeof(adc_bulk_sampling_t) == 19);
+static_assert(sizeof(adc_bulk_sampling_t) == 23);
 
 class ADCSampler {
     private:
