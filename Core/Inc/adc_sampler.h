@@ -160,4 +160,14 @@ class ADCSampler {
          * @return true if a half-buffer was ready and a packet was assembled.
          */
         bool assembleBulkPacket(const uint8_t** packet_ptr, uint16_t* length_ptr);
+
+        static inline void syncSequence(ADCSampler* adc1, ADCSampler* adc2, ADCSampler* adc3) {
+            uint32_t seq1 = adc1->header_.sequence;
+            uint32_t seq2 = adc2->header_.sequence;
+            uint32_t seq3 = adc3->header_.sequence;
+            uint32_t max_seq = std::max(seq1, std::max(seq2, seq3));
+            adc1->header_.sequence = max_seq;
+            adc2->header_.sequence = max_seq;
+            adc3->header_.sequence = max_seq;
+        }
 };

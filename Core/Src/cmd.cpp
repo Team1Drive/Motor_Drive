@@ -87,6 +87,7 @@ UsbTxQueue usb_tx_telemetry_queue = {usb_tx_telemetry_ring, USB_TX_TELEMETRY_QUE
 UsbTxQueue usb_tx_bulk_queue = {usb_tx_bulk_ring, USB_TX_BULK_QUEUE_SIZE, 0, 0};
 
 volatile uint16_t usb_tx_chunk_len = 0;
+volatile uint16_t usb_tx_packet_remaining = 0;
 volatile UsbTxQueueKind usb_tx_active_queue = UsbTxQueueKind::Text;
 volatile UsbTxState usb_tx_state = UsbTxState::Idle;
 volatile bool usb_tx_service_busy = false;
@@ -137,6 +138,29 @@ uint16_t usb_tx_free_nolock(const UsbTxQueue& queue) {
 
 bool usb_tx_is_empty_nolock(const UsbTxQueue& queue) {
     return queue.head == queue.tail;
+}
+
+UsbTxQueue& usb_tx_queue_from_kind(UsbTxQueueKind kind) {
+    switch (kind) {
+        case UsbTxQueueKind::Text:
+            return usb_tx_text_queue;
+        case UsbTxQueueKind::Telemetry:
+            return usb_tx_telemetry_queue;
+        case UsbTxQueueKind::Bulk:
+        default:
+            return usb_tx_bulk_queue;
+    }
+}
+
+void usb_tx_write_byte_nolock(UsbTxQueue& queue, uint8_t value) {
+    queue.buffer[queue.head] = value;
+    queue.head = (queue.head + 1) % queue.size;
+}
+
+uint8_t usb_tx_read_byte_nolock(UsbTxQueue& queue) {
+    const uint8_t value = queue.buffer[queue.tail];
+    queue.tail = (queue.tail + 1) % queue.size;
+    return value;
 }
 
 uint16_t usb_tx_high_watermark(const UsbTxQueue& queue) {
@@ -216,10 +240,12 @@ bool usb_tx_enqueue(UsbTxQueue& queue, const uint8_t* data, uint16_t length) {
     bool queued = false;
 
     const uint32_t primask = irq_save();
-    if (length <= usb_tx_free_nolock(queue)) {
+    const uint32_t required = static_cast<uint32_t>(length) + sizeof(uint16_t);
+    if (required <= usb_tx_free_nolock(queue)) {
+        usb_tx_write_byte_nolock(queue, static_cast<uint8_t>(length & 0xFFU));
+        usb_tx_write_byte_nolock(queue, static_cast<uint8_t>((length >> 8) & 0xFFU));
         for (uint16_t i = 0; i < length; i++) {
-            queue.buffer[queue.head] = data[i];
-            queue.head = (queue.head + 1) % queue.size;
+            usb_tx_write_byte_nolock(queue, data[i]);
         }
         queued = true;
     }
@@ -236,16 +262,29 @@ bool usb_tx_load_next_chunk(void) {
         return false;
     }
 
-    UsbTxQueue* queue = usb_tx_select_queue_nolock();
-    if (queue == nullptr) {
-        irq_restore(primask);
-        return false;
+    UsbTxQueue* queue = nullptr;
+    if (usb_tx_packet_remaining > 0U) {
+        queue = &usb_tx_queue_from_kind(usb_tx_active_queue);
+    } else {
+        queue = usb_tx_select_queue_nolock();
+        if (queue == nullptr) {
+            irq_restore(primask);
+            return false;
+        }
+
+        const uint16_t length_low = usb_tx_read_byte_nolock(*queue);
+        const uint16_t length_high = usb_tx_read_byte_nolock(*queue);
+        usb_tx_packet_remaining = static_cast<uint16_t>(length_low | (length_high << 8));
+        if (usb_tx_packet_remaining == 0U) {
+            irq_restore(primask);
+            return false;
+        }
     }
 
     uint16_t len = 0;
-    while (queue->tail != queue->head && len < USB_TX_CHUNK_SIZE) {
-        usb_tx_chunk[len++] = queue->buffer[queue->tail];
-        queue->tail = (queue->tail + 1) % queue->size;
+    while (usb_tx_packet_remaining > 0U && len < USB_TX_CHUNK_SIZE) {
+        usb_tx_chunk[len++] = usb_tx_read_byte_nolock(*queue);
+        usb_tx_packet_remaining--;
     }
 
     usb_tx_chunk_len = len;

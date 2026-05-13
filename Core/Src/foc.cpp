@@ -386,6 +386,8 @@ void foc(ModulationType modulation_type,
     // Calculate voltage commands with decoupling feed-forward
     float vd_req = vd_pi - foc->omega_e * FOC_L * iq;
     float vq_req = vq_pi + foc->omega_e * FOC_L * id + foc->omega_e * FOC_PSI_F;
+    //float vd_req = vd_pi + FOC_R * id - foc->omega_e * FOC_L * iq;
+    //float vq_req = vq_pi + FOC_R * iq + foc->omega_e * FOC_L * id + foc->omega_e * FOC_PSI_F;
 
     float vd_cmd = vd_req;
     float vq_cmd = vq_req;

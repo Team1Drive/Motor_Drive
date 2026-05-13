@@ -263,12 +263,51 @@ int main(void)
     //if (control_mode != MotorControlMode::MOTOR_STOP && tick_count & 16384) usb_printf("Main Loop Tick: %u\r\n", tick_count);
     tick_count++;
 
+    
+    static uint32_t bulk_drop_count = 0;
+    static uint32_t last_msg_ms = 0;
     if (print_adc) {
       const uint8_t* packet;
       uint16_t length;
-      if (adc1.assembleBulkPacket(&packet, &length)) usb_sendBulk(packet, length);
-      if (adc2.assembleBulkPacket(&packet, &length)) usb_sendBulk(packet, length);
-      if (adc3.assembleBulkPacket(&packet, &length)) usb_sendBulk(packet, length);
+      if (adc1.assembleBulkPacket(&packet, &length)) {
+        if (!usb_sendBulk(packet, length)) {
+          bulk_drop_count++;
+
+          uint32_t now = HAL_GetTick();
+          if (now - last_msg_ms >= 1000) {
+              last_msg_ms = now;
+              usb_printf("USB bulk queue full: drops=%lu len=%u\r\n",
+                        static_cast<unsigned long>(bulk_drop_count),
+                        length);
+          }
+        }
+      }
+      if (adc2.assembleBulkPacket(&packet, &length)) {
+        if (!usb_sendBulk(packet, length)) {
+          bulk_drop_count++;
+
+          uint32_t now = HAL_GetTick();
+          if (now - last_msg_ms >= 1000) {
+              last_msg_ms = now;
+              usb_printf("USB bulk queue full: drops=%lu len=%u\r\n",
+                        static_cast<unsigned long>(bulk_drop_count),
+                        length);
+          }
+        }
+      }
+      if (adc3.assembleBulkPacket(&packet, &length)) {
+        if (!usb_sendBulk(packet, length)) {
+          bulk_drop_count++;
+
+          uint32_t now = HAL_GetTick();
+          if (now - last_msg_ms >= 1000) {
+              last_msg_ms = now;
+              usb_printf("USB bulk queue full: drops=%lu len=%u\r\n",
+                        static_cast<unsigned long>(bulk_drop_count),
+                        length);
+          }
+        }
+      }
     }
     /* USER CODE BEGIN 3 */
   }
@@ -1078,10 +1117,10 @@ void speedControl(void) {
 
   //const float m_fw_entry    = 1.0f;
   //const float m_fw_release  = 0.96f;
-  const float m_fw_entry    = 0.98f;
-  const float m_fw_release  = 0.91f;
+  const float m_fw_entry    = 0.99f;
+  const float m_fw_release  = 0.96f;
 
-  const float u_fw_limit = foc_state.u_abs_limit * 0.93f;
+  const float u_fw_limit = foc_state.u_abs_limit * 0.95f;
   const float u_req = foc_state.u_mag;
   const float omega_abs = fabsf(foc_state.omega_m);
   float new_Id_ref;
@@ -2179,8 +2218,8 @@ void cmd_tune(int argc, char** argv) {
         } else {
             original = *target;
             *target = value;
+            usb_printf("%s %s set to %.6f (was %.6f)\r\n", subsys, param, value, original);
         }
-        usb_printf("%s %s set to %.6f (was %.6f)\r\n", subsys, param, value, original);
     } else {
         usb_printf("Unknown parameter '%s' or subsystem '%s'\r\n", param, subsys);
     }
@@ -2428,7 +2467,10 @@ void cmd_log(int argc, char** argv) {
         else if (strcmp(token, "fft") == 0) flag_ex = PRINT_FFT;
 
         else if (strcmp(token, "adc") == 0) {
-            if (strcmp(action, "add") == 0) print_adc = true;
+            if (strcmp(action, "add") == 0) {
+              ADCSampler::syncSequence(&adc1, &adc2, &adc3);
+              print_adc = true;
+            }
             else if (strcmp(action, "rm") == 0) print_adc = false;
             usb_printf("ADC print %s\r\n", print_adc ? "enabled" : "disabled");
             return;
