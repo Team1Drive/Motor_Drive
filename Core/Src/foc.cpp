@@ -21,6 +21,8 @@
 #include <cmath>
 #include <algorithm>
 
+static OptimalFinalState opt_state; 
+
 static inline float clampf(float value, float lower, float upper) {
     return std::min(std::max(value, lower), upper);
 }
@@ -88,6 +90,11 @@ void foc_init(FOC_State_t* foc)
     foc->m_index       = 0.0f;
     foc->speed_div_cnt = 0U;
     foc->fault         = false;
+
+    foc->m_sixstep = 0.0f;                    
+    foc->exit_smooth_counter = 0;             
+    foc->prev_six_step_active = false; 
+
 }
 
 /* =========================================================================
@@ -99,6 +106,7 @@ void foc_reset(FOC_State_t* foc)
     PI_reset(&foc->pi_q);
     PI_reset(&foc->pi_speed);
     PI_reset(&foc->pi_fw);
+    opt_state = OptimalFinalState{};
     foc->omega_ref   = 0.0f;
     foc->Id_ref      = 0.0f;
     foc->Iq_ref      = 0.0f;
@@ -113,6 +121,9 @@ void foc_reset(FOC_State_t* foc)
     foc->om          = 0U;
     foc->m_index     = 0.0f;
     foc->fault       = false;
+    foc->m_sixstep = 0.0f;
+    foc->exit_smooth_counter = 0;
+    foc->prev_six_step_active = false;
 }
 
 void focResetPI(FOC_State_t* foc) {
@@ -310,6 +321,15 @@ void focAlignZero(FOC_State_t* foc, float Vmag, float Vdc, float* dutyA, float* 
              dutyA, dutyB, dutyC);
 }
 
+static inline float compute_m_sixstep(float omega_m, float v_dc, float psi_f, float pole_pairs)
+{
+    float numerator = omega_m * pole_pairs * psi_f * 0.9f;
+    float denominator = (2.0f / M_PI) * v_dc;
+    float raw = numerator / denominator;
+    raw = std::min(std::max(raw, 0.0f), 1.5f);
+    return raw;
+}
+
 /* =========================================================================
  * foc_run  — called from focTick in main.cpp at 20 kHz
  * ========================================================================= */
@@ -380,8 +400,15 @@ void foc(ModulationType modulation_type,
     const float err_id = foc->Id_ref - id;
     const float err_iq = foc->Iq_ref - iq;
     
-    float vd_pi = PI_update(&foc->pi_d, err_id, foc->ts);
-    float vq_pi = PI_update(&foc->pi_q, err_iq, foc->ts);
+    float vd_pi, vq_pi;
+        if (foc->prev_six_step_active) {
+            // Freeze integrators – use previous integrator value, but still need error for proportional term
+            vd_pi = foc->pi_d.kp * err_id + foc->pi_d.integrator;
+            vq_pi = foc->pi_q.kp * err_iq + foc->pi_q.integrator;
+        } else {
+            vd_pi = PI_update(&foc->pi_d, err_id, foc->ts);
+            vq_pi = PI_update(&foc->pi_q, err_iq, foc->ts);
+        }
 
     // Calculate voltage commands with decoupling feed-forward
     float vd_req = vd_pi - foc->omega_e * FOC_L * iq;
@@ -395,12 +422,16 @@ void foc(ModulationType modulation_type,
     foc->Vq_cmd = vq_cmd;
     foc->u_mag = lut::hypotf(vd_req, vq_req);
 
-    float m_index = foc->u_mag / foc->u_abs_limit;
-    foc->m_index = m_index * 0.1f + foc->m_index * 0.9f;  // Low-pass filter for stable overmodulation index
+    float m_act = foc->u_mag / foc->u_abs_limit;
+    
+    foc->m_index = m_act * 0.1f + foc->m_index * 0.9f;  // Low-pass filter for stable overmodulation index
 
     if (foc->m_index <= 0.907f)         foc->om = 0;
     else if (foc->m_index <= 0.9514f)   foc->om = 1;
     else                                foc->om = 2;
+
+    //Compute speed-based modulation index for six-step exit
+    foc->m_sixstep = compute_m_sixstep(omega_m, vdc, FOC_PSI_F, (float)MOTOR_POLE_PAIRS);
 
     //float v_max = vdc / SQRT3;  // Maximum voltage magnitude for SVPWM (line-line voltage limit)
     //float v_max = 2 * vdc / M_PI;
@@ -415,21 +446,62 @@ void foc(ModulationType modulation_type,
     float v_alpha, v_beta;
     inv_park(foc->Vd_cmd, foc->Vq_cmd, theta_e, &v_alpha, &v_beta);
 
+
+    //Voltage limiting after six‑step exit
+
+     if (foc->exit_smooth_counter > 0) {
+        float V_lin_max = vdc / SQRT3;
+        float Vref = lut::hypotf(v_alpha, v_beta);
+        if (Vref > V_lin_max) {
+            float scale = V_lin_max / Vref;
+            v_alpha *= scale;
+            v_beta  *= scale;
+        }
+        foc->exit_smooth_counter--;
+    }   
+
     /* ------------------------------------------------------------------
      * 5. Modulation: Vα,Vβ → dA,dB,dC
      *     Use specified modulation type (e.g. SVPWM, DPWM) for testing.
      *     Ts passed for compensated timing calculation.
      * ------------------------------------------------------------------ */
-    float u_mag;
-    modulate(modulation_type,
-             v_alpha, v_beta,
-             vdc,
-             foc->ts,
-             dutyA, dutyB, dutyC,
-             foc->omega_e,
-             &u_mag);
+    
+    float theta_m = theta_e / (float)MOTOR_POLE_PAIRS;
 
-    //foc->u_mag = u_mag;
+    bool just_exited = false;
+    bool six_step_active = false;
+    float u_mag;
+    if (modulation_type == ModulationType::OPTIMAL_FINAL)
+    {
+        modulate_optimal_final(v_alpha, v_beta,
+                               vdc,
+                               foc->ts,
+                               theta_e, theta_m,
+                               m_act,
+                               foc->omega_e,
+                               foc->Iq_ref, FOC_IMAX,
+                               opt_state,
+                               dutyA, dutyB, dutyC,
+                               &just_exited, &six_step_active);
+    }
+    else
+    {
+        modulate(modulation_type,
+                 v_alpha, v_beta,
+                 vdc,
+                 foc->ts,
+                 dutyA, dutyB, dutyC,
+                 foc->omega_e,
+                 &u_mag);
+    }
+   
+    if (just_exited) {
+        PI_reset(&foc->pi_speed);
+        // Also start voltage smoothing
+        foc->exit_smooth_counter = 10;   // smooth for 10 PWM cycles
+    }
+
+    foc->prev_six_step_active = six_step_active;
 }
 
 void focInjection(FOC_State_t* foc, float freq) {
