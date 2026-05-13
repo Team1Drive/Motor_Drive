@@ -66,13 +66,13 @@
 #define FOC_KT              4.1028e-2f
 
 /** Electrical damping factor */
-#define FOC_ZETA_I          1.1f//0.707f
+#define FOC_ZETA_I          1.2f//0.707f
 
 /** Speed PI damping factor */
 #define FOC_ZETA_SP         0.707f
 
 /** Current PI bandwidth (rad/s). */
-#define FOC_WND_I           (250 * FREQ_TO_OMEGA)
+#define FOC_WND_I           (200 * FREQ_TO_OMEGA)
 
 /** Speed PI bandwidth (rad/s). */
 #define FOC_WND_SP          (10 * FREQ_TO_OMEGA)

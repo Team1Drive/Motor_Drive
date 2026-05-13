@@ -17,12 +17,33 @@ Encoder::Encoder(TIM_HandleTypeDef* htim, TIM_HandleTypeDef* htim_t, uint16_t in
     }
 
 void Encoder::indexRise(void) {
-    index_offset_ = (uint16_t)__HAL_TIM_GET_COUNTER(htim_);
-    if (!is_synchronized_) is_synchronized_ = true;
-    if (zero_aligned_ && !is_zeroed_) {
-        elec_zero_offset_ = calcElecOffset(elec_zero_pos_, index_offset_);
-        is_zeroed_ = true;
+    uint16_t current_hw_cnt = (uint16_t)__HAL_TIM_GET_COUNTER(htim_);
+    if ((!is_synchronized_) || (zero_aligned_ && !is_zeroed_)) {
+        if (!is_synchronized_) {
+            index_offset_ = current_hw_cnt;
+            is_synchronized_ = true;
+        }
+        if (zero_aligned_ && !is_zeroed_) {
+            elec_zero_offset_ = calcElecOffset(elec_zero_pos_, current_hw_cnt);
+            is_zeroed_ = true;
+        }
+        return;
     }
+
+    uint16_t pos = getPos();
+
+    const uint16_t index_window = 4; // tune this
+    bool near_index =
+        (pos < index_window) ||
+        (pos > (counts_per_rev_ - index_window));
+
+    if (!near_index) {
+        // False index pulse, ignore it.
+        return;
+    }
+
+    // Valid index pulse. Optionally update offset.
+    index_offset_ = current_hw_cnt;
 }
 
 uint16_t Encoder::calcElecOffset(uint16_t elec_zero_pos, uint16_t index_offset) {
