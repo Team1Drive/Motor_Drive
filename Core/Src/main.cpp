@@ -672,7 +672,7 @@ void printTelemetryUTF8(void) {
 /**
  * Print telemetry data in binary format over USB.
  * Data structure:
- * [Header: 0xAA 0x55][4-byte print_mask][Data fields...]
+ * [Header: 0xAA 0x55][Version][Error][Mode][Timestamp_high][Timestamp_low][4-byte print_mask][4-byte print_mask_ex][Data fields...]
  * The data fields are included based on the print_mask bits, and are in the same order as defined in the printTelemetryUTF8 function. Each field is represented in its raw binary format (e.g., float as 4 bytes, uint16_t as 2 bytes).
  * 
  * @brief Function to print telemetry data in binary format over USB.
@@ -731,6 +731,7 @@ void printTelemetryBinary(void) {
 
   const uint8_t header1 = TELEMETRY_HEADER_MAGIC >> 8;
   const uint8_t header2 = TELEMETRY_HEADER_MAGIC & 0xFF;
+  const uint8_t version = TELEMETRY_PACKET_VERSION;
   const uint32_t error = error_flag;
   const uint8_t mode = static_cast<uint8_t>(control_mode);
   const uint64_t time = HighResTimer::getTicks();
@@ -741,6 +742,8 @@ void printTelemetryBinary(void) {
 
   *ptr++ = header1;
   *ptr++ = header2;
+
+  *ptr++ = version;
 
   memcpy(ptr, &error, 4);
   ptr += 4;

@@ -44,10 +44,10 @@ ADCSampler::ADCSampler(ADC_HandleTypeDef* hadc, DMA_HandleTypeDef* hdma, volatil
     length_(length),
     half_len_(length / 2),
     latest_group_(0),
+    use_proc_buffer_(false),
     half_ready_(false),
     full_ready_(false),
-    data_ready_(false),
-    use_proc_buffer_(false) {}
+    data_ready_(false) {}
 
 void ADCSampler::setProcessingBuffer(uint16_t* proc_buf, uint32_t proc_len) {
     proc_buffer_ = proc_buf;
@@ -89,6 +89,7 @@ HAL_StatusTypeDef ADCSampler::startDMA(void) {
 
 void ADCSampler::initBulkHeader(float shunt, float offset) {
     header_.magic = ADC_SAMPLE_HEADER_MAGIC;
+    header_.version = ADC_SAMPLE_PACKET_VERSION;
     header_.sample_count = ADC_HALF_BUF_SIZE;
     header_.sequence = 0;
     header_.shunt = shunt;

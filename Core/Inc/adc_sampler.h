@@ -8,6 +8,7 @@
 
 typedef struct __attribute__((packed)) {
     uint16_t magic;
+    uint8_t  version;
     uint8_t  adc_id;
     uint16_t sample_count;
     uint8_t  resolution_bit;
@@ -16,7 +17,7 @@ typedef struct __attribute__((packed)) {
     float    offset;
 } adc_bulk_sampling_t;
 
-static_assert(sizeof(adc_bulk_sampling_t) == 18);
+static_assert(sizeof(adc_bulk_sampling_t) == 19);
 
 class ADCSampler {
     private:

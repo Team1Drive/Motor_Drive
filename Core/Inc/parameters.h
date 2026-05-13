@@ -110,7 +110,9 @@
 #define LOG_MAX_VALUE_WINDOW_SIZE   32U // Number of samples to consider when calculating max current for logging (must be a power of 2 for efficient averaging)
 
 #define TELEMETRY_HEADER_MAGIC      0xAA55 // Magic number for telemetry data packets to identify the start of a valid packet
+#define TELEMETRY_PACKET_VERSION    0U
 #define ADC_SAMPLE_HEADER_MAGIC     0xAA46 // Magic number for ADC sample packets to identify the start of a valid packet
+#define ADC_SAMPLE_PACKET_VERSION   0U
 
 enum class MotorControlMode : uint8_t {
     MOTOR_PROTECTION,
