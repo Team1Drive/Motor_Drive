@@ -2021,6 +2021,10 @@ void cmd_mod(int argc, char** argv) {
         modulation_type = ModulationType::DPWM3;
         usb_printf("Modulation set to DPWM3\r\n");
     }
+    else if (strcmp(argv[1], "opt") == 0 || strcmp(argv[1], "optimal") == 0) {
+        modulation_type = ModulationType::OPTIMAL_FINAL;
+        usb_printf("Modulation set to Optimal Final\r\n");
+    }
     else {
         usb_printf("Unknown modulation type\r\n");
     }

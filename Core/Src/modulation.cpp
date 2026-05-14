@@ -474,8 +474,10 @@ static float six_step_synchronized_opt(float theta_el, float omega_e, float f_ta
     int   n       = std::max(6, (int)(std::round(n_ideal / 6.0f) * 6.0f));
 
     float T_int     = 2.0f * M_PI / ((float)n * omega_e);
-    float theta_est = theta + omega_e * T_int;
-    int   sector_i  = (int)(theta / (M_PI / 3.0f)) + 1;
+    //float theta_est = theta + omega_e * T_int;
+    float theta_est = theta_el + omega_e * T_int;
+    //int   sector_i  = (int)(theta / (M_PI / 3.0f)) + 1;
+    int   sector_i  = (int)(theta_el / (M_PI / 3.0f)) + 1;
     if (sector_i > 6) sector_i = 6;
     float target_th = (float)sector_i * (M_PI / 3.0f);
 
@@ -522,8 +524,7 @@ void modulate_optimal_final(float v_alpha, float v_beta, float v_dc, float Ts,
                              float theta_e, float theta_m, float m_act, float m_sixstep, float omega_e,
                              float iq_ref, float iq_max, OptimalFinalState& S,
                              float* dutyA, float* dutyB, float* dutyC,
-                             bool* just_exited, bool* is_active)
-{
+                             bool* just_exited, bool* is_active) {
     // Default safe output
     *dutyA = *dutyB = *dutyC = 0.5f;
     if (just_exited) *just_exited = false;
@@ -548,21 +549,19 @@ void modulate_optimal_final(float v_alpha, float v_beta, float v_dc, float Ts,
 
     // ── Six-step entry ────────────────────────────────────────────────────
     // MATLAB: wait for next sector boundary before committing to six-step
-    if (S.region_curr == 6 && !S.six_step_active)
-    {
-        if (!S.enter_pending)
-        {
+    if (S.region_curr == 6 && !S.six_step_active) {
+
+        if (!S.enter_pending) {
             int sector = (int)(std::fmod(theta_e, 2.0f * M_PI) / (M_PI / 3.0f));
             S.target_theta_entry = std::fmod((float)(sector + 1) * (M_PI / 3.0f), 2.0f * M_PI);
             S.enter_pending = true;
         }
         
         float angle_err = theta_e - S.target_theta_entry;
-    float x = std::abs(std::atan2(std::sin(angle_err), std::cos(angle_err)));
-    float y = std::max(std::abs(omega_e) * Ts, 0.01f);
-    if (x < y)
+        float x = std::abs(std::atan2(std::sin(angle_err), std::cos(angle_err)));
+        float y = std::max(std::abs(omega_e) * Ts, 0.01f);
 
-        {
+        if (x < y) {
             S.six_step_active = true;
             S.enter_pending   = false;
         }
@@ -693,7 +692,6 @@ void modulate(
                            dutyA, dutyB, dutyC,
                            applied_mag);
             break;
-            fprint;
 
         case ModulationType::SVPWM_COMP:
             svpwm_comp(v_alpha, v_beta, v_dc, Ts,
@@ -735,7 +733,7 @@ void modulate(
             break;
 
         default:
-            *dutyA = *dutyB = *dutyC = 0.0f;
+            *dutyA = *dutyB = *dutyC = -1.0f;
             break;
     }
 }

@@ -21,7 +21,7 @@
 #include <cmath>
 #include <algorithm>
 
-static OptimalFinalState opt_state; 
+OptimalFinalState opt_state; 
 
 static inline float clampf(float value, float lower, float upper) {
     return std::min(std::max(value, lower), upper);
@@ -121,6 +121,7 @@ void foc_reset(FOC_State_t* foc)
     foc->om          = 0U;
     foc->m_index     = 0.0f;
     foc->fault       = false;
+
     foc->m_sixstep = 0.0f;
     foc->exit_smooth_counter = 0;
     foc->prev_six_step_active = false;
@@ -473,21 +474,15 @@ void foc(ModulationType modulation_type,
     bool just_exited = false;
     bool six_step_active = false;
     float u_mag;
-    if (modulation_type == ModulationType::OPTIMAL_FINAL)
-    {
-        modulate_optimal_final(v_alpha, v_beta,
-                               vdc,
-                               foc->ts,
-                               theta_e, theta_m,
-                               m_act,
+    if (modulation_type == ModulationType::OPTIMAL_FINAL) {
+        modulate_optimal_final(v_alpha, v_beta, vdc, foc->ts,
+                               theta_e, theta_m, m_act, foc->m_sixstep, // Added by guessing
                                foc->omega_e,
-                               foc->Iq_ref, FOC_IMAX,
-                               opt_state,
+                               foc->Iq_ref, FOC_IMAX, opt_state,
                                dutyA, dutyB, dutyC,
                                &just_exited, &six_step_active);
     }
-    else
-    {
+    else {
         modulate(modulation_type,
                  v_alpha, v_beta,
                  vdc,
