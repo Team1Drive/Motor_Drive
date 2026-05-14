@@ -1,0 +1,3 @@
+[submodule "Middlewares/ARM/CMSIS-DSP"]
+	path = Middlewares/ARM/CMSIS-DSP
+	url = https://github.com/ARM-software/CMSIS-DSP.git

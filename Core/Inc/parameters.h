@@ -18,6 +18,13 @@
 #define ADC2_NUM_CHANNELS   2U
 #define ADC3_NUM_CHANNELS   2U
 
+#define ADC_BUF_SIZE        2048U
+#define ADC_HALF_BUF_SIZE   (ADC_BUF_SIZE / 2U)
+
+#define ADC1_BUF_LEN  (ADC_BUF_SIZE * ADC1_NUM_CHANNELS)
+#define ADC2_BUF_LEN  (ADC_BUF_SIZE * ADC2_NUM_CHANNELS)
+#define ADC3_BUF_LEN  (ADC_BUF_SIZE * ADC3_NUM_CHANNELS)
+
 // ---------- ADC Calibration Parameters ----------
 #define BOARD_SELECTION     1U
 // Board 1
@@ -69,7 +76,9 @@
 #define MOTOR_ALIGNMENT_IQ_REF      0.0f
 #define MOTOR_SPEED_LIMIT_RPM       10000.0f
 
-#define MOTOR_MAX_PHASE_CURRENT     4.8f // Maximum phase current for safety (in amps)
+#define MOTOR_MAX_PHASE_CURRENT     3.5f // Maximum phase current for safety (in amps)
+#define MOTOR_INSTANT_TRIP_CURRENT  5.0f // Instantaneous trip threshold for overcurrent protection (in amps)
+#define MOTOR_INT_CURRENT_THRESHOLD 3.0f
 #define MOTOR_MAX_CURRENT           5.0f // Maximum current for safety (in amps), including battery current
 #define MOTOR_MIN_VOLTAGE           6.0f // Minimum voltage for operation (in volts) 
 
@@ -81,7 +90,7 @@
 
 #define FOC_ALLOWED                 false // Allow FOC mode in the system (set to false to disable FOC-related code and save flash/RAM)
 #define FOC_INITIAL_RPM             1500U // Target RPM for FOC mode (used when FOC is enabled and selected)
-#define FOC_OVERSAMPLING_SIZE       4U // Number of samples to average for oversampling (must be a power of 2 for efficient averaging)
+#define FOC_OVERSAMPLING_SIZE       1U // Number of samples to average for oversampling (must be a power of 2 for efficient averaging)
 #define FOC_RAMP_DOWN_SPEED         200U // 200 RPM/s
 
 #define MASTER_MODE                 true // Set master or slave mode in load testing
@@ -90,8 +99,8 @@
 #define BATTERY_OVERVOLTAGE_THRESHOLD   5.0f // Voltage threshold for overvoltage protection (in volts)
 
 #define ENCODER_PPR                 2048U // Pulses per revolution for the encoder
-#define ENCODER_T_THRESHOLD         250U // Threshold in RPM for using T method (with hysteresis)
-#define ENCODER_M_THRESHOLD         700U // Threshold in RPM for using M method (with hysteresis)
+#define ENCODER_T_THRESHOLD         400U // Threshold in RPM for using T method (Linear Interpolation)
+#define ENCODER_M_THRESHOLD         550U // Threshold in RPM for using M method (Linear Interpolation)
 #define ENCODER_ONEPULSE_THRESHOLD  1000U // Threshold in RPM for using one pulse counting
 #define ENCODER_STALL_THRESHOLD     100U // Threshold for detecting stall
 
@@ -100,7 +109,10 @@
 
 #define LOG_MAX_VALUE_WINDOW_SIZE   32U // Number of samples to consider when calculating max current for logging (must be a power of 2 for efficient averaging)
 
-
+#define TELEMETRY_HEADER_MAGIC      0xAA55 // Magic number for telemetry data packets to identify the start of a valid packet
+#define TELEMETRY_PACKET_VERSION    0U
+#define ADC_SAMPLE_HEADER_MAGIC     0xAA46 // Magic number for ADC sample packets to identify the start of a valid packet
+#define ADC_SAMPLE_PACKET_VERSION   0U
 
 enum class MotorControlMode : uint8_t {
     MOTOR_PROTECTION,
@@ -135,8 +147,15 @@ enum ErrorFlag : uint32_t {
     ERROR_TIM_CONFIG        = 1 << 3,
     ERROR_ENCODER_CONFIG    = 1 << 4,
     ERROR_FOC_CONFIG        = 1 << 5,
-    ERROR_OVERCURRENT       = 1 << 6,
-    ERROR_UNDERVOLTAGE      = 1 << 7
+    ERROR_COMM_CONFIG       = 1 << 6,
+    ERROR_OVERCURRENT       = 1 << 7,
+    ERROR_UNDERVOLTAGE      = 1 << 8
+};
+
+enum SimulationFlag : uint16_t {
+    SIM_FLAG_RUNNING        = 1 << 0,
+    SIM_FLAG_PAUSED         = 1 << 1,
+    SIM_FLAG_READY_ALIGN    = 1 << 2,
 };
 
 typedef struct {
@@ -199,7 +218,7 @@ enum PrintData : uint32_t {
 };
 
 enum PrintDataEx : uint32_t {
-    PRINT_OM        = 1 << 0,
+    PRINT_CP_MODE   = 1 << 0,
     PRINT_M_INDEX   = 1 << 1,
     PRINT_FW        = 1 << 2,
     PRINT_UMAG      = 1 << 3,
@@ -230,7 +249,7 @@ TIM2: 10 Hz interrupt
 TIM3: 4 Hz interrupt
 TIM4: Encoder pulse timing
 TIM5: Incremental counter at APB frequency
-TIM6: 1000 Hz interrupt
+TIM6: 5000 Hz interrupt for binary telemetry
 TIM8: PWM generation for motor control
 TIM12: Upper 16 bits for TIM5 incremental counter (for microsecond timing)
 TIM15: Remapped TIM4 for encoder index timing

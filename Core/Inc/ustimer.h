@@ -127,7 +127,7 @@ class HighResTimer {
         }
 
         static inline uint64_t getTime_us() {
-            return (getTicks() * 1000000ULL) * TICK_PERIOD;
+            return getTicks() * (1000000ULL * TICK_PERIOD);
         }
 
         static inline float getTimef_us() {

@@ -4,6 +4,9 @@
 #include "usbd_cdc_if.h"
 #include <stdio.h>
 #include <stdarg.h>
+#include <cstring>
+
+extern "C" USBD_HandleTypeDef hUsbDeviceHS;
 
 extern void cmd_start(int argc, char** argv);
 extern void cmd_stop(int argc, char** argv);
@@ -20,6 +23,7 @@ extern void cmd_tune(int argc, char** argv);
 extern void cmd_increment(int argc, char** argv);
 extern void cmd_board(int argc, char** argv);
 extern void cmd_log(int argc, char** argv);
+extern void cmd_sim(int argc, char** argv);
 extern void cmd_audible(int argc, char** argv);
 extern void cmd_sin(int argc, char** argv);
 extern void cmd_cos(int argc, char** argv);
@@ -41,6 +45,7 @@ static const cmd_entry_t cmd_table[] = {
     { "tune",        cmd_tune,        4,    4,  "Usage: tune <subsys> <param> <value>\r\n"      }, // e.g., "tune speed p 0.1" = 4 tokens
     { "increment",   cmd_increment,   4,    4,  "Usage: increment <subsys> <param> <value>\r\n" }, // e.g., "increment speed p 0.1" = 4 tokens
     { "log",         cmd_log,         2,    3,  "Usage: log <add|rm|preset|utf8|bin> [var]\r\n" },
+    { "sim",         cmd_sim,         2,    2,  "Usage: sim <start|status|reset>\r\n"           },
     { "board",       cmd_board,       1,    2,  "Usage: board <1|2|3>\r\n"                      },
     { "audible",     cmd_audible,     1,    1,  "Usage: audible\r\n"                            },
     { "sin",         cmd_sin,         2,    2,  "Usage: sin <value>\r\n"                        },
@@ -51,6 +56,305 @@ static const cmd_entry_t cmd_table[] = {
 
 const int num_commands = sizeof(cmd_table) / sizeof(cmd_entry_t);
 
+namespace {
+
+enum class UsbTxState : uint8_t {
+    Idle,
+    Pending,
+    InFlight,
+};
+
+enum class UsbTxQueueKind : uint8_t {
+    Text,
+    Telemetry,
+    Bulk,
+};
+
+struct UsbTxQueue {
+    uint8_t* buffer;
+    uint16_t size;
+    volatile uint16_t head;
+    volatile uint16_t tail;
+};
+
+alignas(32) uint8_t usb_tx_text_ring[USB_TX_TEXT_QUEUE_SIZE] __attribute__((section(".sram_d1")));
+alignas(32) uint8_t usb_tx_telemetry_ring[USB_TX_TELEMETRY_QUEUE_SIZE] __attribute__((section(".sram_d1")));
+alignas(32) uint8_t usb_tx_bulk_ring[USB_TX_BULK_QUEUE_SIZE] __attribute__((section(".sram_d1")));
+alignas(32) uint8_t usb_tx_chunk[USB_TX_CHUNK_SIZE] __attribute__((section(".sram_d1")));
+
+UsbTxQueue usb_tx_text_queue = {usb_tx_text_ring, USB_TX_TEXT_QUEUE_SIZE, 0, 0};
+UsbTxQueue usb_tx_telemetry_queue = {usb_tx_telemetry_ring, USB_TX_TELEMETRY_QUEUE_SIZE, 0, 0};
+UsbTxQueue usb_tx_bulk_queue = {usb_tx_bulk_ring, USB_TX_BULK_QUEUE_SIZE, 0, 0};
+
+volatile uint16_t usb_tx_chunk_len = 0;
+volatile uint16_t usb_tx_packet_remaining = 0;
+volatile UsbTxQueueKind usb_tx_active_queue = UsbTxQueueKind::Text;
+volatile UsbTxState usb_tx_state = UsbTxState::Idle;
+volatile bool usb_tx_service_busy = false;
+bool usb_tx_bulk_high_active = false;
+bool usb_tx_telemetry_high_active = false;
+uint8_t usb_tx_stressed_round_robin = 0;
+
+uint32_t irq_save(void) {
+    const uint32_t primask = __get_PRIMASK();
+    __disable_irq();
+    return primask;
+}
+
+void irq_restore(uint32_t primask) {
+    if (primask == 0U) {
+        __enable_irq();
+    }
+}
+
+bool is_interrupt_context(void) {
+    return (__get_IPSR() != 0U);
+}
+
+void usb_tx_reconcile_cdc_state(void) {
+    USBD_CDC_HandleTypeDef* hcdc =
+        reinterpret_cast<USBD_CDC_HandleTypeDef*>(hUsbDeviceHS.pClassData);
+
+    if (hcdc == nullptr) return;
+
+    const uint32_t primask = irq_save();
+    if (usb_tx_state == UsbTxState::InFlight && hcdc->TxState == 0U) {
+        usb_tx_state = UsbTxState::Idle;
+        usb_tx_chunk_len = 0;
+    }
+    irq_restore(primask);
+}
+
+uint16_t usb_tx_used_nolock(const UsbTxQueue& queue) {
+    const uint16_t head = queue.head;
+    const uint16_t tail = queue.tail;
+    if (head >= tail) return head - tail;
+    return queue.size - tail + head;
+}
+
+uint16_t usb_tx_free_nolock(const UsbTxQueue& queue) {
+    return queue.size - usb_tx_used_nolock(queue) - 1;
+}
+
+bool usb_tx_is_empty_nolock(const UsbTxQueue& queue) {
+    return queue.head == queue.tail;
+}
+
+UsbTxQueue& usb_tx_queue_from_kind(UsbTxQueueKind kind) {
+    switch (kind) {
+        case UsbTxQueueKind::Text:
+            return usb_tx_text_queue;
+        case UsbTxQueueKind::Telemetry:
+            return usb_tx_telemetry_queue;
+        case UsbTxQueueKind::Bulk:
+        default:
+            return usb_tx_bulk_queue;
+    }
+}
+
+void usb_tx_write_byte_nolock(UsbTxQueue& queue, uint8_t value) {
+    queue.buffer[queue.head] = value;
+    queue.head = (queue.head + 1) % queue.size;
+}
+
+uint8_t usb_tx_read_byte_nolock(UsbTxQueue& queue) {
+    const uint8_t value = queue.buffer[queue.tail];
+    queue.tail = (queue.tail + 1) % queue.size;
+    return value;
+}
+
+uint16_t usb_tx_high_watermark(const UsbTxQueue& queue) {
+    return static_cast<uint16_t>((static_cast<uint32_t>(queue.size) * USB_TX_HIGH_WATERMARK_PERCENT) / 100U);
+}
+
+uint16_t usb_tx_low_watermark(const UsbTxQueue& queue) {
+    return static_cast<uint16_t>((static_cast<uint32_t>(queue.size) * USB_TX_LOW_WATERMARK_PERCENT) / 100U);
+}
+
+void usb_tx_update_pressure_flags_nolock(void) {
+    const uint16_t telemetry_used = usb_tx_used_nolock(usb_tx_telemetry_queue);
+    const uint16_t bulk_used = usb_tx_used_nolock(usb_tx_bulk_queue);
+
+    if (telemetry_used >= usb_tx_high_watermark(usb_tx_telemetry_queue)) {
+        usb_tx_telemetry_high_active = true;
+    } else if (telemetry_used <= usb_tx_low_watermark(usb_tx_telemetry_queue)) {
+        usb_tx_telemetry_high_active = false;
+    }
+
+    if (bulk_used >= usb_tx_high_watermark(usb_tx_bulk_queue)) {
+        usb_tx_bulk_high_active = true;
+    } else if (bulk_used <= usb_tx_low_watermark(usb_tx_bulk_queue)) {
+        usb_tx_bulk_high_active = false;
+    }
+}
+
+UsbTxQueue* usb_tx_select_queue_nolock(void) {
+    usb_tx_update_pressure_flags_nolock();
+
+    if (!usb_tx_is_empty_nolock(usb_tx_text_queue)) {
+        usb_tx_active_queue = UsbTxQueueKind::Text;
+        return &usb_tx_text_queue;
+    }
+
+    const bool telemetry_waiting = !usb_tx_is_empty_nolock(usb_tx_telemetry_queue);
+    const bool bulk_waiting = !usb_tx_is_empty_nolock(usb_tx_bulk_queue);
+
+    if (!telemetry_waiting && !bulk_waiting) return nullptr;
+
+    if (telemetry_waiting && bulk_waiting && usb_tx_telemetry_high_active && usb_tx_bulk_high_active) {
+        const bool send_bulk = (usb_tx_stressed_round_robin++ >= 2U);
+        if (send_bulk) {
+            usb_tx_stressed_round_robin = 0;
+            usb_tx_active_queue = UsbTxQueueKind::Bulk;
+            return &usb_tx_bulk_queue;
+        }
+        usb_tx_active_queue = UsbTxQueueKind::Telemetry;
+        return &usb_tx_telemetry_queue;
+    }
+
+    if (telemetry_waiting && usb_tx_telemetry_high_active) {
+        usb_tx_active_queue = UsbTxQueueKind::Telemetry;
+        return &usb_tx_telemetry_queue;
+    }
+
+    if (bulk_waiting && usb_tx_bulk_high_active) {
+        usb_tx_active_queue = UsbTxQueueKind::Bulk;
+        return &usb_tx_bulk_queue;
+    }
+
+    if (telemetry_waiting) {
+        usb_tx_active_queue = UsbTxQueueKind::Telemetry;
+        return &usb_tx_telemetry_queue;
+    }
+
+    usb_tx_active_queue = UsbTxQueueKind::Bulk;
+    return &usb_tx_bulk_queue;
+}
+
+bool usb_tx_enqueue(UsbTxQueue& queue, const uint8_t* data, uint16_t length) {
+    if (data == nullptr || length == 0) {
+        usb_tx_service();
+        return true;
+    }
+
+    bool queued = false;
+
+    const uint32_t primask = irq_save();
+    const uint32_t required = static_cast<uint32_t>(length) + sizeof(uint16_t);
+    if (required <= usb_tx_free_nolock(queue)) {
+        usb_tx_write_byte_nolock(queue, static_cast<uint8_t>(length & 0xFFU));
+        usb_tx_write_byte_nolock(queue, static_cast<uint8_t>((length >> 8) & 0xFFU));
+        for (uint16_t i = 0; i < length; i++) {
+            usb_tx_write_byte_nolock(queue, data[i]);
+        }
+        queued = true;
+    }
+    irq_restore(primask);
+
+    if (queued && !is_interrupt_context()) usb_tx_service();
+    return queued;
+}
+
+bool usb_tx_load_next_chunk(void) {
+    const uint32_t primask = irq_save();
+    if (usb_tx_state != UsbTxState::Idle) {
+        irq_restore(primask);
+        return false;
+    }
+
+    UsbTxQueue* queue = nullptr;
+    if (usb_tx_packet_remaining > 0U) {
+        queue = &usb_tx_queue_from_kind(usb_tx_active_queue);
+    } else {
+        queue = usb_tx_select_queue_nolock();
+        if (queue == nullptr) {
+            irq_restore(primask);
+            return false;
+        }
+
+        const uint16_t length_low = usb_tx_read_byte_nolock(*queue);
+        const uint16_t length_high = usb_tx_read_byte_nolock(*queue);
+        usb_tx_packet_remaining = static_cast<uint16_t>(length_low | (length_high << 8));
+        if (usb_tx_packet_remaining == 0U) {
+            irq_restore(primask);
+            return false;
+        }
+    }
+
+    uint16_t len = 0;
+    while (usb_tx_packet_remaining > 0U && len < USB_TX_CHUNK_SIZE) {
+        usb_tx_chunk[len++] = usb_tx_read_byte_nolock(*queue);
+        usb_tx_packet_remaining--;
+    }
+
+    usb_tx_chunk_len = len;
+    usb_tx_state = UsbTxState::Pending;
+    irq_restore(primask);
+
+    return len > 0;
+}
+
+void usb_tx_try_submit_pending(void) {
+    const uint32_t primask = irq_save();
+    if (usb_tx_state != UsbTxState::Pending || usb_tx_chunk_len == 0) {
+        irq_restore(primask);
+        return;
+    }
+    const uint16_t len = usb_tx_chunk_len;
+    irq_restore(primask);
+
+    if (CDC_Transmit_HS(usb_tx_chunk, len) == USBD_OK) {
+        const uint32_t state_primask = irq_save();
+        usb_tx_state = UsbTxState::InFlight;
+        irq_restore(state_primask);
+    }
+}
+
+bool usb_tx_queue_text(const char* text) {
+    if (text == nullptr) return false;
+    return usb_tx_enqueue(usb_tx_text_queue, reinterpret_cast<const uint8_t*>(text), strlen(text));
+}
+
+}
+
+void usb_tx_service(void) {
+    if (is_interrupt_context()) return;
+
+    usb_tx_reconcile_cdc_state();
+
+    const uint32_t primask = irq_save();
+    if (usb_tx_service_busy) {
+        irq_restore(primask);
+        return;
+    }
+    usb_tx_service_busy = true;
+    irq_restore(primask);
+
+    usb_tx_load_next_chunk();
+    usb_tx_try_submit_pending();
+
+    const uint32_t done_primask = irq_save();
+    usb_tx_service_busy = false;
+    irq_restore(done_primask);
+}
+
+extern "C" void usb_tx_onTransmitComplete(void) {
+    const uint32_t primask = irq_save();
+    if (usb_tx_state == UsbTxState::InFlight) {
+        usb_tx_state = UsbTxState::Idle;
+        usb_tx_chunk_len = 0;
+    }
+    irq_restore(primask);
+}
+
+bool usb_sendTelemetry(const uint8_t* buffer, uint16_t length) {
+    return usb_tx_enqueue(usb_tx_telemetry_queue, buffer, length);
+}
+
+bool usb_sendBulk(const uint8_t* buffer, uint16_t length) {
+    return usb_tx_enqueue(usb_tx_bulk_queue, buffer, length);
+}
+
 void usb_printf(const char *format, ...) {
     char buffer[256];
     va_list args;
@@ -60,9 +364,8 @@ void usb_printf(const char *format, ...) {
     va_end(args);
 
     if (len > 0) {
-        __disable_irq();
-        CDC_Transmit_HS((uint8_t*)buffer, len);
-        __enable_irq();
+        if (len >= static_cast<int>(sizeof(buffer))) len = sizeof(buffer) - 1;
+        usb_tx_enqueue(usb_tx_text_queue, reinterpret_cast<const uint8_t*>(buffer), static_cast<uint16_t>(len));
     }
 }
 
@@ -106,6 +409,10 @@ void process_command(const char* cmd_str) {
     cmd_copy[sizeof(cmd_copy) - 1] = '\0';
 
     char* argv[MAX_ARGC];
+    static char empty_arg[] = "";
+    for (int i = 0; i < MAX_ARGC; i++) {
+        argv[i] = empty_arg;
+    }
     int argc = 0;
 
     // 1. Universal parsing / Tokenization via space delimiter
@@ -123,7 +430,7 @@ void process_command(const char* cmd_str) {
         if (strcmp(argv[0], cmd_table[i].cmd) == 0) {
             // Validate arguments
             if (argc < cmd_table[i].min_args || argc > cmd_table[i].max_args) {
-                CDC_Transmit_HS((uint8_t*)cmd_table[i].usage, strlen(cmd_table[i].usage));
+                usb_tx_queue_text(cmd_table[i].usage);
                 return;
             }
             // Execute the mapped handler
@@ -134,15 +441,15 @@ void process_command(const char* cmd_str) {
 
     // 3. Command not found
     const char* err = "Unknown command\r\n";
-    CDC_Transmit_HS((uint8_t*)err, strlen(err));
+    usb_tx_queue_text(err);
 }
 
 void protectionModePrint(void) {
     const char* msg = "\r\nSystem tripped by overcurrent: Motor in protection mode, reset error to start\r\n\r\n";
-    CDC_Transmit_HS((uint8_t*)msg, strlen(msg));
+    usb_tx_queue_text(msg);
 }
 
 void batteryProtectionPrint(void) {
     const char* msg = "\r\nSystem operating under battery protection, this function is disabled\r\nIf supplied with a current-limited source, set BATTERY_PROTECTION to false\r\n\r\n";
-    CDC_Transmit_HS((uint8_t*)msg, strlen(msg));
+    usb_tx_queue_text(msg);
 }

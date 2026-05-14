@@ -110,7 +110,7 @@ uint8_t UserTxBufferHS[APP_TX_DATA_SIZE];
 extern USBD_HandleTypeDef hUsbDeviceHS;
 
 /* USER CODE BEGIN EXPORTED_VARIABLES */
-
+extern void usb_tx_onTransmitComplete(void);
 /* USER CODE END EXPORTED_VARIABLES */
 
 /**
@@ -309,6 +309,7 @@ static int8_t CDC_TransmitCplt_HS(uint8_t *Buf, uint32_t *Len, uint8_t epnum)
 {
   uint8_t result = USBD_OK;
   /* USER CODE BEGIN 14 */
+  usb_tx_onTransmitComplete();
   UNUSED(Buf);
   UNUSED(Len);
   UNUSED(epnum);

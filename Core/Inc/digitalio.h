@@ -12,10 +12,19 @@ class DigitalOut {
         DigitalOut(GPIO_TypeDef* port, uint16_t pin);
 
         // Set the output level of the pin
-        void write(bool value);
+        inline void write(bool value) {
+            HAL_GPIO_WritePin(port_, pin_, value ? GPIO_PIN_SET : GPIO_PIN_RESET);
+        }
+
+        // Overload for GPIO_PinState
+        inline void write(GPIO_PinState state) {
+            HAL_GPIO_WritePin(port_, pin_, state);
+        }
 
         // Toggle the output level of the pin
-        void toggle(void);
+        inline void toggle(void) {
+            HAL_GPIO_TogglePin(port_, pin_);
+        }
 };
 
 class DigitalIn {
@@ -27,5 +36,7 @@ class DigitalIn {
         DigitalIn(GPIO_TypeDef* port, uint16_t pin);
 
         // Read the input level of the pin
-        bool read(void) const;
+        inline bool read(void) const {
+            return HAL_GPIO_ReadPin(port_, pin_) == GPIO_PIN_SET;
+        }
 };
