@@ -250,10 +250,8 @@ TIM3: 4 Hz interrupt
 TIM4: Encoder pulse timing
 TIM5: Incremental counter at APB frequency
 TIM6: 5000 Hz interrupt for binary telemetry
-TIM7: 2 Hz interrupt for communication timeout
 TIM8: PWM generation for motor control
 TIM12: Upper 16 bits for TIM5 incremental counter (for microsecond timing)
-TIM14: Communication timing
 TIM15: Remapped TIM4 for encoder index timing
 TIM16: Speed loop timer (1000 Hz)
 
