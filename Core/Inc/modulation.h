@@ -145,20 +145,24 @@ typedef struct {
     float M_BLEND1_HI = 0.922f;
     float M_OM1_MAX   = 0.970f;
     float M_BLEND2_HI = 0.980f;
-    float M_SIX_ENTER = 1.000f;
-    float M_SIX_EXIT  = 1.000f;
+    float M_SIX_ENTER = 1.200f;
+    float M_SIX_EXIT  = 0.6f;
+    float M_PHASE_ADVANCE_ENTRY = 0.3f;
+
+    uint32_t REGION_SWITCH_THRESHOLD = 500;
 
     float Kp_six       = 2.0f;
     float f_target_six = 20000.0f;  //switching frequency
     float psi_gdpwm    = M_PI / 6.0f;
 
-    int   region_curr        = 1;
-    bool  six_step_active    = false;
-    bool  enter_pending      = false;
-    bool  exit_pending       = false;
-    float target_theta_entry = 0.0f;
-    float target_theta_exit  = 0.0f;
+    uint8_t region_curr        = 1;
+    bool    six_step_active    = false;
+    bool    enter_pending      = false;
+    bool    exit_pending       = false;
+    float   target_theta_entry = 0.0f;
+    float   target_theta_exit  = 0.0f;
 
+    uint32_t region_switch_cunter = 0;
     int   hold_counter = 0;
     float hold_da      = 0.5f;
     float hold_db      = 0.5f;

@@ -81,6 +81,8 @@ void foc_init(FOC_State_t* foc)
     foc->rpm     = 0.0f;
     foc->Vd_cmd  = 0.0f;
     foc->Vq_cmd  = 0.0f;
+    foc->V_alpha = 0.0f;
+    foc->V_beta  = 0.0f;
     foc->u_mag   = 0.0f;
     foc->i_mag   = 0.0f;
 
@@ -106,7 +108,7 @@ void foc_reset(FOC_State_t* foc)
     PI_reset(&foc->pi_q);
     PI_reset(&foc->pi_speed);
     PI_reset(&foc->pi_fw);
-    opt_state = OptimalFinalState{};
+    
     foc->omega_ref   = 0.0f;
     foc->Id_ref      = 0.0f;
     foc->Iq_ref      = 0.0f;
@@ -114,6 +116,8 @@ void foc_reset(FOC_State_t* foc)
     foc->Iq          = 0.0f;
     foc->Vd_cmd      = 0.0f;
     foc->Vq_cmd      = 0.0f;
+    foc->V_alpha = 0.0f;
+    foc->V_beta  = 0.0f;
     foc->u_mag       = 0.0f;
     foc->i_mag       = 0.0f;
     foc->u_abs_limit = 0.0f;
@@ -125,6 +129,19 @@ void foc_reset(FOC_State_t* foc)
     foc->m_sixstep = 0.0f;
     foc->exit_smooth_counter = 0;
     foc->prev_six_step_active = false;
+
+    opt_state.region_curr = 1;
+    opt_state.six_step_active = false;
+    opt_state.enter_pending = false;
+    opt_state.exit_pending = false;
+    opt_state.target_theta_entry = 0.0f;
+    opt_state.target_theta_exit = 0.0f;
+
+    opt_state.region_switch_cunter = 0;
+    opt_state.hold_counter = 0;
+    opt_state.hold_da = 0.5f;
+    opt_state.hold_db = 0.5f;
+    opt_state.hold_dc = 0.5f;
 }
 
 void focResetPI(FOC_State_t* foc) {
@@ -451,8 +468,7 @@ void foc(ModulationType modulation_type,
 
 
     //Voltage limiting after six‑step exit
-
-     if (foc->exit_smooth_counter > 0) {
+    if (foc->exit_smooth_counter > 0) {
         float V_lin_max = vdc / SQRT3;
         float Vref = lut::hypotf(v_alpha, v_beta);
         if (Vref > V_lin_max) {
@@ -461,7 +477,7 @@ void foc(ModulationType modulation_type,
             v_beta  *= scale;
         }
         foc->exit_smooth_counter--;
-    }   
+    }
 
     /* ------------------------------------------------------------------
      * 5. Modulation: Vα,Vβ → dA,dB,dC
@@ -476,7 +492,7 @@ void foc(ModulationType modulation_type,
     float u_mag;
     if (modulation_type == ModulationType::OPTIMAL_FINAL) {
         modulate_optimal_final(v_alpha, v_beta, vdc, foc->ts,
-                               theta_e, theta_m, m_act, foc->m_sixstep, // Added by guessing
+                               theta_e, theta_m, foc->m_index, foc->m_sixstep,
                                foc->omega_e,
                                foc->Iq_ref, FOC_IMAX, opt_state,
                                dutyA, dutyB, dutyC,

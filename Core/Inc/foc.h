@@ -241,6 +241,8 @@ typedef struct {
     volatile float rpm;
     volatile float Vd_cmd;
     volatile float Vq_cmd;
+    volatile float V_alpha;
+    volatile float V_beta;
     volatile float u_mag;
     volatile float u_abs_limit;
     volatile float i_mag;

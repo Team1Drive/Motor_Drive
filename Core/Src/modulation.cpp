@@ -532,8 +532,14 @@ void modulate_optimal_final(float v_alpha, float v_beta, float v_dc, float Ts,
 
     // ── Phase voltage references from inverse Clarke ──────────────────────
     // MATLAB: va_ref = v_alpha;  vb_ref = -0.5*v_alpha + (√3/2)*v_beta;  etc.
+    float theta_comp = omega_e * Ts * COMP_RATIO;
+    float cos_t = lut::cosf(theta_comp);
+    float sin_t = lut::sinf(theta_comp);
+    
+    float alpha_c = v_alpha * cos_t - v_beta * sin_t;
+    float beta_c  = v_alpha * sin_t + v_beta * cos_t;
     float va_ref, vb_ref, vc_ref;
-    inv_clarke(v_alpha, v_beta, &va_ref, &vb_ref, &vc_ref);
+    inv_clarke(alpha_c, beta_c, &va_ref, &vb_ref, &vc_ref);
 
     // ── Region determination (with one-step hysteresis) ───────────────────
     int nat_region;
@@ -544,8 +550,14 @@ void modulate_optimal_final(float v_alpha, float v_beta, float v_dc, float Ts,
     else if (m_act < S.M_SIX_ENTER) nat_region = 5;
     else                             nat_region = 6;
 
-    if      (nat_region > S.region_curr) S.region_curr++;
-    else if (nat_region < S.region_curr) S.region_curr--;
+    if (nat_region != S.region_curr) S.region_switch_cunter++;
+    else                             S.region_switch_cunter = 0;
+    
+    if (S.region_switch_cunter >= S.REGION_SWITCH_THRESHOLD) {
+        if      (nat_region > S.region_curr) S.region_curr++;
+        else if (nat_region < S.region_curr) S.region_curr--;
+        S.region_switch_cunter = 0;
+    }
 
     // ── Six-step entry ────────────────────────────────────────────────────
     // MATLAB: wait for next sector boundary before committing to six-step
@@ -600,7 +612,7 @@ void modulate_optimal_final(float v_alpha, float v_beta, float v_dc, float Ts,
         float pole_pairs = 4.0f;                     // should be passed or made global
         float theta_six = (pole_pairs * theta_m) - M_PI / 3.0f + M_PI;
         float iq_max_safe = std::max(iq_max, 1e-6f);
-        float phase_advance = (iq_ref / iq_max_safe) * 1.7f;
+        float phase_advance = (iq_ref / iq_max_safe) * 0.3f;
         theta_six = std::fmod(theta_six + phase_advance, 2.0f * M_PI);
         if (theta_six < 0.0f) theta_six += 2.0f * M_PI;
 
@@ -640,6 +652,11 @@ void modulate_optimal_final(float v_alpha, float v_beta, float v_dc, float Ts,
                 svpwm_om1_opt(va_ref, vb_ref, vc_ref,
                               m_act, theta_e, Ts, v_dc,
                               da_out, db_out, dc_out);
+                break;
+
+           /*  case 1: case 2: case 3:
+                svpwm_superposition(v_alpha, v_beta, v_dc, Ts, omega_e,
+                                    &da_out, &db_out, &dc_out); */
                 break;
 
             case 4:
