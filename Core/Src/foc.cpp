@@ -479,6 +479,9 @@ void foc(ModulationType modulation_type,
         foc->exit_smooth_counter--;
     }
 
+    foc->V_alpha = v_alpha;
+    foc->V_beta = v_beta;
+
     /* ------------------------------------------------------------------
      * 5. Modulation: Vα,Vβ → dA,dB,dC
      *     Use specified modulation type (e.g. SVPWM, DPWM) for testing.
