@@ -11,75 +11,70 @@ A separate software has been developed for Windows to control and display the te
     Root
     ├── Core
     │   ├── Inc/
-    │   │   ├── adc_sampler.cpp         # Class for ADC and DMA sampling
-    │   │   ├── adc_sampler.h           # Declaration of class and functions for ADC and DMA sampling
-    │   │   ├── adc.c                   # CubeMX generated file
-    │   │   ├── digitalio.cpp
-    │   │   ├── digitalio.h
-    │   │   ├── dma.c                   # CubeMX generated file
-    │   │   ├── encoder.cpp
-    │   │   ├── encoder.h
-    │   │   ├── gpio.c                  # CubeMX generated file
-    │   │   ├── hallsensor.cpp
-    │   │   ├── hallsensor.h
-    │   │   ├── main.c                  # CubeMX generated main file
-    │   │   ├── main.cpp                # Main programme
-    │   │   ├── modulation.cpp
-    │   │   ├── modulation.h
-    │   │   ├── pwm3phase_timer.cpp
-    │   │   ├── pwm3phase_timer.h
-    │   │   ├── stm32h7xx_hal_msp.c     # CubeMX generated file
-    │   │   ├── stm32h7xx_it.c          # CubeMX generated file
-    │   │   ├── syscalls.c              # CubeMX generated file
-    │   │   ├── sysmem.c                # CubeMX generated file
-    │   │   ├── system_stm32h7xx.c      # CubeMX generated file
-    │   │   ├── tim.c                   # CubeMX generated file
-    │   │   ├── ustimer.cpp
-    │   │   └── ustimer.h
+    │   │   ├── adc.h                   # CubeMX generated file
+    │   │   ├── adc_sampler.h           # Non-generated: ADC and DMA sampler interface
+    │   │   ├── cmd.h                   # Non-generated: USB CLI command interface
+    │   │   ├── coupled_comm.h          # Non-generated: coupled communication interface
+    │   │   ├── digitalio.h             # Non-generated: digital I/O helpers
+    │   │   ├── dma.h                   # CubeMX generated file
+    │   │   ├── encoder.h               # Non-generated: encoder interface
+    │   │   ├── fft_analyzer.h          # Non-generated: FFT analyzer interface
+    │   │   ├── foc.h                   # Non-generated: field-oriented control interface
+    │   │   ├── gpio.h                  # CubeMX generated file
+    │   │   ├── hallsensor.h            # Non-generated: Hall sensor interface
+    │   │   ├── lut.h                   # Non-generated: lookup table data
+    │   │   ├── main.h                  # CubeMX generated file
+    │   │   ├── math_helpers.h          # Non-generated: math helper interface
+    │   │   ├── modulation.h            # Non-generated: modulation algorithms interface
+    │   │   ├── parameters.h            # Non-generated: tunable firmware parameters
+    │   │   ├── pwm3phase_timer.h       # Non-generated: three-phase PWM timer interface
+    │   │   ├── stm32h7xx_hal_conf.h    # CubeMX generated file
+    │   │   ├── stm32h7xx_it.h          # CubeMX generated file
+    │   │   ├── tim.h                   # CubeMX generated file
+    │   │   ├── timer.h                 # Non-generated: timer helper interface
+    │   │   └── ustimer.h               # Non-generated: microsecond timer interface
     │   │
-    │   └── Src                     
-    │       ├── adc_sampler.cpp         # Class for ADC and DMA sampling
-    │       ├── adc_sampler.h           # Declaration of class and functions for ADC and DMA sampling
+    │   └── Src/
     │       ├── adc.c                   # CubeMX generated file
-    │       ├── digitalio.cpp
-    │       ├── digitalio.h
+    │       ├── adc_sampler.cpp         # Non-generated: ADC and DMA sampler implementation
+    │       ├── cmd.cpp                 # Non-generated: USB CLI command handling
+    │       ├── coupled_comm.cpp        # Non-generated: coupled communication implementation
+    │       ├── digitalio.cpp           # Non-generated: digital I/O implementation
     │       ├── dma.c                   # CubeMX generated file
-    │       ├── encoder.cpp
-    │       ├── encoder.h
+    │       ├── encoder.cpp             # Non-generated: encoder implementation
+    │       ├── fft_analyzer.cpp        # Non-generated: FFT analyzer implementation
+    │       ├── foc.cpp                 # Non-generated: field-oriented control implementation
     │       ├── gpio.c                  # CubeMX generated file
-    │       ├── hallsensor.cpp
-    │       ├── hallsensor.h
+    │       ├── hallsensor.cpp          # Non-generated: Hall sensor implementation
     │       ├── main.c                  # CubeMX generated main file
-    │       ├── main.cpp                # Main programme
-    │       ├── modulation.cpp
-    │       ├── modulation.h
-    │       ├── pwm3phase_timer.cpp
-    │       ├── pwm3phase_timer.h
+    │       ├── main.cpp                # Non-generated: main programme
+    │       ├── math_helpers.cpp        # Non-generated: math helper implementation
+    │       ├── modulation.cpp          # Non-generated: modulation algorithms implementation
+    │       ├── pwm3phase_timer.cpp     # Non-generated: three-phase PWM timer implementation
     │       ├── stm32h7xx_hal_msp.c     # CubeMX generated file
     │       ├── stm32h7xx_it.c          # CubeMX generated file
     │       ├── syscalls.c              # CubeMX generated file
     │       ├── sysmem.c                # CubeMX generated file
     │       ├── system_stm32h7xx.c      # CubeMX generated file
     │       ├── tim.c                   # CubeMX generated file
-    │       ├── ustimer.cpp
-    │       └── ustimer.h
+    │       ├── timer.cpp               # Non-generated: timer helper implementation
+    │       └── ustimer.cpp             # Non-generated: microsecond timer implementation
     │
-    ├── Drivers/
-    ├── Middlewares/ST/STM32_USB_Device_Library/
-    ├── USB_DEVICE/       
+    ├── Drivers/                        # STM32 HAL and CMSIS vendor files
+    ├── Middlewares/                    # STM32 USB library and CMSIS-DSP vendor files
+    ├── USB_DEVICE/                     # CubeMX generated USB device files
+    ├── Plot/                           # Non-generated: plotting and debug scripts
     ├── cmake/
-    ├── out/build/gcc-arm
-    │   ├── .cmake/
-    │   ├── cmake/
-    │   ├── CMakeFiles/
-    │   ├── cmake_install.cmake
-    │   ├── CMakeCache.txt
-    │   ├── compile_commands.json
-    │   ├── Makefile
+    ├── out/build/gcc-arm/              # Generated build output
     │   ├── Motor_Drive.bin             # Compiled binary file for flashing
-    │   ├── Motor_Drive.elf
-    │   └── Motor_Drive.map
-    │
+    │   ├── Motor_Drive.elf             # Compiled ELF image
+    │   └── Motor_Drive.map             # Linker map file
+    ├── CMakeLists.txt
+    ├── CMakePresets.json
+    ├── Motor_Drive.ioc                 # STM32CubeMX project file
+    ├── startup_stm32h725xx.s           # Startup assembly file
+    ├── STM32H725XG_FLASH.ld            # Linker script
+    ├── use_of_git.md                   # Non-generated: Git workflow notes
     └── README.md
 
 ## Flashing Programme onto STM32
@@ -191,6 +186,6 @@ Select log information output format.
 
 Before you begin, make sure you are familiar with developing STM32 using CMake toolchain.
 
-An example test project can be found at [Test project]("https://github.com/Gilbert526/MEng_Project-CMake_Demo_Project").
+An example test project can be found at [Test project](https://github.com/Gilbert526/MEng_Project-CMake_Demo_Project).
 
-A brief tutorial of git is available [here]("use_of_git.md").
+A brief tutorial of git is available [here](use_of_git.md).
