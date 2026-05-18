@@ -1,132 +1,42 @@
 # M.Eng. Project - Motor Drive Codebase
 
-## Development Environment
+This repository is the main motor drive microcontroller firmware codebase for M.Eng. Project Team 1.
 
-Before you begin, make sure you are familiar with developing STM32 using CMake toolchain.
+This project aims to investigate different methods of modulation and compare their performances across linear and overmodulation region. For the hardware testing part of the project, a custom PCB together with a back-to-back drive and load motor test rig is developed for physical testing of the modulation algorithms. The PCB integrates a STM32H725VGT microcontroller to implement FOC, which has been programmed using C/C++. This repository consists of the firmware used on the microcontroller.
 
-An example test project can be found at [Test project]("https://github.com/Gilbert526/MEng_Project-CMake_Demo_Project").
-
-## Git
-
-Ensure [Git](https://git-scm.com/downloads) is installed on your PC.
-
-Login your account in Git and you should be able to take advantage of the source control tab in VS Code.
-
-**Ensure you PULL FIRST BEFORE PUSHING any changes**
-
-### Common Git Terminology
-
-| Term          | Meaning                                                                       |
-|:--------------|:------------------------------------------------------------------------------|
-|Repository     |The project folder that Git tracks.                                            |
-|Branch         |A separate line of development. Use branches to work on features or fixes.     |
-|Commit         |A snapshot of your changes with a descriptive message.                         |
-|Push           |Upload your local commits to the remote repository on GitHub.                  |
-|Pull           |Download the latest changes from the remote repository to your local machine.  |
-|Pull Request   |A request to merge your branch into another branch (usually main).             |
-
-### The Basic Workflow
-
-1. Update your local main branch – get the latest code.
-2. Create a new branch for your work.
-3. Make changes and commit them locally.
-4. Push the branch to GitHub.
-5. Open a Pull Request (PR) to merge your changes.
-6. After review, the PR is merged and you can delete your branch.
-
-### Using the Command Line
-
-Cloning the repository for the first time
-
-    cd "your-desired-location"
-    git clone https://github.com/Team1Drive/Motor_Drive.git
-
-Pulling from the main branch
-
-    git pull origin main
-
-Create and switch to a new branch
-
-    # Use a descriptive name, e.g., feature/overmodulation or fix/interface
-    git checkout -b your-branch-name
-
-Add and commit
-
-    # Add all changes (or use `git add <file>` for specific files)
-    git add .
-
-    # Commit with a clear message
-    git commit -m "Add login form validation"
-
-Pushing your branch
-
-    git push origin your-branch-name
-
-### Using GUI in VS Code
-
-#### 1. Clone the repository
-
-- Open VS Code.
-
-- Press `Ctrl+Shift+P` and type `Git: Clone`.
-
-- Paste the repository URL and select a local folder.
-
-#### 2. Update your local `main` branch
-
-- Click the Source Control icon in the left sidebar (or `Ctrl+Shift+G`).
-
-- In the bottom-left corner, click the branch name (usually `main`) and select `main` from the list.
-
-- Click the `…` menu and choose `Pull` to get the latest changes.
-
-#### 3. Create and switch to a new branch
-
-- Click the branch name in the bottom-left corner.
-
-- Choose `Create new branch…` and enter a name (e.g., `feature/overmodulation`).
-
-#### 4. Make changes and commit them
-
-- Edit files as needed. Modified files appear in the Source Control view.
-
-- Hover over a file and click the `+` to stage it (or click the `+` next to Changes to stage all).
-
-- Enter a commit message in the text box above.
-
-- Click the checkmark Commit button to commit locally.
-
-#### 5. Push your branch to GitHub
-
-- Click the `…` menu in Source Control and choose `Push`.
-
-- If this is the first push from this branch, VS Code may ask if you want to publish the branch – confirm.
-
-### Opening a Pull Request
-
-You can do this from VS Code (if you have the GitHub Pull Requests extension) or directly on GitHub.
-
-#### Option A: In VS Code (with extension)
-
-Click the `Pull Requests` icon in the left sidebar (or install the extension first).
-
-Click the `+` to create a new PR, select your branch as the `compare` branch, and `main` as `base`.
-
-Fill in the details and click `Create`.
-
-#### Option B: On GitHub
-
-Go to the repository page on GitHub.
-
-You’ll likely see a prompt to create a PR from your recently pushed branch. Click `Compare & pull request`.
-
-Otherwise, go to the `Pull requests` tab, click `New pull request`, select your branch as `compare` and `main` as `base`, then `Create pull request`.
+A separate software has been developed for Windows to control and display the telemetry data in a GUI. This can be found at [Tuning Master](https://github.com/Gilbert526/Motor_Drive_Frontend).
 
 ## File Structure
 
     Root
     ├── Core
     │   ├── Inc/
+    │   │   ├── adc_sampler.cpp         # Class for ADC and DMA sampling
+    │   │   ├── adc_sampler.h           # Declaration of class and functions for ADC and DMA sampling
+    │   │   ├── adc.c                   # CubeMX generated file
+    │   │   ├── digitalio.cpp
+    │   │   ├── digitalio.h
+    │   │   ├── dma.c                   # CubeMX generated file
+    │   │   ├── encoder.cpp
+    │   │   ├── encoder.h
+    │   │   ├── gpio.c                  # CubeMX generated file
+    │   │   ├── hallsensor.cpp
+    │   │   ├── hallsensor.h
+    │   │   ├── main.c                  # CubeMX generated main file
+    │   │   ├── main.cpp                # Main programme
+    │   │   ├── modulation.cpp
+    │   │   ├── modulation.h
+    │   │   ├── pwm3phase_timer.cpp
+    │   │   ├── pwm3phase_timer.h
+    │   │   ├── stm32h7xx_hal_msp.c     # CubeMX generated file
+    │   │   ├── stm32h7xx_it.c          # CubeMX generated file
+    │   │   ├── syscalls.c              # CubeMX generated file
+    │   │   ├── sysmem.c                # CubeMX generated file
+    │   │   ├── system_stm32h7xx.c      # CubeMX generated file
+    │   │   ├── tim.c                   # CubeMX generated file
+    │   │   ├── ustimer.cpp
+    │   │   └── ustimer.h
+    │   │
     │   └── Src                     
     │       ├── adc_sampler.cpp         # Class for ADC and DMA sampling
     │       ├── adc_sampler.h           # Declaration of class and functions for ADC and DMA sampling
@@ -172,42 +82,6 @@ Otherwise, go to the `Pull requests` tab, click `New pull request`, select your 
     │
     └── README.md
 
-## Programming Convention
-
-### Naming
-
-Use `FULL_CAPITAL` for defined macros and enumeration.
-
-e.g.
-
-    enum class MotorControlMode : uint8_t {
-        MOTOR_STOP,
-        MOTOR_STARTUP,
-        MOTOR_SIX_STEP,
-        MOTOR_FOC_LINEAR,
-        MOTOR_FOC_DPWM
-    };
-
-Always name macros with `DEVICE_DESCRIPTION_UNIT`.
-
-e.g.
-
-    #define ADC1_NUM_CHANNELS   3U
-    #define ADC2_NUM_CHANNELS   2U
-    #define ADC3_NUM_CHANNELS   2U
-
-Use `camelCase()` for functions.
-
-e.g.
-
-    void setDuty(float duty_A, float duty_B, float duty_C);
-
-Use `snake_case` for variables.
-
-e.g.
-
-    bool use_proc_buffer;
-
 ## Flashing Programme onto STM32
 
 To set the STM32 into Bootloader mode, pull the `BOOT0` pin to 5 V and press the RESET button.
@@ -226,41 +100,59 @@ Select the path to the `.bin`file, then click `Program` to flash the programme, 
 
 Unplug the jumper cable on the board and press RESET, the STM32 should be running the programme.
 
-## MCU Command
+## MCU Command Table
 
-### `start`
+The firmware has a build in CLI that can be accessed when connected to PC using USB serial monitor for the purpose of tuning and debugging. The table of commands is listed below.
 
-Starting the motor with open loop VVVF.
+### `start {foc|vvvf}`
+
+Start motor with desired control method, defaulted to start with FOC if argument is left empty.
 
 ### `stop`
 
-Immediately stopping the motor.
+Stop the motor with immediate effect. If running FOC or VVVF, a speed ramp to 0 is requested and can be interrupted by another stop command.
+
+### `align [reset]`
+
+Run the aligning sequence, if reset is selected then current align offset will be deleted.
+
+### `reset`
+
+Reset protection state.
+
+### `foc {status|stat|manual}`
+
+Return internal FOC operating values if argument is status or stat, or enter manual FOC mode if argument is manual.
+
+### `foc {vd|vq|id|iq} <value>`
+
+Manually setting the d-q voltage or current setpoint, only available when in FOC manual mode.
 
 ### `sixstep`
 
-Run motor in six-step commutation.
+Start motor with six-step commutation using hall effect sensors.
 
-### `speed <target_speed>`
+### `speed <target> [time]`
 
-Set target speed for speed loop.
+Set speed target in RPM directly, optional positive time generates a speed ramp.
 
-**`<target_speed>` Range -5000 to 5000 in RPM**
+### `torque <target> [time]`
+
+Set torque target in Nm directly, optional positive time generates a torque ramp.
+
+### `mod <modulation>`
+
+Select modulation type, valid types: `svpwm`, `svpwms`, `sym`, `dpwm0`, `dpwm1`, `dpwm2`, `dpwm3`.
 
 ### `duty <duty_A, duty_B, duty_C>`
 
-Set duty cycle for each phase.
+Set duty ratio for each phase directly, must be in range `[0.0, 1.0]` to set duty cycle, `-1.0` on any channel will disable phase output.
 
-**`<duty_A, duty_B, duty_C>` Range -1.0 to 1.0, value below 0.0 will disable the phase**
+### `vec <0-5>`
 
-### `vec <vector>`
-
-Set three-phase output that follows a specific field orientation.
-
-**`<vector>` Range 0 to 5 representing 6 orientation**
+Applies one of the switching states in the switch table for six-step commutation
 
 ### `tune <subsys> <param> <value>`
-
-Tuning specific value. ***SAVE DATA BEFORE POWER DOWN***
 
 **`<subsys>` Select subsystem**
 
@@ -268,24 +160,37 @@ Tuning specific value. ***SAVE DATA BEFORE POWER DOWN***
 
 **`<value>` New value to be set**
 
-| Subsystem | Parameter                                 |
-|:---------:|:------------------------------------------|
-|`Speed`    |`p` `i` `d`                                |
-|`Current`  |`p` `i`                                    |
-|`adc`      |`ia` `ib` `ic` `va` `vb` `ibatt` `vbatt`   |
+Tune specific value. Value may be `?` for query. Subsystem include `speed`, `fw`, `id`, `iq` with parameter `p`, `i`; `offset`, `gain` with `ia`, `ib`, `ic`, `va`, `vb`, `vbatt`, `ibatt`; `opt` with `phase`, `phase_advance`, `exit`, `six_exit`, `enter`, `six_enter`.
 
-### `print <operation> <variable>`
+***SAVE DATA BEFORE POWER DOWN***
 
-Print selected variable through USB COM.
+### `increment <subsys> <param> <value>`
 
-**`<operation>` add or remove variable**
+Increment specific tuneable value, support the same names as tune.
 
-**`<variable>` select variable to print**
+***SAVE DATA BEFORE POWER DOWN***
 
-| Operation | Variable                                  |
-|:---------:|:------------------------------------------|
-|`add` `rm` |`hall` `hall_dec` `rpm` `pos` `duty_a` `duty_b` `duty_c` `ia` `ib` `ic` `va` `vb` `vbatt` `ibatt` `ia_raw` `ib_raw` `ic_raw` `va_raw` `vb_raw` `vbatt_raw` `ibatt_raw`     |
+### `board [board_num]`
 
-### `print <format>`
+Select ADC tuning preset for board, leave argument blank for query. Currently support `[0, 2]`
 
-**`<operation>` select `utf8` for readable text in UTF8 or `bin` for binary**
+### `log preset <number>`
+
+Apply logging preset.
+
+### `log {add|rm} <variable>`
+
+Add or remove a variable to be logged, variables include `rpm`, `rpmsp`, `pos`, `elpos`, `duty_a`, `duty_b`, `duty_c`, `ia`, `ib`, `ic`, `va`, `vb`, `vbatt`, `ibatt`, `ia_raw`, `ib_raw`, `ic_raw`, `va_raw`, `vb_raw`, `vbatt_raw`, `ibatt_raw`, `ia_max`, `ib_max`, `ic_max`, `ibatt_max`, `id`, `iq`, `idsp`, `iqsp`, `vd`, `vq`, `cp_mode`, `m_index`, `fw`, `umag`, `imag`, `valpha`, `vbeta`, `mod`, `msixstep`, `region`, `adc`.
+
+### `log {bin|utf8}`
+
+Select log information output format.
+
+
+## Development Environment
+
+Before you begin, make sure you are familiar with developing STM32 using CMake toolchain.
+
+An example test project can be found at [Test project]("https://github.com/Gilbert526/MEng_Project-CMake_Demo_Project").
+
+A brief tutorial of git is available [here]("use_of_git.md").
