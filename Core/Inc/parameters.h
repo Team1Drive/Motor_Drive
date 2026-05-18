@@ -223,7 +223,11 @@ enum PrintDataEx : uint32_t {
     PRINT_FW        = 1 << 2,
     PRINT_UMAG      = 1 << 3,
     PRINT_IMAG      = 1 << 4,
-    PRINT_FFT       = 1 << 5
+    PRINT_VALPHA    = 1 << 5,
+    PRINT_VBETA     = 1 << 6,
+    PRINT_MOD       = 1 << 7,
+    PRINT_MSIXSTEP  = 1 << 8,
+    PRINT_REGION    = 1 << 9
 };
 
 enum class PrintFormat : uint8_t {

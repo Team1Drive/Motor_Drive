@@ -162,6 +162,7 @@
 
 typedef struct {
     float kp;
+    
     float ki;
     float integrator;
     float clamp_upper;    /* symmetric ±clamp applied to both integrator and output */
@@ -240,6 +241,8 @@ typedef struct {
     volatile float rpm;
     volatile float Vd_cmd;
     volatile float Vq_cmd;
+    volatile float V_alpha;
+    volatile float V_beta;
     volatile float u_mag;
     volatile float u_abs_limit;
     volatile float i_mag;
@@ -257,6 +260,11 @@ typedef struct {
 
     /* --- Fault flag — set on overcurrent, cleared by foc_reset() --- */
     volatile bool fault;
+
+    /* [CHANGE] Six-step control parameters */
+    float m_sixstep;                // [CHANGE] motor‑speed‑based modulation index
+    uint32_t exit_smooth_counter;   // [CHANGE] voltage limiting counter after six‑step exit
+    bool prev_six_step_active;      // [CHANGE] track previous state for exit detection
 
 } FOC_State_t;
 

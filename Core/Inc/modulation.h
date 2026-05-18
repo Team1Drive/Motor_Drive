@@ -28,6 +28,7 @@ enum class ModulationType : uint8_t
     DPWM1,          ///< Discontinuous PWM variant 1 — clamps phase with largest absolute value
     DPWM2,          ///< Discontinuous PWM variant 2 — clamps phase near positive line-line peak
     DPWM3,          ///< Discontinuous PWM variant 3 — clamps phase furthest from zero
+    OPTIMAL_FINAL   ///< final algorithm
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -125,3 +126,53 @@ void modulate(
     float omega_e = 0.0f,
     float* applied_mag = nullptr
 );
+
+struct OptimalFinalConfig {
+    static constexpr float M_LIN_MAX   = 0.892f;
+    static constexpr float M_BLEND1_HI = 0.922f;
+    static constexpr float M_OM1_MAX   = 0.970f;
+    static constexpr float M_BLEND2_HI = 0.980f;
+    static constexpr float M_SIX_ENTER = 1.000f;
+    static constexpr float M_SIX_EXIT  = 1.000f;
+
+    static constexpr float Kp_six       = 2.0f;
+    static constexpr float f_target_six = 20000.0f;
+    static constexpr float psi_gdpwm    = M_PI / 6.0f;
+};
+
+typedef struct {
+    float M_LIN_MAX   = 0.892f;
+    float M_BLEND1_HI = 0.922f;
+    float M_OM1_MAX   = 0.970f;
+    float M_BLEND2_HI = 0.980f;
+    float M_SIX_ENTER = 1.200f;
+    float M_SIX_EXIT  = 0.6f;
+    float M_PHASE_ADVANCE_ENTRY = 0.3f;
+
+    uint32_t REGION_SWITCH_THRESHOLD = 500;
+
+    float Kp_six       = 2.0f;
+    float f_target_six = 20000.0f;  //switching frequency
+    float psi_gdpwm    = M_PI / 6.0f;
+
+    uint8_t region_curr        = 1;
+    bool    six_step_active    = false;
+    bool    enter_pending      = false;
+    bool    exit_pending       = false;
+    float   target_theta_entry = 0.0f;
+    float   target_theta_exit  = 0.0f;
+
+    uint32_t region_switch_cunter = 0;
+    int   hold_counter = 0;
+    float hold_da      = 0.5f;
+    float hold_db      = 0.5f;
+    float hold_dc      = 0.5f;
+
+    bool initialised = false;
+} OptimalFinalState;
+
+void modulate_optimal_final(float v_alpha, float v_beta, float v_dc, float Ts,
+                             float theta_e, float theta_m, float m_act, float m_sixstep, float omega_e,
+                             float iq_ref, float iq_max, OptimalFinalState& S,
+                             float* dutyA, float* dutyB, float* dutyC,
+                             bool* just_exited = nullptr, bool* is_active = nullptr);

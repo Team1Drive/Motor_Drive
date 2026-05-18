@@ -127,6 +127,8 @@ FOC_State_t foc_state;
 
 RollingMax ia_max, ib_max, ic_max, ibatt_max;
 
+extern OptimalFinalState opt_state;
+
 
 
 
@@ -704,6 +706,21 @@ void printTelemetryUTF8(void) {
   if (print_mask_ex & PRINT_IMAG) {
     pos += snprintf(buffer + pos, sizeof(buffer) - pos, "imag %.2f ", foc_state.i_mag);
   }
+  if (print_mask_ex & PRINT_VALPHA) {
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "valpha %.2f ", foc_state.V_alpha);
+  }
+  if (print_mask_ex & PRINT_VBETA) {
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "vbeta %.2f ", foc_state.V_beta);
+  }
+  if (print_mask_ex & PRINT_MOD) {
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "mod %u ", static_cast<uint8_t>(modulation_type));
+  }
+  if (print_mask_ex & PRINT_MSIXSTEP) {
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "msixstep %.2f ", foc_state.m_sixstep);
+  }
+  if (print_mask_ex & PRINT_REGION) {
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "region %u ", opt_state.region_curr);
+  }
   if (pos > 0) {
     buffer[pos - 1] = '\n';
     buffer[pos] = '\0';
@@ -987,6 +1004,31 @@ void printTelemetryBinary(void) {
     memcpy(ptr, &val, 4);
     ptr += 4;
   }
+  if (print_mask_ex & PRINT_VALPHA) {
+    float val = foc_state.V_alpha;
+    memcpy(ptr, &val, 4);
+    ptr += 4;
+  }
+  if (print_mask_ex & PRINT_VBETA) {
+    float val = foc_state.V_beta;
+    memcpy(ptr, &val, 4);
+    ptr += 4;
+  }
+  if (print_mask_ex & PRINT_MOD) {
+    uint8_t val = static_cast<uint8_t>(modulation_type);
+    memcpy(ptr, &val, 1);
+    ptr += 1;
+  }
+  if (print_mask_ex & PRINT_MSIXSTEP) {
+    float val = foc_state.m_sixstep;
+    memcpy(ptr, &val, 4);
+    ptr += 4;
+  }
+  if (print_mask_ex & PRINT_REGION) {
+    uint8_t val = opt_state.region_curr;
+    memcpy(ptr, &val, 1);
+    ptr += 1;
+  }
   if (ptr != buffer) {
       usb_sendTelemetry(buffer, static_cast<uint16_t>(ptr - buffer));
   }
@@ -1240,8 +1282,7 @@ void alignRotor(Sampling_t* sample) {
 
   else {
     control_mode = MotorControlMode::MOTOR_STOP;
-    foc_state.Iq_ref = 0.0f;
-    foc_state.Id_ref = 0.0f;
+    foc_reset(&foc_state);
     outputDisable();
     rpm = 0.0f;
     angle = 0.0f;
@@ -2021,6 +2062,10 @@ void cmd_mod(int argc, char** argv) {
         modulation_type = ModulationType::DPWM3;
         usb_printf("Modulation set to DPWM3\r\n");
     }
+    else if (strcmp(argv[1], "opt") == 0 || strcmp(argv[1], "optimal") == 0) {
+        modulation_type = ModulationType::OPTIMAL_FINAL;
+        usb_printf("Modulation set to Optimal Final\r\n");
+    }
     else {
         usb_printf("Unknown modulation type\r\n");
     }
@@ -2211,11 +2256,24 @@ void cmd_tune(int argc, char** argv) {
             success = true;
         }
     }
+    else if (strcmp(subsys, "opt") == 0) {
+        if (strcmp(param, "phase") == 0 || strcmp(param, "phase_advance") == 0) {
+            target = &opt_state.M_PHASE_ADVANCE_ENTRY;
+            success = true;
+        } else if (strcmp(param, "exit") == 0 || strcmp(param, "six_exit") == 0) {
+            target = &opt_state.M_SIX_EXIT;
+            success = true;
+        } else if (strcmp(param, "enter") == 0 || strcmp(param, "six_enter") == 0) {
+            target = &opt_state.M_SIX_ENTER;
+            success = true;
+        }
+    }
 
     if (success && target != nullptr) {
         if (is_query) {
             usb_printf("%s %s is %.6f\r\n", subsys, param, *target);
-        } else {
+        }
+        else {
             original = *target;
             *target = value;
             usb_printf("%s %s set to %.6f (was %.6f)\r\n", subsys, param, value, original);
@@ -2352,6 +2410,21 @@ void cmd_increment(int argc, char** argv) {
             success = true;
         }
     }
+    else if (strcmp(subsys, "opt") == 0) {
+        if (strcmp(param, "phase") == 0 || strcmp(param, "phase_advance") == 0) {
+            original = opt_state.M_PHASE_ADVANCE_ENTRY;
+            opt_state.M_PHASE_ADVANCE_ENTRY += value;
+            success = true;
+        } else if (strcmp(param, "exit") == 0 || strcmp(param, "six_exit") == 0) {
+            original = opt_state.M_SIX_EXIT;
+            opt_state.M_SIX_EXIT += value;
+            success = true;
+        } else if (strcmp(param, "enter") == 0 || strcmp(param, "six_enter") == 0) {
+            original = opt_state.M_SIX_ENTER;
+            opt_state.M_SIX_ENTER += value;
+            success = true;
+        }
+    }
 
     if (success) {
         usb_printf("%s %s set to %.4f (was %.4f)\r\n", subsys, param, (original + value), original);
@@ -2400,8 +2473,9 @@ void cmd_log(int argc, char** argv) {
                 usb_printf("Preset %d active\r\n", preset_id);
                 break;
                 
-            case 3: // Preset 3: Power Monitoring
-                print_mask = PRINT_VBATT | PRINT_IBATT | PRINT_DUTY_A | PRINT_DUTY_B | PRINT_DUTY_C;
+            case 3: // Preset 3: Results Testing
+                print_mask = PRINT_RPM | PRINT_RPMSP | PRINT_POS | PRINT_ELPOS | PRINT_DUTY_A | PRINT_DUTY_B | PRINT_DUTY_C | PRINT_IA | PRINT_IB | PRINT_IC | PRINT_VBATT | PRINT_FOC_ID | PRINT_FOC_IQ | PRINT_FOC_VD | PRINT_FOC_VQ | PRINT_FOC_IDSP | PRINT_FOC_IQSP;
+                print_mask_ex = PRINT_M_INDEX | PRINT_FW | PRINT_VALPHA | PRINT_VBETA | PRINT_MOD;
                 usb_printf("Preset %d active\r\n", preset_id);
                 break;
 
@@ -2464,7 +2538,11 @@ void cmd_log(int argc, char** argv) {
         else if (strcmp(token, "fw") == 0) flag_ex = PRINT_FW;
         else if (strcmp(token, "umag") == 0) flag_ex = PRINT_UMAG;
         else if (strcmp(token, "imag") == 0) flag_ex = PRINT_IMAG;
-        else if (strcmp(token, "fft") == 0) flag_ex = PRINT_FFT;
+        else if (strcmp(token, "valpha") == 0) flag_ex = PRINT_VALPHA;
+        else if (strcmp(token, "vbeta") == 0) flag_ex = PRINT_VBETA;
+        else if (strcmp(token, "mod") == 0) flag_ex = PRINT_MOD;
+        else if (strcmp(token, "msixstep") == 0) flag_ex = PRINT_MSIXSTEP;
+        else if (strcmp(token, "region") == 0) flag_ex = PRINT_REGION;
 
         else if (strcmp(token, "adc") == 0) {
             if (strcmp(action, "add") == 0) {
@@ -2639,6 +2717,14 @@ void focTick(Sampling_t* sample) {
      * 4. Apply to inverter
      * --------------------------------------------------------------------- */
     motorPWM.setDuty(dutyA, dutyB, dutyC);
+
+    /* -----------------------------------------------------------------------
+     * 5. Illuminate LEDs based on overmodulation and field-weakening
+     * --------------------------------------------------------------------- */
+    if (foc_state.m_index > 0.907f) led_yellow_1.write(1);
+    else led_yellow_1.write(0);
+    if (foc_state.fw_active) led_yellow_2.write(1);
+    else led_yellow_2.write(0);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
