@@ -4,6 +4,8 @@ This repository is the main motor drive microcontroller firmware codebase for M.
 
 This project aims to investigate different methods of modulation and compare their performances across linear and overmodulation region. For the hardware testing part of the project, a custom PCB together with a back-to-back drive and load motor test rig is developed for physical testing of the modulation algorithms. The PCB integrates a STM32H725VGT microcontroller to implement FOC, which has been programmed using C/C++. This repository consists of the firmware used on the microcontroller.
 
+The software has been written using a combination of STM32CubeMX generated library in C and custom classes in C++. It is heavily oriented towards STM32H725VGT with pins defined under [Motor_Drive.ioc](Motor_Drive.ioc). Subsequent development based on this project is advised to pay close attention to the definition of the hardware usage including the on chip peripherals as they may differ from chip to chip. A detailed list of all the available public member functions can be found in [API Documentation](API_DOCUMENTATION.md)
+
 A separate software has been developed for Windows to control and display the telemetry data in a GUI. This can be found at [Tuning Master](https://github.com/Gilbert526/Motor_Drive_Frontend).
 
 ## File Structure
