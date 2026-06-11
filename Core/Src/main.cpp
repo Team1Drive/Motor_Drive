@@ -1036,6 +1036,7 @@ void printTelemetryBinary(void) {
 
 void speedControl(void) {
   static float ramp_speed_increment = 0.0f;
+  static float ramp_torque_id_increment = 0.0f;
   static uint32_t ramp_tick = 0;
   static float iq_torque_clamp;
   static bool fw_active = false;
@@ -1046,29 +1047,58 @@ void speedControl(void) {
   *   Ramp up/down logic
   * ========================================================================= */
   if (((system_flag & FLAG_FOC_RUNNING) == 0) && (control_mode != MotorControlMode::MOTOR_FOC_MANUAL)) {
-    float ramp_down_step = FOC_RAMP_RATE * foc_state.ts_speed;
-    if (target.speed > 0.0f){
-      target.speed -= ramp_down_step;
-      if (target.speed < 0.0f) {
-        target.speed = 0.0f;
-        target.torque = 0.0f;
-        foc_state.target_rpm = 0.0f;
-        foc_reset(&foc_state);
-        outputDisable();
-        control_mode = MotorControlMode::MOTOR_STOP;
-        return;
+    const float ramp_down_step = FOC_RAMP_RATE * foc_state.ts_speed;
+    const float torque_ramp_down_step = FOC_TORQUE_RAMP_RATE * foc_state.ts_speed;
+    if (!target.is_torque_control) {
+      if (target.speed > 0.0f){
+        target.speed -= ramp_down_step;
+        if (target.speed < 0.0f) {
+          target.speed = 0.0f;
+          target.torque = 0.0f;
+          foc_state.target_rpm = 0.0f;
+          foc_reset(&foc_state);
+          outputDisable();
+          control_mode = MotorControlMode::MOTOR_STOP;
+          return;
+        }
+      }
+      else {
+        target.speed += ramp_down_step;
+        if (target.speed > 0.0f) {
+          target.speed = 0.0f;
+          target.torque = 0.0f;
+          foc_state.target_rpm = 0.0f;
+          foc_reset(&foc_state);
+          outputDisable();
+          control_mode = MotorControlMode::MOTOR_STOP;
+          return;
+        }
       }
     }
     else {
-      target.speed += ramp_down_step;
-      if (target.speed > 0.0f) {
-        target.speed = 0.0f;
-        target.torque = 0.0f;
-        foc_state.target_rpm = 0.0f;
-        foc_reset(&foc_state);
-        outputDisable();
-        control_mode = MotorControlMode::MOTOR_STOP;
-        return;
+      if (target.torque > 0.0f){
+        target.torque -= torque_ramp_down_step;
+        if (target.torque < 0.0f) {
+          target.torque = 0.0f;
+          target.speed = 0.0f;
+          foc_state.target_rpm = 0.0f;
+          foc_reset(&foc_state);
+          outputDisable();
+          control_mode = MotorControlMode::MOTOR_STOP;
+          return;
+        }
+      }
+      else {
+        target.torque += torque_ramp_down_step;
+        if (target.torque > 0.0f) {
+          target.torque = 0.0f;
+          target.speed = 0.0f;
+          foc_state.target_rpm = 0.0f;
+          foc_reset(&foc_state);
+          outputDisable();
+          control_mode = MotorControlMode::MOTOR_STOP;
+          return;
+        }
       }
     }
   }
@@ -1120,10 +1150,42 @@ void speedControl(void) {
   /* =========================================================================
   *   Torque Ramping
   * ========================================================================= */
-    iq_torque_clamp = target.torque / FOC_KT;
     foc_state.target_rpm = 0.0f;
-    if (system_flag & FLAG_SPEED_RAMP_INIT) {
-      system_flag &= ~FLAG_SPEED_RAMP_INIT;
+    const float new_iq_torque_clamp = target.torque / FOC_KT;
+    if (new_iq_torque_clamp != iq_torque_clamp) {
+      // Check if new target contains ramp flag
+      if (system_flag & FLAG_TARGET_RAMP) {
+        // Set up ramp parameters if this is the first tick of a new torque target
+        if (system_flag & FLAG_SPEED_RAMP_INIT) {
+          const float iq_clamp_delta = new_iq_torque_clamp - iq_torque_clamp;
+          ramp_tick = (uint32_t)(target.time * (float)SPEEDLOOP_FREQ_HZ + 0.5f) + 1;
+          ramp_torque_id_increment = iq_clamp_delta / (float)ramp_tick;
+          if (ramp_torque_id_increment > ((FOC_TORQUE_RAMP_RATE / FOC_KT) / SPEEDLOOP_FREQ_HZ)) {
+            ramp_torque_id_increment = (FOC_TORQUE_RAMP_RATE / FOC_KT) / SPEEDLOOP_FREQ_HZ;
+            ramp_tick = (uint32_t)(fabsf(iq_clamp_delta / ramp_torque_id_increment)) + 1;
+          }
+          if (ramp_torque_id_increment < -((FOC_TORQUE_RAMP_RATE / FOC_KT) / SPEEDLOOP_FREQ_HZ)) {
+            ramp_torque_id_increment = -((FOC_TORQUE_RAMP_RATE / FOC_KT) / SPEEDLOOP_FREQ_HZ);
+            ramp_tick = (uint32_t)(fabsf(iq_clamp_delta / ramp_torque_id_increment)) + 1;
+          }
+          system_flag &= ~FLAG_SPEED_RAMP_INIT;
+        }
+        if (ramp_tick > 0) {
+          iq_torque_clamp += ramp_torque_id_increment;
+          ramp_tick--;
+        }
+        if (ramp_tick == 0) {
+          iq_torque_clamp = new_iq_torque_clamp;
+        }
+      }
+      // If no ramping, update torque clamp immediately
+      else {
+        iq_torque_clamp = new_iq_torque_clamp;
+      }
+    }
+    else if (system_flag & FLAG_TARGET_RAMP) {
+      ramp_torque_id_increment = 0.0f;
+      system_flag &= ~FLAG_TARGET_RAMP;
     }
   }
   
@@ -2025,9 +2087,9 @@ void cmd_torque(int argc, char** argv) {
         target.time = time;
         usb_printf("Torque set to %.2f, reaching in %.3f seconds\r\n", torque, time);
     } else {
-        // Disable ramping if no time parameter is provided, making the torque change instantaneous
-        system_flag &= ~FLAG_TARGET_RAMP;
-        system_flag &= ~FLAG_SPEED_RAMP_INIT;
+        // Force ramping if no time parameter is provided to prevent sudden torque changes which can be dangerous
+        system_flag |= FLAG_TARGET_RAMP;
+        system_flag |= FLAG_SPEED_RAMP_INIT;
         target.time = 0.0f;
         usb_printf("Torque set to %.2f\r\n", torque);
     }

@@ -235,12 +235,12 @@ static inline void get_phase_refs(float v_alpha, float v_beta, float v_dc,
                                   float& Va, float& Vb, float& Vc, float omega_e = 0.0f, float Ts = 0.0f)
 {
     // inv_clarke gives phase voltages in volts
-    //float alpha_n = v_alpha / (v_dc * 0.5f);   // normalise to [-1,1]
-    //float beta_n  = v_beta  / (v_dc * 0.5f);
+    float alpha_n = v_alpha / (v_dc * 0.5f);   // normalise to [-1,1]
+    float beta_n  = v_beta  / (v_dc * 0.5f);
     //float alpha_n = v_alpha / (v_dc / SQRT3);   // Corrected: normalise to [-1,1] using Vdc/√3
     //float beta_n  = v_beta  / (v_dc / SQRT3);
-    float alpha_n = v_alpha / (2 * v_dc / M_PI);   // Corrected: normalise to [-1,1] using 2Vdc/π
-    float beta_n  = v_beta  / (2 * v_dc / M_PI);
+    //float alpha_n = v_alpha / (2 * v_dc / M_PI);   // Corrected: normalise to [-1,1] using 2Vdc/π
+    //float beta_n  = v_beta  / (2 * v_dc / M_PI);
     
     float theta_comp = omega_e * Ts * COMP_RATIO;
     float cos_t = lut::cosf(theta_comp);

@@ -92,6 +92,7 @@
 #define FOC_INITIAL_RPM             1500U // Target RPM for FOC mode (used when FOC is enabled and selected)
 #define FOC_OVERSAMPLING_SIZE       1U // Number of samples to average for oversampling (must be a power of 2 for efficient averaging)
 #define FOC_RAMP_DOWN_SPEED         200U // 200 RPM/s
+#define FOC_TORQUE_RAMP_RATE        0.1f // Maximum change in torque reference per control loop iteration (in Nm/s)
 
 #define MASTER_MODE                 true // Set master or slave mode in load testing
 #define BATTERY_PROTECTION          false // Set to true when powered with supply without current limit
