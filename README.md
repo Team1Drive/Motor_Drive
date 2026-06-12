@@ -183,7 +183,6 @@ Add or remove a variable to be logged, variables include `rpm`, `rpmsp`, `pos`, 
 
 Select log information output format.
 
-
 ## Development Environment
 
 Before you begin, make sure you are familiar with developing STM32 using CMake toolchain.

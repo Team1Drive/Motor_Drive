@@ -666,29 +666,29 @@ Call `usb_tx_service()` frequently from the main loop. Call `usb_tx_onTransmitCo
 
 | Command | Arguments | Description |
 | --- | --- | --- |
-| `start` | `[foc|vvvf]` | Starts motor control. Defaults to FOC if no valid mode is supplied. |
+| `start` | `[foc, vvvf]` | Starts motor control. Defaults to FOC if no valid mode is supplied. |
 | `stop` | none | Requests controlled ramp-down for active FOC/VVVF where applicable, otherwise stops immediately. |
 | `align` | `[reset]` | Runs encoder/electrical zero alignment, or clears alignment state with `reset`. |
 | `reset` | none | Stops outputs, clears over-current/under-voltage faults, and resets FOC state. |
-| `foc` | `status` or `stat` | Prints FOC status. |
+| `foc` | `status`, `stat` | Prints FOC status. |
 | `foc` | `manual` | Enters manual FOC mode. |
-| `foc` | `vd|vq|id|iq <value>` | Sets manual FOC d/q voltage or current command. Valid only in manual FOC mode. |
+| `foc` | `vd`, `vq`, `id`, or `iq` plus `<value>` | Sets manual FOC d/q voltage or current command. Valid only in manual FOC mode. |
 | `sixstep` | none | Starts Hall-sensor six-step commutation. |
 | `speed` | `<target> [time]` | Sets speed target in RPM. Optional time applies a ramp. |
 | `torque` | `<target> [time]` | Sets torque target in Nm. Optional time applies a ramp. |
 | `mod` | `<type>` | Selects modulation type. |
 | `duty` | `<a>,<b>,<c>` | Sets direct phase duty values. Use only with current-limited supply. |
 | `vec` | `<0-5>` | Applies a six-step switching vector. |
-| `tune` | `<subsys> <param> <value|?>` | Sets or queries tunable parameters. |
+| `tune` | `<subsys> <param> <value>` or `<subsys> <param> ?` | Sets or queries tunable parameters. |
 | `increment` | `<subsys> <param> <delta>` | Increments tunable parameters. |
 | `board` | `[preset]` | Queries or loads ADC calibration preset. |
 | `log preset` | `<number>` | Applies a logging preset. |
 | `log add` | `<variable>` | Enables a telemetry field. |
-| `log rm` | `<variable|all>` | Disables a telemetry field or clears all fields. |
-| `log` | `utf8|bin` | Selects telemetry output format. |
+| `log rm` | `<variable>` or `all` | Disables a telemetry field or clears all fields. |
+| `log` | `utf8`, `bin` | Selects telemetry output format. |
 | `log add adc` | none | Enables bulk ADC sample output. |
 | `log rm adc` | none | Disables bulk ADC sample output. |
-| `sim` | `start|status|reset` | Placeholder simulation command surface. Current handlers are not implemented. |
+| `sim` | `start`, `status`, `reset` | Placeholder simulation command surface. Current handlers are not implemented. |
 | `audible` | none | Toggles audible PWM frequency mode. |
 | `sin` | `<value>` | Compares `sinf()` with LUT sine timing. |
 | `cos` | `<value>` | Compares `cosf()` with LUT cosine timing. |
@@ -869,4 +869,3 @@ The main application uses these callback routes:
 - FOC assumes encoder alignment has been completed before closed-loop operation.
 - ADC mean functions require power-of-two sample counts.
 - USB TX queue functions copy caller data before returning, but may return `false` if the selected queue does not have enough space for the whole packet.
-
